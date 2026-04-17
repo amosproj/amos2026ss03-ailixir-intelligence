@@ -10,6 +10,13 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
+   If `npm` is not installed, install the current LTS version of Node.js first. `npm` is included with Node.js. After installing Node.js, restart your terminal and verify the installation:
+
+   ```bash
+   node --version
+   npm --version
+   ```
+
 2. Start the app
 
    ```bash
@@ -25,19 +32,24 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+## Linting & Formatting
 
-When you're ready, run:
+- Run `npx expo lint` to check the project for ESLint issues.
+- Run `npx expo lint --fix` to apply ESLint's automatic fixes for supported problems, such as import ordering or other safe rule-based changes. It will not fix every issue, so you may still need to make some edits manually.
+- Prettier is already installed in this project.
+- If you use VS Code, install the Prettier extension (`esbenp.prettier-vscode`) and enable format on save in your JSON settings:
 
-```bash
-npm run reset-project
-```
+  ```json
+  {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+  ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- For more background on Expo's ESLint and Prettier setup, see ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
 
-### Other setup steps
+## Other setup steps
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
 - If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
 - Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
