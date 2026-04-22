@@ -308,26 +308,34 @@ jobs:
           set -euo pipefail
 
           mkdir -p packaged
-          shopt -s nullglob
 
-          ANDROID_FILES=(release-assets/android/*.apk release-assets/android/*.aab)
+          ANDROID_FILES=()
+          while IFS= read -r -d '' f; do
+            ANDROID_FILES+=("$f")
+          done < <(find release-assets/android -type f \( -name '*.apk' -o -name '*.aab' \) -print0 | sort -z)
+
           if [[ ${#ANDROID_FILES[@]} -eq 0 ]]; then
-            echo "No Android release files found."
+            echo "No Android release files found under release-assets/android"
+            find release-assets/android -maxdepth 6 -print || true
             exit 1
           fi
 
           for f in "${ANDROID_FILES[@]}"; do
-            cp "$f" packaged/
+            cp -- "$f" packaged/
           done
 
-          IOS_APP_PATH="$(find release-assets/ios -maxdepth 1 -type d -name '*.app' | head -n 1 || true)"
+          IOS_APP_PATH="$(find release-assets/ios -mindepth 1 -maxdepth 1 -type d -name '*.app' | head -n 1 || true)"
           if [[ -z "${IOS_APP_PATH}" ]]; then
-            echo "No iOS .app bundle found."
+            echo "No iOS .app bundle found under release-assets/ios"
+            find release-assets/ios -maxdepth 6 -print || true
             exit 1
           fi
 
           IOS_ZIP_NAME="${REPO_NAME}-${TAG_NAME}-ios-simulator.app.zip"
-          zip -r "packaged/${IOS_ZIP_NAME}" "${IOS_APP_PATH}"
+          (
+            cd "$(dirname "${IOS_APP_PATH}")"
+            zip -r "${GITHUB_WORKSPACE}/packaged/${IOS_ZIP_NAME}" "$(basename "${IOS_APP_PATH}")"
+          )
 
           (
             cd packaged
