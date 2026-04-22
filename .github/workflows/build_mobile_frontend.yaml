@@ -109,22 +109,29 @@ jobs:
 
   ios-build:
     name: iOS Build
-    runs-on: macos-15
-    timeout-minutes: 45
+    runs-on: macos-26
+    timeout-minutes: 60
 
     defaults:
       run:
         shell: bash
 
     env:
-      IOS_SCHEME: ""
+      PROJECT_DIR: frontend/ailixir
+      NODE_VERSION: "20"
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Show Xcode version
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          sw_vers
 
       - name: Validate project directory
         run: |
@@ -135,7 +142,7 @@ jobs:
           fi
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -150,16 +157,25 @@ jobs:
           set -euo pipefail
           npm ci
 
+      - name: Inspect Expo dependency alignment
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          npx expo-doctor || true
+          npm ls expo expo-modules-core react-native || true
+
       - name: Lint
         working-directory: ${{ env.PROJECT_DIR }}
         run: npm run lint
 
-      - name: Prebuild iOS app directory using Expo when needed
+      - name: Prebuild iOS app directory when needed
         working-directory: ${{ env.PROJECT_DIR }}
+        env:
+          CI: "1"
         run: |
           set -euo pipefail
           if [[ ! -d ios ]]; then
-            CI=1 npx expo prebuild --platform ios --non-interactive
+            npx expo prebuild --platform ios --non-interactive
           fi
 
       - name: Set up Ruby for CocoaPods
@@ -225,6 +241,8 @@ jobs:
 
       - name: Build iOS app for Simulator without signing
         working-directory: ${{ env.PROJECT_DIR }}/ios
+        env:
+          CI: "1"
         run: |
           set -euo pipefail
 
@@ -239,20 +257,18 @@ jobs:
             -scheme "${IOS_SCHEME_RESOLVED}" \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "generic/platform=iOS Simulator" \
             -derivedDataPath "${PWD}/build/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             build
 
       - name: Upload iOS simulator build
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ios-simulator-build
-          path: |
-            ${{ env.PROJECT_DIR }}/ios/build/DerivedData/Build/Products/Release-iphonesimulator/*.app
+          path: ${{ env.PROJECT_DIR }}/ios/build/DerivedData/Build/Products/Release-iphonesimulator/*.app
           if-no-files-found: error
-          compression-level: 0
           retention-days: 7
 
   release-assets:
