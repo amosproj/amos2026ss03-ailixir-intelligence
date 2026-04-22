@@ -1,0 +1,332 @@
+name: Build Mobile Frontend
+
+on:
+  push:
+    branches:
+      - "**"
+      # - main
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # directory where the React Native project lives
+  PROJECT_DIR: frontend/ailixir
+
+  NODE_VERSION: "22"
+  JAVA_VERSION: "17"
+
+jobs:
+  android-build:
+    name: Android Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Validate project directory
+        run: |
+          set -euo pipefail
+          if [[ ! -d "${PROJECT_DIR}" ]]; then
+            echo "Project directory not found: ${PROJECT_DIR}"
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.PROJECT_DIR }}/package-lock.json
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install JS dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Lint
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: npm run lint
+
+      - name: Prebuild Android app directory using Expo when needed
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          if [[ ! -d android ]]; then
+            CI=1 npx expo prebuild --platform android --non-interactive
+          fi
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Fix Gradle wrapper permissions
+        run: chmod +x "${PROJECT_DIR}/android/gradlew"
+
+      - name: Build Android release artifacts
+        working-directory: ${{ env.PROJECT_DIR }}/android
+        run: |
+          set -euo pipefail
+          ./gradlew assembleRelease bundleRelease --no-daemon --warning-mode=all --build-cache --stacktrace
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-release-artifacts
+          path: |
+            ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/release/*.apk
+            ${{ env.PROJECT_DIR }}/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  ios-build:
+    name: iOS Build
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      IOS_SCHEME: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Validate project directory
+        run: |
+          set -euo pipefail
+          if [[ ! -d "${PROJECT_DIR}" ]]; then
+            echo "Project directory not found: ${PROJECT_DIR}"
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.PROJECT_DIR }}/package-lock.json
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install JS dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Lint
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: npm run lint
+
+      - name: Prebuild iOS app directory using Expo when needed
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+          if [[ ! -d ios ]]; then
+            CI=1 npx expo prebuild --platform ios --non-interactive
+          fi
+
+      - name: Set up Ruby for CocoaPods
+        if: ${{ hashFiles(format('{0}/ios/Gemfile', env.PROJECT_DIR)) != '' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ${{ env.PROJECT_DIR }}/ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: ${{ env.PROJECT_DIR }}/ios
+        run: |
+          set -euo pipefail
+
+          if [[ -f Gemfile ]]; then
+            if [[ -f Podfile.lock ]]; then
+              bundle exec pod install --deployment
+            else
+              bundle exec pod install --repo-update
+            fi
+          else
+            sudo gem install cocoapods -N
+            if [[ -f Podfile.lock ]]; then
+              pod install --deployment
+            else
+              pod install --repo-update
+            fi
+          fi
+
+      - name: Resolve iOS project file and scheme
+        run: |
+          set -euo pipefail
+
+          ABS_IOS_DIR="$(cd "${PROJECT_DIR}/ios" && pwd)"
+
+          WORKSPACE="$(find "${ABS_IOS_DIR}" -maxdepth 1 -name '*.xcworkspace' | head -n 1 || true)"
+          PROJECT="$(find "${ABS_IOS_DIR}" -maxdepth 1 -name '*.xcodeproj' | head -n 1 || true)"
+
+          if [[ -n "${WORKSPACE}" ]]; then
+            BUILD_FILE_TYPE="workspace"
+            BUILD_FILE_PATH="${WORKSPACE}"
+            SCHEME="$(xcodebuild -list -json -workspace "${WORKSPACE}" | python3 -c 'import json, sys; data = json.load(sys.stdin); print((data.get("workspace", {}).get("schemes") or [""])[0])')"
+          elif [[ -n "${PROJECT}" ]]; then
+            BUILD_FILE_TYPE="project"
+            BUILD_FILE_PATH="${PROJECT}"
+            SCHEME="$(xcodebuild -list -json -project "${PROJECT}" | python3 -c 'import json, sys; data = json.load(sys.stdin); print((data.get("project", {}).get("schemes") or [""])[0])')"
+          else
+            echo "No .xcworkspace or .xcodeproj found in ${ABS_IOS_DIR}"
+            exit 1
+          fi
+
+          if [[ -z "${SCHEME}" ]]; then
+            echo "No shared Xcode scheme found."
+            exit 1
+          fi
+
+          {
+            echo "IOS_BUILD_FILE_TYPE=${BUILD_FILE_TYPE}"
+            echo "IOS_BUILD_FILE_PATH=${BUILD_FILE_PATH}"
+            echo "IOS_SCHEME_RESOLVED=${SCHEME}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Build iOS app for Simulator without signing
+        working-directory: ${{ env.PROJECT_DIR }}/ios
+        run: |
+          set -euo pipefail
+
+          if [[ "${IOS_BUILD_FILE_TYPE}" == "workspace" ]]; then
+            TARGET_ARGS=(-workspace "${IOS_BUILD_FILE_PATH}")
+          else
+            TARGET_ARGS=(-project "${IOS_BUILD_FILE_PATH}")
+          fi
+
+          xcodebuild \
+            "${TARGET_ARGS[@]}" \
+            -scheme "${IOS_SCHEME_RESOLVED}" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "${PWD}/build/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Upload iOS simulator build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-simulator-build
+          path: |
+            ${{ env.PROJECT_DIR }}/ios/build/DerivedData/Build/Products/Release-iphonesimulator/*.app
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  release-assets:
+    name: Attach artifacts to GitHub Release
+    if: github.event_name == 'release'
+    needs:
+      - android-build
+      - ios-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: android-release-artifacts
+          path: release-assets/android
+
+      - name: Download iOS artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ios-simulator-build
+          path: release-assets/ios
+
+      - name: Package release assets
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p packaged
+          shopt -s nullglob
+
+          ANDROID_FILES=(release-assets/android/*.apk release-assets/android/*.aab)
+          if [[ ${#ANDROID_FILES[@]} -eq 0 ]]; then
+            echo "No Android release files found."
+            exit 1
+          fi
+
+          for f in "${ANDROID_FILES[@]}"; do
+            cp "$f" packaged/
+          done
+
+          IOS_APP_PATH="$(find release-assets/ios -maxdepth 1 -type d -name '*.app' | head -n 1 || true)"
+          if [[ -z "${IOS_APP_PATH}" ]]; then
+            echo "No iOS .app bundle found."
+            exit 1
+          fi
+
+          IOS_ZIP_NAME="${REPO_NAME}-${TAG_NAME}-ios-simulator.app.zip"
+          zip -r "packaged/${IOS_ZIP_NAME}" "${IOS_APP_PATH}"
+
+          (
+            cd packaged
+            sha256sum * > SHA256SUMS.txt
+            ls -lah
+          )
+
+      - name: Upload assets to existing release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            packaged/*.apk
+            packaged/*.aab
+            packaged/*.zip
+            packaged/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          preserve_order: true
