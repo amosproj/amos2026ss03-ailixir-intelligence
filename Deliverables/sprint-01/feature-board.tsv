@@ -1,0 +1,22 @@
+Title	URL	Assignees	Status	Estimated size	Real size	Labels
+Interface includes a document upload screen	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/11		Product Backlog			Frontend, medium priority
+Capturing Documents using Camera	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/10		Product Backlog			Frontend, medium priority
+Preview of Uploaded Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/12		Product Backlog			Frontend, medium priority
+Implement Welcome Screen with Appropriate Navigation Options	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/13		Product Backlog			Frontend, medium priority
+App Login	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/18		Product Backlog			Frontend, medium priority
+Set up Database for App Persistent Storage	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/17	hasnatahmed331	Product Backlog			Backend, Frontend, medium priority
+Implement Document Analysis and Structured Data Output (JSON)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/16		Product Backlog			Backend, high priority
+Set up GCP	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/23		Product Backlog			Backend, high priority
+Set up Backend DB	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/24		Product Backlog			Backend, medium priority
+Set up API framework	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/25		Product Backlog			Backend, medium priority
+Medical Dashboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/19		Product Backlog			Frontend, medium priority
+Finance Dashboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/20		Product Backlog			Frontend, medium priority
+Documents and Metadata should be shared to configure/run model (OCR, etc.)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/7		Sprint Backlog			
+Backend: Docker Container Ubuntu	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/5	hasnatahmed331	In Progress			
+GitHub Actions CI/CD Pipeline	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/3	hasnatahmed331	In Progress			
+Deliverable: Software Architecture Design	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/21	hasnatahmed331	In Progress			Backend, urgent
+Research which extraction tool do we use? (Document AI, OCR, OCR with Google AI)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/4	Hossam-Amer, MuhammadZeeshan2	In Progress			
+Acquire basic knowledge about the project and the data	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/1	VogtIndustries	In Progress			
+Setup documentation README.md	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/2	hasnatahmed331, VogtIndustries	In Progress			
+Frontend Setup Development Environment for App	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/8	hannes-v	Awaiting Review			Frontend
+App Design Mockups / Wireframes / Moodboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/14	hannes-v	Awaiting Review			Frontend, high priority
