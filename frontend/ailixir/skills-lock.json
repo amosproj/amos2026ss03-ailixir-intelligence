@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "tamagui": {
+      "source": "tamagui/tamagui",
+      "sourceType": "github",
+      "computedHash": "c16ef17b45cf188289a72600898110f6245c295c41cf5493b8ead3fd45027544"
+    }
+  }
+}
