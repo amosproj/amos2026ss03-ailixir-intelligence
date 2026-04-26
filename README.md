@@ -39,6 +39,15 @@ Important information is often locked in unstructured documents:
 
 ---
 
+## Miro Board Link For backend Tasks
+
+**Edit**
+https://miro.com/welcomeonboard/VEw3bWtiaEJuMFVldndnZFp2WCs0ck5oWnBURUxzU3JsZE1zaElsWmJOQVBteFZibmFvc3h3U0FlczgvRDcvM1lwS2k0WEpuNVdUUFBiM1NXN0xiT0RoSUxQR2Fra2EwMDFqaHZyZmU3Ymx3WmJoSWxPQW91Y1hFcFplL3dNNFdhWWluRVAxeXRuUUgwWDl3Mk1qRGVRPT0hdjE=?share_link_id=286578324277
+
+**View**
+https://miro.com/app/board/uXjVHcF54Y8=/?share_link_id=142814163268
+
+---------
 ## Key Features
 
 - Document scanning and upload  
