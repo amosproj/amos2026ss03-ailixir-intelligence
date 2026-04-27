@@ -6,9 +6,9 @@ on:
       - "**"
       # - main
   workflow_dispatch:
-  release:
-    types:
-      - published
+  # release:
+  #   types:
+  #     - published
 
 permissions:
   contents: read
@@ -96,12 +96,21 @@ jobs:
           set -euo pipefail
           ./gradlew assembleRelease bundleRelease --no-daemon --warning-mode=all --build-cache --stacktrace
 
-      - name: Upload Android artifacts
+      - name: Upload Android artifacts (.apk)
         uses: actions/upload-artifact@v7
         with:
           name: android-release-artifacts
           path: |
             ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload Android artifacts (.aab)
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-release-artifacts
+          path: |
             ${{ env.PROJECT_DIR }}/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
           compression-level: 0
@@ -239,7 +248,7 @@ jobs:
             echo "IOS_SCHEME_RESOLVED=${SCHEME}"
           } >> "${GITHUB_ENV}"
 
-      - name: Build iOS app for Simulator without signing
+      - name: Build iOS app for Device without signing
         working-directory: ${{ env.PROJECT_DIR }}/ios
         env:
           CI: "1"
@@ -256,101 +265,36 @@ jobs:
             "${TARGET_ARGS[@]}" \
             -scheme "${IOS_SCHEME_RESOLVED}" \
             -configuration Release \
-            -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -derivedDataPath "${PWD}/build/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGN_IDENTITY="" \
             build
 
-      - name: Upload iOS simulator build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-simulator-build
-          path: ${{ env.PROJECT_DIR }}/ios/build/DerivedData/Build/Products/Release-iphonesimulator/*.app
-          if-no-files-found: error
-          retention-days: 7
-
-  release-assets:
-    name: Attach artifacts to GitHub Release
-    if: github.event_name == 'release'
-    needs:
-      - android-build
-      - ios-build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-
-    permissions:
-      contents: write
-
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - name: Download Android artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: android-release-artifacts
-          path: release-assets/android
-
-      - name: Download iOS artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: ios-simulator-build
-          path: release-assets/ios
-
-      - name: Package release assets
-        env:
-          REPO_NAME: ${{ github.event.repository.name }}
-          TAG_NAME: ${{ github.event.release.tag_name }}
+      - name: Package unsigned IPA
+        working-directory: ${{ env.PROJECT_DIR }}/ios
         run: |
           set -euo pipefail
 
-          mkdir -p packaged
-
-          ANDROID_FILES=()
-          while IFS= read -r -d '' f; do
-            ANDROID_FILES+=("$f")
-          done < <(find release-assets/android -type f \( -name '*.apk' -o -name '*.aab' \) -print0 | sort -z)
-
-          if [[ ${#ANDROID_FILES[@]} -eq 0 ]]; then
-            echo "No Android release files found under release-assets/android"
-            find release-assets/android -maxdepth 6 -print || true
+          APP_DIR=$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -type d | head -n 1)
+          if [[ -z "${APP_DIR}" ]]; then
+            echo "Error: No .app bundle found in Release-iphoneos"
             exit 1
           fi
 
-          for f in "${ANDROID_FILES[@]}"; do
-            cp -- "$f" packaged/
-          done
+          echo "Found app bundle: ${APP_DIR}"
+          mkdir -p Payload
+          cp -r "${APP_DIR}" Payload/
+          zip -r unsigned-app.ipa Payload
+          echo "Successfully created unsigned-app.ipa"
 
-          IOS_APP_PATH="$(find release-assets/ios -mindepth 1 -maxdepth 1 -type d -name '*.app' | head -n 1 || true)"
-          if [[ -z "${IOS_APP_PATH}" ]]; then
-            echo "No iOS .app bundle found under release-assets/ios"
-            find release-assets/ios -maxdepth 6 -print || true
-            exit 1
-          fi
-
-          IOS_ZIP_NAME="${REPO_NAME}-${TAG_NAME}-ios-simulator.app.zip"
-          (
-            cd "$(dirname "${IOS_APP_PATH}")"
-            zip -r "${GITHUB_WORKSPACE}/packaged/${IOS_ZIP_NAME}" "$(basename "${IOS_APP_PATH}")"
-          )
-
-          (
-            cd packaged
-            sha256sum * > SHA256SUMS.txt
-            ls -lah
-          )
-
-      - name: Upload assets to existing release
-        uses: softprops/action-gh-release@v3
+      - name: Upload unsigned iOS IPA
+        uses: actions/upload-artifact@v7
         with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: |
-            packaged/*.apk
-            packaged/*.aab
-            packaged/*.zip
-            packaged/SHA256SUMS.txt
-          fail_on_unmatched_files: true
-          preserve_order: true
+          name: ios-unsigned-ipa
+          path: ${{ env.PROJECT_DIR }}/ios/unsigned-app.ipa
+          if-no-files-found: error
+          retention-days: 7
