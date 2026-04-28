@@ -55,6 +55,10 @@ export default function HomeScreen() {
           <CButton>LogIn</CButton>
         </Link>
 
+        <Link href="/upload" asChild>
+          <CButton>Go to Upload</CButton>
+        </Link>
+
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
