@@ -19,7 +19,7 @@ GEMINI_MODEL = "gemini-2.5-flash"
 
 # If you prefer, set GEMINI_API_KEY as an environment variable.
 # The code below keeps your existing inline key behavior working.
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyDxHSmfPrH2dUHSR9AsgHzQDxP-tXhw5bM")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 BASE_DIR = Path(__file__).resolve().parent
 IMAGES_DIR = BASE_DIR / "Images"
