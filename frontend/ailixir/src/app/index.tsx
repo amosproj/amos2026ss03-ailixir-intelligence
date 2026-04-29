@@ -1,6 +1,5 @@
 import { Link } from 'expo-router';
 import { Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
@@ -9,7 +8,7 @@ import { CText } from '@/components/atoms';
 export default function HomeScreen() {
   return (
     <ThemedView>
-      <SafeAreaView>
+      <>
         <CText fontSize={40}>Welcome to Ailixir!</CText>
         <Link href="/login" asChild>
           <CText>LogIn</CText>
@@ -23,7 +22,7 @@ export default function HomeScreen() {
         </Link>
 
         {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+      </>
     </ThemedView>
   );
 }

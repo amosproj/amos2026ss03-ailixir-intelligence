@@ -3,7 +3,6 @@ import { LoginForm } from '@/components/organisms';
 import { AppBar } from '@/components/organisms/app-bar';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 
 export default function LoginScreen() {
@@ -15,17 +14,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView>
-      <YStack width="100%" height="100%" background="$background" justify="space-between" items="center" gap={5}>
-        <AppBar />
-        <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} />
-        <CText fontSize={12} color="darkgray">
-          Don{"'"}t have an account?{' '}
-          <CText color="$blue10" onPress={() => {}}>
-            Sign Up
-          </CText>
+    <YStack width="100%" height="100%" background="$background" justify="space-between" items="center" gap={5}>
+      <AppBar />
+      <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} />
+      <CText fontSize={12} color="darkgray">
+        Don{"'"}t have an account?{' '}
+        <CText color="$blue10" onPress={() => {}}>
+          Sign Up
         </CText>
-      </YStack>
-    </SafeAreaView>
+      </CText>
+    </YStack>
   );
 }

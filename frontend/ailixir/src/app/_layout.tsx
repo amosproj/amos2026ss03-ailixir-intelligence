@@ -1,7 +1,8 @@
 import { defaultConfig } from '@tamagui/config/v5';
 import { TamaguiProvider, createTamagui } from '@tamagui/core';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // TODO: create a tamagui.config.ts file
 const config = createTamagui(defaultConfig);
@@ -17,7 +18,9 @@ declare module '@tamagui/core' {
 export default function TabLayout() {
   return (
     <TamaguiProvider config={config} defaultTheme="light">
-      <Slot />
+      <SafeAreaView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </SafeAreaView>
     </TamaguiProvider>
   );
 }
