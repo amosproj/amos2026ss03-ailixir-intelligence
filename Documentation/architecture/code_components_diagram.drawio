@@ -1,0 +1,150 @@
+<mxfile host="app.diagrams.net" agent="Ailixir">
+  <diagram name="Code Components" id="ailixir-code-components">
+    <mxGraphModel dx="3187" dy="1482" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="band_apps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#1e40af;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="/app" vertex="1">
+          <mxGeometry height="180" width="2120" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="app_mobile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#1e40af;strokeWidth=2;fontSize=13;" value="mobile (React Native + TypeScript)&#xa;features/ · shared/ · platform/" vertex="1">
+          <mxGeometry height="100" width="840" x="680" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="band_sync" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#166534;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="/services - Synchronous Backend Services (Cloud Run)" vertex="1">
+          <mxGeometry height="200" width="2120" x="40" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="s_docs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;strokeWidth=2;fontSize=12;direction=west;" value="documents-api&lt;br&gt;interface · application&lt;br&gt;domain · infrastructure" vertex="1">
+          <mxGeometry height="120" width="380" x="80" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="s_chat" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbf7d0;strokeColor=#15803d;strokeWidth=3;fontSize=12;fontStyle=1;" value="chat-api&lt;br&gt;FastAPI + LangGraph&lt;br&gt;ChatGraph: classify → retrieve →&lt;br&gt;rerank → draft → critique → finalize" vertex="1">
+          <mxGeometry height="120" width="380" x="500" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="s_voice" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;strokeWidth=2;fontSize=12;" value="voice-gateway&lt;br&gt;webhook to VAPI/elevenlabs&lt;br&gt;interface · application&lt;br&gt;infrastructure" vertex="1">
+          <mxGeometry height="120" width="380" x="920" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="s_cfg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde68a;strokeColor=#b45309;strokeWidth=3;fontSize=12;fontStyle=1;" value="domain-config&amp;nbsp;&lt;br&gt;serves YAML schemas&lt;br&gt;ETag cache&lt;br&gt;loads /domains at runtime" vertex="1">
+          <mxGeometry height="120" width="380" x="1340" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="s_notif" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;strokeWidth=2;fontSize=12;" value="notifications&lt;br&gt;Pub/Sub consumer&lt;br&gt;FCM dispatcher" vertex="1">
+          <mxGeometry height="120" width="380" x="1760" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="band_workers" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#9a3412;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="/workers - Async Pub/Sub-driven Workers (Cloud Run)" vertex="1">
+          <mxGeometry height="200" width="2120" x="40" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="w_ing" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fed7aa;strokeColor=#9a3412;strokeWidth=2;fontSize=12;" value="ingestion&#xa;Python&#xa;OCR + LLM extract&#xa;validate · confidence gate" vertex="1">
+          <mxGeometry height="120" width="320" x="80" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="w_emb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fed7aa;strokeColor=#9a3412;strokeWidth=2;fontSize=12;" value="embedding&#xa;Python&#xa;chunk + embed&#xa;upsert vectors" vertex="1">
+          <mxGeometry height="120" width="320" x="430" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="w_enr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f4;strokeColor=#a8a29e;strokeWidth=2;fontSize=12;fontStyle=2;fontColor=#57534e;" value="enrichment&#xa;Python&#xa;adapters/{pubmed, market}&#xa;rate limiter · cache" vertex="1">
+          <mxGeometry height="120" width="320" x="780" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="w_clean" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f4;strokeColor=#a8a29e;strokeWidth=2;fontSize=12;fontStyle=2;fontColor=#57534e;" value="cleanup&#xa;Python&#xa;retention enforcement&#xa;GDPR delete" vertex="1">
+          <mxGeometry height="120" width="320" x="1130" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="w_reidx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f4;strokeColor=#a8a29e;strokeWidth=2;fontSize=12;fontStyle=2;fontColor=#57534e;" value="reindex&#xa;Python&#xa;schema-version &amp;&#xa;embedding-model migration" vertex="1">
+          <mxGeometry height="120" width="320" x="1480" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="w_exp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f4;strokeColor=#a8a29e;strokeWidth=2;fontSize=12;fontStyle=2;fontColor=#57534e;" value="export&#xa;Python&#xa;GDPR data export" vertex="1">
+          <mxGeometry height="120" width="310" x="1830" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="band_shared" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffbeb;strokeColor=#92400e;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="/packages - Shared Libraries (imported by services + workers + apps)" vertex="1">
+          <mxGeometry height="200" width="2120" x="40" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="p_sdk" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#92400e;strokeWidth=2;fontSize=12;" value="api-sdk&#xa;TS + Python clients&#xa;(generated from OpenAPI)" vertex="1">
+          <mxGeometry height="120" width="460" x="120" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="p_dm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde68a;strokeColor=#b45309;strokeWidth=3;fontSize=12;fontStyle=1;" value="domain-models&lt;br&gt;Pydantic + TS types&lt;br&gt;(generated from /domains/*.yaml)" vertex="1">
+          <mxGeometry height="120" width="460" x="640" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="p_evt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#92400e;strokeWidth=2;fontSize=12;" value="event-schemas&#xa;Pub/Sub envelope types&#xa;(generated from /infra/proto-events)" vertex="1">
+          <mxGeometry height="120" width="460" x="1160" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="p_obs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#92400e;strokeWidth=2;fontSize=12;" value="observability&#xa;structured logger · tracer&#xa;metric helpers" vertex="1">
+          <mxGeometry height="120" width="400" x="1680" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="band_domains" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fefce8;strokeColor=#854d0e;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="/domains - Domain Configurations  ( configurability core )" vertex="1">
+          <mxGeometry height="240" width="1240" x="40" y="980" as="geometry" />
+        </mxCell>
+        <mxCell id="d_med" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef08a;strokeColor=#854d0e;strokeWidth=2;fontSize=12;" value="medical/v1.yaml&#xa;schema · prompts · sources&#xa;persona · confidence threshold" vertex="1">
+          <mxGeometry height="160" width="360" x="80" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="d_fin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef08a;strokeColor=#854d0e;strokeWidth=2;fontSize=12;" value="finance/v1.yaml&#xa;schema · prompts · sources&#xa;persona · confidence threshold" vertex="1">
+          <mxGeometry height="160" width="360" x="480" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="d_fut" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fefce8;strokeColor=#854d0e;strokeWidth=2;fontSize=12;fontStyle=2;" value="...future domains&#xa;(adding a domain = adding YAML,&#xa;NO code change required)" vertex="1">
+          <mxGeometry height="160" width="360" x="880" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="band_infra" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9fafb;strokeColor=#374151;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="/infra — Infrastructure &amp; Contract Sources" vertex="1">
+          <mxGeometry height="240" width="860" x="1300" y="980" as="geometry" />
+        </mxCell>
+        <mxCell id="i_tf" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e5e7eb;strokeColor=#374151;strokeWidth=2;fontSize=12;" value="terraform/&lt;br&gt;Cloud Run · Pub/Sub&lt;br&gt;GCS · IAM · KMS · VPC-SC" vertex="1">
+          <mxGeometry height="160" width="240" x="1340" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="i_oas" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e5e7eb;strokeColor=#374151;strokeWidth=2;fontSize=12;" value="openapi/v1.yaml&#xa;source of api-sdk&#xa;(also enforced by Cloud&#xa;Endpoints at the edge)" vertex="1">
+          <mxGeometry height="160" width="260" x="1610" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="i_evt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e5e7eb;strokeColor=#374151;strokeWidth=2;fontSize=12;" value="proto-events/&#xa;JSON schemas for&#xa;Pub/Sub events&#xa;(versioned)" vertex="1">
+          <mxGeometry height="160" width="240" x="1900" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="band_legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafaf9;strokeColor=#525252;strokeWidth=2;dashed=1;verticalAlign=top;fontStyle=1;fontSize=14;spacingTop=10;" value="Per-service internal structure (applies to every box in /services and /workers)" vertex="1">
+          <mxGeometry height="200" width="2120" x="40" y="1260" as="geometry" />
+        </mxCell>
+        <mxCell id="l_int" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#1e40af;strokeWidth=2;fontSize=12;dashed=1;" value="interface/&#xa;HTTP routes · Pub/Sub consumers&#xa;SSE handlers · webhooks" vertex="1">
+          <mxGeometry height="120" width="380" x="120" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="l_app" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#166534;strokeWidth=2;fontSize=12;dashed=1;" value="application/&#xa;use cases · orchestrators&#xa;(LangGraph nodes for chat-api)" vertex="1">
+          <mxGeometry height="120" width="380" x="640" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="l_dom" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#92400e;strokeWidth=2;fontSize=12;dashed=1;" value="domain/&lt;br&gt;entities · value objects · schemas&lt;br&gt;NO I/O - pure code" vertex="1">
+          <mxGeometry height="120" width="380" x="1160" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="l_inf" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fed7aa;strokeColor=#9a3412;strokeWidth=2;fontSize=12;dashed=1;" value="infrastructure/&lt;br&gt;adapters: Firestore · Gemini · Document AI&lt;br&gt;GCS · VAPI/elevenlabs · domain-config-client" vertex="1">
+          <mxGeometry height="120" width="400" x="1680" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_apps_sdk" edge="1" parent="1" source="app_mobile" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;dashed=1;fontSize=11;exitX=0;exitY=1;entryX=0;entryY=0;" target="p_sdk" value="import">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_sync_shared" edge="1" parent="1" source="band_sync" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;dashed=1;fontSize=11;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="band_shared" value="all services import: domain-models · event-schemas · observability · api-sdk types">
+          <mxGeometry relative="1" x="-0.1429" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ed_workers_shared" edge="1" parent="1" source="band_workers" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;dashed=1;fontSize=11;exitX=0.5;exitY=1;entryX=0.7;entryY=0;" target="band_shared" value="all workers import: domain-models · event-schemas · observability">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_oas_sdk" edge="1" parent="1" source="i_oas" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=3;fontSize=11;exitX=0.5;exitY=0;entryX=1;entryY=0.5;strokeColor=#b45309;" target="p_sdk" value="generates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_dom_dm" edge="1" parent="1" source="d_med" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=3;fontSize=11;exitX=0.5;exitY=0;entryX=0.25;entryY=1;strokeColor=#b45309;" target="p_dm" value="generates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_dom_dm2" edge="1" parent="1" source="d_fin" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=3;fontSize=11;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#b45309;" target="p_dm" value="generates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_evt_evt" edge="1" parent="1" source="i_evt" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=3;fontSize=11;exitX=0.5;exitY=0;entryX=0.75;entryY=1;strokeColor=#b45309;" target="p_evt" value="generates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_cfg_reads" edge="1" parent="1" source="d_med" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;dashed=1;fontSize=11;exitX=1;exitY=0;entryX=0.25;entryY=1;" target="s_cfg" value="loaded at runtime">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_cfg_reads2" edge="1" parent="1" source="d_fin" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;dashed=1;fontSize=11;exitX=1;exitY=0;entryX=0.75;entryY=1;" target="s_cfg" value="loaded at runtime">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_int_app" edge="1" parent="1" source="l_int" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="l_app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_app_dom" edge="1" parent="1" source="l_app" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="l_dom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed_inf_dom" edge="1" parent="1" source="l_inf" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" target="l_dom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" value="Ailixir Intelligence - Code Component Diagram&lt;br&gt;Static structure of the source tree. Solid arrows = code generation. Dashed arrows = compile-time imports." vertex="1">
+          <mxGeometry height="40" width="2120" x="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
