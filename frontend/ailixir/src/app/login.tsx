@@ -20,7 +20,7 @@ export default function LoginScreen() {
         <AppBar />
         <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} />
         <CText fontSize={12} color="darkgray">
-          Dont' have an account?{' '}
+          Don{"'"}t have an account?{' '}
           <CText color="$blue10" onPress={() => {}}>
             Sign Up
           </CText>

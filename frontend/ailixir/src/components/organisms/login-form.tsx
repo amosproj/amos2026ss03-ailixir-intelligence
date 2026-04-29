@@ -15,11 +15,7 @@ type LoginFormProps = {
   onSubmit?: SubmitHandler<LoginFormValues>;
 };
 
-export function LoginForm({
-  width = 300,
-  onForgotPasswordPress,
-  onSubmit = (data) => console.log(data),
-}: LoginFormProps) {
+export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data) => console.log(data) }: LoginFormProps) {
   const {
     control,
     handleSubmit,
@@ -56,7 +52,9 @@ export function LoginForm({
           required: FORM_MESSAGES.requiredPassword,
           validate: (value) => value === 'password' || FORM_MESSAGES.invalidPassword,
         }}
-        render={({ field: { onBlur, onChange, value } }) => <CInput placeholder={FORM_MESSAGES.passwordPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />}
+        render={({ field: { onBlur, onChange, value } }) => (
+          <CInput placeholder={FORM_MESSAGES.passwordPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />
+        )}
       />
 
       <XStack gap={10} justify="space-between" width={width}>

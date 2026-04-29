@@ -10,6 +10,7 @@ type Conf = typeof config;
 
 // make imports typed
 declare module '@tamagui/core' {
+  // eslint-disable-next-line
   interface TamaguiCustomConfig extends Conf {}
 }
 
