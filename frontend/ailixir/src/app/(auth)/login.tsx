@@ -11,7 +11,7 @@ export default function LoginScreen() {
 
   // TODO: this is unsafe, we should use <Stack.Protected> once we have proper routing
   const handleLogin = () => {
-    router.push('/login-success');
+    router.push('./success');
   };
 
   return (

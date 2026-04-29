@@ -3,7 +3,7 @@ import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 
-export default function LoginSuccessScreen() {
+export default function SuccessScreen() {
   return (
     <SafeAreaView>
       <YStack width="100%" height="100%" background="$background" justify="center" items="center" gap={10}>
