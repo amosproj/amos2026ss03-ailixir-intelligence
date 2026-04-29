@@ -16,10 +16,21 @@ declare module '@tamagui/core' {
 }
 
 export default function TabLayout() {
+  const isLoggedIn = false;
+  const loggedIn: boolean = Boolean(isLoggedIn);
+
   return (
     <TamaguiProvider config={config} defaultTheme="light">
       <SafeAreaView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={loggedIn}>
+            <Stack.Screen name="(private)" options={{ title: 'App' }} />
+          </Stack.Protected>
+
+          <Stack.Protected guard={!loggedIn}>
+            <Stack.Screen name="(auth)" options={{ title: 'Auth' }} />
+          </Stack.Protected>
+        </Stack>
       </SafeAreaView>
     </TamaguiProvider>
   );

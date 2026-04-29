@@ -19,7 +19,7 @@ export default function LoginScreen() {
       <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} />
       <CText fontSize={12} color="darkgray">
         Don{"'"}t have an account?{' '}
-        <CText color="$blue10" onPress={() => {}}>
+        <CText color="$blue10" onPress={() => router.push('./signup')}>
           Sign Up
         </CText>
       </CText>

@@ -10,9 +10,6 @@ export default function HomeScreen() {
     <ThemedView>
       <>
         <CText fontSize={40}>Welcome to Ailixir!</CText>
-        <Link href="/login" asChild>
-          <CText>LogIn</CText>
-        </Link>
 
         <Link href="/documents/" asChild>
           <CText>Go to Documents</CText>
