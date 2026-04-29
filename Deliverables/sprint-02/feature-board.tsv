@@ -1,0 +1,28 @@
+Title	URL	Assignees	Status	Estimated size	Real size	Labels
+Frontend: Documents Overview	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/36		Product Backlog			Frontend, high priority, visual
+App Navigation Tree	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/26		Product Backlog			Frontend, high priority
+Consistent Layout	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/45		Product Backlog			Frontend, medium priority
+Integrating OCR JSON Data into Graphiti	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/44		Product Backlog			Backend, high priority
+Set up GCP	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/23		Product Backlog			Backend, high priority
+Set up Backend DB	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/24		Product Backlog			Backend, high priority
+CI/CD for Backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/47		Product Backlog			Backend, medium priority
+Set up Database for App Persistent Storage	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/17		Product Backlog			Backend, Frontend, medium priority
+Login Authentication Process 	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/37		Product Backlog			Backend, Frontend, medium priority
+Preview of Uploaded Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/12		Product Backlog			Frontend, medium priority
+Set up API framework	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/25		Product Backlog			Backend, medium priority
+Implement Welcome Screen with Appropriate Navigation Options	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/13		Product Backlog			Frontend, medium priority
+Medical Dashboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/19		Product Backlog			Frontend, low priority
+Finance Dashboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/20		Product Backlog			Frontend, low priority
+Documents and Metadata should be shared to configure/run model (OCR, etc.)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/7		Product Backlog			
+Backend: Docker Container Ubuntu	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/5	hasnatahmed331	Product Backlog			
+Wiki Articles: Release Manager, Merge Procedure	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/27	andrewluka	Sprint Backlog			Backend, Frontend, low priority
+Capturing Documents using Camera/Scanning	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/10	andrewluka	In Progress	5		Frontend, medium priority
+App Login Screen	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/18	hannes-v	Awaiting Review	2		Frontend, medium priority, visual
+Interface includes a document upload screen	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/11	hannes-v	Awaiting Review	3		Frontend, medium priority
+Deliverable: Software Architecture Design	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/21	AbdulHaseeb-SE, hasnatahmed331	Awaiting Review	8		Backend, Frontend, urgent
+Implement Document Analysis and Structured Data Output (JSON)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/16	Hossam-Amer, MuhammadZeeshan2	Awaiting Review	8		Backend, high priority
+Frontend: GitHub Actions CI/CD Pipeline	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/3	andrewluka	Feature Archive			Frontend, medium priority
+Research which extraction tool do we use? (Document AI, OCR, OCR with Google AI)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/4	Hossam-Amer, MuhammadZeeshan2	Feature Archive			
+Frontend Setup Development Environment for App	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/8	hannes-v	Feature Archive			Frontend
+App Design Mockups / Wireframes / Moodboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/14	hannes-v	Feature Archive			Frontend, high priority
+Setup documentation README.md	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/2	hasnatahmed331, VogtIndustries	Feature Archive			
