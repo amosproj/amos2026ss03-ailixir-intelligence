@@ -106,15 +106,15 @@ jobs:
           compression-level: 0
           retention-days: 7
 
-      - name: Upload Android artifacts (.aab)
-        uses: actions/upload-artifact@v7
-        with:
-          name: android-release-artifacts
-          path: |
-            ${{ env.PROJECT_DIR }}/android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 7
+      # - name: Upload Android artifacts (.aab)
+      #   uses: actions/upload-artifact@v7
+      #   with:
+      #     name: android-release-artifacts
+      #     path: |
+      #       ${{ env.PROJECT_DIR }}/android/app/build/outputs/bundle/release/*.aab
+      #     if-no-files-found: error
+      #     compression-level: 0
+      #     retention-days: 7
 
   ios-build:
     name: iOS Build
