@@ -16,7 +16,7 @@ declare module '@tamagui/core' {
 }
 
 export default function TabLayout() {
-  const isLoggedIn = false;
+  const isLoggedIn = true;
   const loggedIn: boolean = Boolean(isLoggedIn);
 
   return (
