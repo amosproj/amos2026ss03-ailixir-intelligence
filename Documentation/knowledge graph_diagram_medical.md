@@ -39,4 +39,4 @@ graph TD
     DOC -.-> META
     OBS -.-> META
     EVENT -.-> META
-mermaid```
+```
