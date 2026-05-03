@@ -1,8 +1,11 @@
 import { Button, styled } from 'tamagui';
 
 export const CButton = styled(Button, {
-  backgroundColor: 'transparent',
-
+  bg: 'transparent',
+  chromeless: 'all',
+  pressStyle: {
+    opacity: 0.7,
+  },
   variants: {
     theme: {
       green: {
@@ -17,7 +20,14 @@ export const CButton = styled(Button, {
       },
     },
     emphasis: {
-      high: {},
+      high: {
+        backgroundColor: '#E25353',
+        borderRadius: 999,
+        color: 'white',
+        pressStyle: {
+          backgroundColor: '#E25353',
+        },
+      },
       medium: {},
       low: {},
     },
