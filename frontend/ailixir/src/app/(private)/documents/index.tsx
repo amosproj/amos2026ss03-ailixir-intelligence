@@ -1,6 +1,6 @@
 import { AuxiliaryOverview, ListFilters } from '@/components/molecules';
 import { DocumentsAction } from '@/components/molecules/documents-action';
-import DocumentsList from '@/components/organisms/documents-list';
+import { DocumentsList } from '@/components/organisms';
 
 import { Document } from '@/interfaces/document';
 import React, { useState } from 'react';

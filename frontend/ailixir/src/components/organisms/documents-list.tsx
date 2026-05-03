@@ -2,11 +2,11 @@ import { DocumentListItem } from '@/components/molecules';
 import { Document } from '@/interfaces/document';
 import { ScrollView, YStack } from 'tamagui';
 
-type DocumentsListProps = {
+export type DocumentsListProps = {
   documents: Document[];
 };
 
-const DocumentsList = ({ documents }: DocumentsListProps) => {
+export const DocumentsList = ({ documents }: DocumentsListProps) => {
   return (
     <ScrollView showsVerticalScrollIndicator>
       <YStack mt={10} gap={10}>
@@ -17,5 +17,3 @@ const DocumentsList = ({ documents }: DocumentsListProps) => {
     </ScrollView>
   );
 };
-
-export default DocumentsList;
