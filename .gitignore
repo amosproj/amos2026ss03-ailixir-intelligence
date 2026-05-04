@@ -18,6 +18,22 @@ pids
 # Python
 *.pyc
 __pycache__/
+.venv/
+venv/
+*.egg-info/
+
+# Firebase / GCP credentials — NEVER commit these
+serviceAccountKey.json
+*-serviceAccountKey.json
+*.firebase-credentials.json
+gcp-credentials.json
+
+# Firebase emulator artifacts
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+firebase-export-*/
 
 # vscode
 .vscode/

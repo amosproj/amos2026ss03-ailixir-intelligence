@@ -1,55 +1,59 @@
-import os
+"""
+Firebase ID-token authentication for FastAPI endpoints.
+
+Inject `get_current_user` as a dependency on any route that should require a
+signed-in user. The function verifies the bearer token against Firebase Auth and
+returns the decoded user info, or raises 401 if the token is bad.
+"""
+
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import firebase_admin
-from firebase_admin import credentials, auth
+from firebase_admin import auth
 
-# ── Firebase App Initialization ───────────────────────────────────────────────
-# Runs once on startup. Reads your service account key from the path in env var.
-_FIREBASE_CRED_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
+from shared.firestore import ensure_firebase_app
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(_FIREBASE_CRED_PATH)
-    firebase_admin.initialize_app(cred)
-
-
+_log = logging.getLogger(__name__)
 _bearer_scheme = HTTPBearer()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    creds: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> dict:
+    """Verify a Firebase ID token and return the decoded user info.
+
+    Returns a dict with `uid` and optionally `email`, `name`, and `email_verified`.
+    Raises HTTP 401 on any token-level failure. Infrastructure errors (e.g. unable
+    to reach Google's certificate endpoint) propagate as 500, which is correct —
+    those are not auth failures.
     """
-    FastAPI dependency.  Inject with:  user = Depends(get_current_user)
+    ensure_firebase_app()
 
-    Verifies the Firebase ID token sent as:
-        Authorization: Bearer <firebase_id_token>
-
-    Returns a dict with at minimum:
-        {
-            "uid":   "firebase_user_id",
-            "email": "user@example.com",   # if available
-        }
-
-    Raises HTTP 401 on any failure so the endpoint never runs with a bad token.
-    """
-    token = credentials.credentials
     try:
-        decoded = auth.verify_id_token(token)
+        decoded = auth.verify_id_token(creds.credentials)
     except auth.ExpiredIdTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired. Please re-authenticate.",
         )
-    except auth.InvalidIdTokenError:
+    except auth.RevokedIdTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked.",
+        )
+    except auth.UserDisabledError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is disabled.",
+        )
+    except (auth.InvalidIdTokenError, ValueError) as e:
+        # Generic message to the client; full reason logged server-side so we can
+        # debug invalid tokens without leaking auth internals to attackers.
+        _log.warning("invalid_id_token: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token.",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {str(e)}",
         )
 
     return {
