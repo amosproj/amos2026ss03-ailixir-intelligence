@@ -4,8 +4,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import firebase_admin
 from firebase_admin import credentials, auth
 
-# ── Firebase App Initialization ───────────────────────────────────────────────
-# Runs once on startup. Reads your service account key from the path in env var.
 _FIREBASE_CRED_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
 
 if not firebase_admin._apps:

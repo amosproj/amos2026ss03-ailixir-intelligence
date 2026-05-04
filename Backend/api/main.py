@@ -1,8 +1,22 @@
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from auth import get_current_user
 
-app = FastAPI(title="My API", version="1.0.0")
+app = FastAPI(
+    title="Document Processing API",
+    version="1.0.0",
+    description="""
+## API end points for ALIXIR Intelligence
+""",
+    contact={
+        "name": "Hasnat Ahmed",
+        "email": "hasnatahmed331@gmail.com",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,27 +27,47 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["System"],
+    summary="Health Check",
+    response_description="API is running",
+)
 def health():
     return {"status": "ok"}
 
 
-@app.post("/documents/upload", status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/documents/upload",
+    status_code=status.HTTP_201_CREATED,
+    tags=["Documents"],
+    summary="Upload a document",
+    response_description="Upload confirmation with job ID",
+    responses={
+        201: {"description": "Document uploaded and queued successfully"},
+        401: {"description": "Missing or invalid Firebase token"},
+        413: {"description": "File exceeds 10 MB size limit"},
+        415: {"description": "Unsupported file type"},
+    },
+)
 async def upload_document(
-    file: UploadFile = File(...),
+    file: UploadFile = File(
+        ..., description="PDF, JPEG, PNG, or plain text. Max 10 MB."
+    ),
     user: dict = Depends(get_current_user),
 ):
     """
-    Upload a document.  Only accessible with a valid Firebase ID token.
+    Upload a document for processing.
 
-    `user` is injected automatically and contains:
-        user["uid"]   → Firebase user ID  (use as DB key, storage path, etc.)
-        user["email"] → e.g. "alice@example.com"
+    - Validates file type and size
+    - Queues a processing job in Pub/Sub (TODO)
+    - Returns a job ID to poll for results
+
+    **Requires:** `Authorization: Bearer <firebase_id_token>`
     """
     uid = user["uid"]
     email = user["email"]
 
-    # ── Basic file validation ─────────────────────────────────────────────────
     ALLOWED_TYPES = {"application/pdf", "image/jpeg", "image/png", "text/plain"}
     MAX_SIZE_MB = 10
 
@@ -50,7 +84,7 @@ async def upload_document(
             detail=f"File exceeds {MAX_SIZE_MB} MB limit.",
         )
 
-    # ── TODO: Logic for uploading Task to pub sub
+    # TODO: publish to Pub/Sub
 
     return {
         "message": "Document uploaded successfully.",
@@ -61,8 +95,55 @@ async def upload_document(
     }
 
 
-# ── Example: a second protected endpoint showing user info ───────────────────
-@app.get("/me")
+@app.get(
+    "/me",
+    tags=["Auth"],
+    summary="Get current user",
+    response_description="Decoded Firebase token claims",
+    responses={
+        200: {"description": "User profile from Firebase token"},
+        401: {"description": "Missing or invalid Firebase token"},
+    },
+)
 def get_me(user: dict = Depends(get_current_user)):
-    """Returns the authenticated user's profile from the token."""
+    """
+    Returns the authenticated user's profile decoded from their Firebase token.
+
+    Useful for verifying auth is working end-to-end.
+
+    **Requires:** `Authorization: Bearer <firebase_id_token>`
+    """
     return user
+
+
+# FastAPI auto-generates a schema, but we patch it here to inject the
+# HTTP Bearer security scheme so Swagger UI shows the Authorize button.
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    # Teach Swagger UI that this API uses Bearer tokens
+    schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Paste your Firebase ID token (without the 'Bearer ' prefix)",
+        }
+    }
+
+    # Apply globally — every endpoint gets the lock icon
+    schema["security"] = [{"BearerAuth": []}]
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
