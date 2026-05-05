@@ -17,7 +17,9 @@ from pydantic import BaseModel
 from api.auth import get_current_user
 from shared.models.document import DocumentStatus
 from shared.repositories.documents import create_document
+from dotenv import load_dotenv
 
+load_dotenv()
 app = FastAPI(
     title="Document Processing API",
     version="1.0.0",
