@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { CButton } from '@/components/atoms';
+import { CameraButton } from '@/components/molecules';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
 function getDevMenuHint() {
@@ -58,6 +59,8 @@ export default function HomeScreen() {
         <Link href="/upload" asChild>
           <CButton>Go to Upload</CButton>
         </Link>
+
+        <CameraButton onPhoto={(photo) => alert('Photo taken: ' + photo.uri)} />
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
