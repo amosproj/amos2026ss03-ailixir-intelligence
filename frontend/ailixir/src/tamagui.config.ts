@@ -1,7 +1,9 @@
 import { defaultConfig } from '@tamagui/config/v5';
-import { createTamagui } from 'tamagui';
+import { createTamagui, createTokens } from 'tamagui';
+import { themes } from './themes';
 
-export const config = createTamagui(defaultConfig);
+const tokens = createTokens({});
+export const config = createTamagui({ ...defaultConfig, themes });
 
 export type AppConfig = typeof config;
 
