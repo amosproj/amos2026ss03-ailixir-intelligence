@@ -1,0 +1,10 @@
+neo4j==6.1.0
+numpy==2.4.4
+openai==2.34.0
+opencv_contrib_python==4.10.0.84
+opencv_python==4.12.0.88
+paddleocr==3.5.0
+Pillow==12.2.0
+protobuf==3.20.2
+pydantic==2.13.3
+python-dotenv==1.2.2

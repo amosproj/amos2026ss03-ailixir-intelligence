@@ -1,0 +1,986 @@
+{
+  "schema_json": {
+    "entities": {
+      "person": [
+        {
+          "id": "medical:doctor:sunita_verma",
+          "type": "doctor",
+          "name": "Dr. Sunita Verma",
+          "gender": null,
+          "date_of_birth": null
+        },
+        {
+          "id": "medical:doctor:poonam_lata_singh",
+          "type": "doctor",
+          "name": "Dr. Poonam Lata Singh",
+          "gender": null,
+          "date_of_birth": null
+        },
+        {
+          "id": "medical:doctor:netra_singh",
+          "type": "doctor",
+          "name": "Dr. Netra Singh",
+          "gender": null,
+          "date_of_birth": null
+        }
+      ],
+      "clinical_event": [
+        {
+          "id": "medical:event:lab:2025-04-25",
+          "type": "lab",
+          "datetime": "2025-04-25",
+          "status": null,
+          "notes": null
+        }
+      ],
+      "condition": [],
+      "medication": [],
+      "observation": [
+        {
+          "id": "medical:observation:ph:1",
+          "name": "PH",
+          "type": "lab",
+          "value": "7.0",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:specific_gravity:1",
+          "name": "SPECIFIC GRAVITY",
+          "type": "lab",
+          "value": "1.020",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:protein:1",
+          "name": "PROTEIN",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:glucose:1",
+          "name": "GLUCOSE",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:ketones:1",
+          "name": "KETONES",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:blood:1",
+          "name": "BLOOD",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:bilirubin:1",
+          "name": "BILIRUBIN",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:urobilinogen:1",
+          "name": "UROBILINOGEN",
+          "type": "lab",
+          "value": "NORMAL",
+          "unit": null,
+          "reference_range": null,
+          "flag": "normal",
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:nitrite:1",
+          "name": "NITRITE",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:leukocyte_esterase:1",
+          "name": "LEUKOCYTE ESTERASE",
+          "type": "lab",
+          "value": "NEGATIVE",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:red_blood_cells:1",
+          "name": "RED BLOOD CELLS",
+          "type": "lab",
+          "value": "NOT DETECTED",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:blood_urea_nitrogen:1",
+          "name": "BLOOD UREA NITROGEN",
+          "type": "lab",
+          "value": "8",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:creatinine:1",
+          "name": "CREATININE",
+          "type": "lab",
+          "value": "0.61",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:bun_creat_ratio:1",
+          "name": "BUN/CREAT RATIO",
+          "type": "lab",
+          "value": "13.11",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:sodium:1",
+          "name": "SODIUM",
+          "type": "lab",
+          "value": "138",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:potassium:1",
+          "name": "POTASSIUM",
+          "type": "lab",
+          "value": "3.92",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:chloride:1",
+          "name": "CHLORIDE",
+          "type": "lab",
+          "value": "103",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:uric_acid:1",
+          "name": "URIC ACID",
+          "type": "lab",
+          "value": "5.3",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:aspartate_aminotransferase:1",
+          "name": "ASPARTATE AMINOTRANSFERASE (AST/SGOT)",
+          "type": "lab",
+          "value": "28",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:alanine_aminotransferase:1",
+          "name": "ALANINE AMINOTRANSFERASE (ALT/SGPT)",
+          "type": "lab",
+          "value": "30",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:alkaline_phosphatase:1",
+          "name": "ALKALINE PHOSPHATASE",
+          "type": "lab",
+          "value": "263",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:bilirubin_total:1",
+          "name": "BILIRUBIN, TOTAL",
+          "type": "lab",
+          "value": "0.61",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:bilirubin_direct:1",
+          "name": "BILIRUBIN, DIRECT",
+          "type": "lab",
+          "value": "0.10",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:bilirubin_indirect:1",
+          "name": "BILIRUBIN, INDIRECT",
+          "type": "lab",
+          "value": "0.51",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:gamma_glutamyl_transferase:1",
+          "name": "GAMMA GLUTAMYL TRANSFERASE (GGT)",
+          "type": "lab",
+          "value": "26",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        },
+        {
+          "id": "medical:observation:lactate_dehydrogenase:1",
+          "name": "LACTATE DEHYDROGENASE",
+          "type": "lab",
+          "value": "219",
+          "unit": null,
+          "reference_range": null,
+          "flag": null,
+          "datetime": "2025-04-25"
+        }
+      ],
+      "document": [
+        {
+          "id": "medical:document:discharge_summary:1",
+          "type": "discharge",
+          "source": "Fortis Hospital",
+          "date": "2025-04-27"
+        }
+      ]
+    },
+    "relations": [
+      {
+        "type": "ATTENDED_BY",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:doctor:sunita_verma"
+      },
+      {
+        "type": "ATTENDED_BY",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:doctor:poonam_lata_singh"
+      },
+      {
+        "type": "ATTENDED_BY",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:doctor:netra_singh"
+      },
+      {
+        "type": "SOURCE_OF",
+        "from": "medical:document:discharge_summary:1",
+        "to": "medical:event:lab:2025-04-25"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:ph:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:specific_gravity:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:protein:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:glucose:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:ketones:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:blood:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:bilirubin:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:urobilinogen:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:nitrite:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:leukocyte_esterase:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:red_blood_cells:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:blood_urea_nitrogen:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:creatinine:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:bun_creat_ratio:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:sodium:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:potassium:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:chloride:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:uric_acid:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:aspartate_aminotransferase:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:alanine_aminotransferase:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:alkaline_phosphatase:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:bilirubin_total:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:bilirubin_direct:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:bilirubin_indirect:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:gamma_glutamyl_transferase:1"
+      },
+      {
+        "type": "HAS_OBSERVATION",
+        "from": "medical:event:lab:2025-04-25",
+        "to": "medical:observation:lactate_dehydrogenase:1"
+      }
+    ],
+    "metadata": null
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "medical:document:discharge_summary:1",
+        "labels": [
+          "Document"
+        ],
+        "properties": {
+          "type": "discharge",
+          "source": "Fortis Hospital",
+          "date": "2025-04-27"
+        }
+      },
+      {
+        "id": "medical:doctor:sunita_verma",
+        "labels": [
+          "Person"
+        ],
+        "properties": {
+          "name": "Dr. Sunita Verma",
+          "type": "doctor"
+        }
+      },
+      {
+        "id": "medical:doctor:poonam_lata_singh",
+        "labels": [
+          "Person"
+        ],
+        "properties": {
+          "name": "Dr. Poonam Lata Singh",
+          "type": "doctor"
+        }
+      },
+      {
+        "id": "medical:doctor:netra_singh",
+        "labels": [
+          "Person"
+        ],
+        "properties": {
+          "name": "Dr. Netra Singh",
+          "type": "doctor"
+        }
+      },
+      {
+        "id": "medical:event:lab:2025-04-25",
+        "labels": [
+          "ClinicalEvent"
+        ],
+        "properties": {
+          "type": "lab",
+          "datetime": "2025-04-25"
+        }
+      },
+      {
+        "id": "medical:observation:ph:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "PH",
+          "value": "7.0",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:specific_gravity:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "SPECIFIC GRAVITY",
+          "value": "1.020",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:protein:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "PROTEIN",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:glucose:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "GLUCOSE",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:ketones:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "KETONES",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:blood:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BLOOD",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:bilirubin:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BILIRUBIN",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:urobilinogen:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "UROBILINOGEN",
+          "value": "NORMAL",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:nitrite:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "NITRITE",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:leukocyte_esterase:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "LEUKOCYTE ESTERASE",
+          "value": "NEGATIVE",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:red_blood_cells:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "RED BLOOD CELLS",
+          "value": "NOT DETECTED",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:blood_urea_nitrogen:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BLOOD UREA NITROGEN",
+          "value": "8",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:creatinine:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "CREATININE",
+          "value": "0.61",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:bun_creat_ratio:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BUN/CREAT RATIO",
+          "value": "13.11",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:sodium:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "SODIUM",
+          "value": "138",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:potassium:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "POTASSIUM",
+          "value": "3.92",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:chloride:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "CHLORIDE",
+          "value": "103",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:uric_acid:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "URIC ACID",
+          "value": "5.3",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:aspartate_aminotransferase:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "ASPARTATE AMINOTRANSFERASE (AST/SGOT)",
+          "value": "28",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:alanine_aminotransferase:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "ALANINE AMINOTRANSFERASE (ALT/SGPT)",
+          "value": "30",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:alkaline_phosphatase:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "ALKALINE PHOSPHATASE",
+          "value": "263",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:bilirubin_total:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BILIRUBIN, TOTAL",
+          "value": "0.61",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:bilirubin_direct:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BILIRUBIN, DIRECT",
+          "value": "0.10",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:bilirubin_indirect:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "BILIRUBIN, INDIRECT",
+          "value": "0.51",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:gamma_glutamyl_transferase:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "GAMMA GLUTAMYL TRANSFERASE (GGT)",
+          "value": "26",
+          "type": "lab"
+        }
+      },
+      {
+        "id": "medical:observation:lactate_dehydrogenase:1",
+        "labels": [
+          "Observation"
+        ],
+        "properties": {
+          "name": "LACTATE DEHYDROGENASE",
+          "value": "219",
+          "type": "lab"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "medical:document:discharge_summary:1",
+        "type": "SOURCE_OF",
+        "target": "medical:event:lab:2025-04-25",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "ATTENDED_BY",
+        "target": "medical:doctor:sunita_verma",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "ATTENDED_BY",
+        "target": "medical:doctor:poonam_lata_singh",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "ATTENDED_BY",
+        "target": "medical:doctor:netra_singh",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:ph:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:specific_gravity:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:protein:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:glucose:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:ketones:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:blood:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:bilirubin:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:urobilinogen:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:nitrite:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:leukocyte_esterase:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:red_blood_cells:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:blood_urea_nitrogen:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:creatinine:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:bun_creat_ratio:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:sodium:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:potassium:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:chloride:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:uric_acid:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:aspartate_aminotransferase:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:alanine_aminotransferase:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:alkaline_phosphatase:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:bilirubin_total:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:bilirubin_direct:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:bilirubin_indirect:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:gamma_glutamyl_transferase:1",
+        "properties": {}
+      },
+      {
+        "source": "medical:event:lab:2025-04-25",
+        "type": "HAS_OBSERVATION",
+        "target": "medical:observation:lactate_dehydrogenase:1",
+        "properties": {}
+      }
+    ]
+  }
+}

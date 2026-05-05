@@ -1,0 +1,29 @@
+
+# =========================
+# Gemini configuration
+# =========================
+GEMINI_MODEL=
+GEMINI_API_KEY= 
+#=========================
+# Pipeline mode
+# =========================
+# Options:
+# ocr_then_gemini_text
+# gemini_vision_single
+# gemini_graph_single
+PIPELINE_MODE=gemini_graph_single
+
+# =========================
+# Feature toggles
+# =========================
+ENABLE_NEO4J=true
+
+# =========================
+# Neo4j configuration (Aura)
+# =========================
+NEO4J_USERNAME=
+NEO4J_URI=
+NEO4J_PASSWORD=
+NEO4J_DATABASE=
+AURA_INSTANCEID=
+AURA_INSTANCENAME=
