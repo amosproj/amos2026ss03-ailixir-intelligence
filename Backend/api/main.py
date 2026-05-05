@@ -11,13 +11,27 @@ Run from the `Backend/` directory:
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 
 from api.auth import get_current_user
 from shared.models.document import DocumentStatus
 from shared.repositories.documents import create_document
 
-app = FastAPI(title="Ailixir Documents API", version="1.0.0")
+app = FastAPI(
+    title="Document Processing API",
+    version="1.0.0",
+    description="""
+## API end points for ALIXIR Intelligence
+""",
+    contact={
+        "name": "Hasnat Ahmed",
+        "email": "hasnatahmed331@gmail.com",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 # CORS only matters to browser clients. React Native does not enforce it. The
 # middleware is kept so the FastAPI Swagger UI at /docs works during local dev.
@@ -41,14 +55,31 @@ _ALLOWED_TYPES = {"application/pdf", "image/jpeg", "image/png", "text/plain"}
 _MAX_SIZE_BYTES = 10 * 1024 * 1024
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["System"],
+    summary="Health Check",
+    response_description="API is running",
+)
 def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/me")
+@app.get(
+    "/me",
+    tags=["Auth"],
+    summary="Get current user",
+    response_description="Decoded Firebase token claims",
+    responses={
+        200: {"description": "User profile from Firebase token"},
+        401: {"description": "Missing or invalid Firebase token"},
+    },
+)
 def get_me(user: dict = Depends(get_current_user)) -> dict:
-    """Return the authenticated user's profile derived from their Firebase token."""
+    """Return the authenticated user's profile derived from their Firebase token.
+
+    Useful for verifying auth is working end-to-end.
+    """
     return user
 
 
@@ -56,9 +87,20 @@ def get_me(user: dict = Depends(get_current_user)) -> dict:
     "/documents/upload",
     status_code=status.HTTP_201_CREATED,
     response_model=UploadDocumentResponse,
+    tags=["Documents"],
+    summary="Upload a document",
+    response_description="Document tracking record created",
+    responses={
+        201: {"description": "Document accepted; tracking record created in Firestore"},
+        401: {"description": "Missing or invalid Firebase token"},
+        413: {"description": "File exceeds 10 MB size limit"},
+        415: {"description": "Unsupported file type"},
+    },
 )
 async def upload_document(
-    file: UploadFile = File(...),
+    file: UploadFile = File(
+        ..., description="PDF, JPEG, PNG, or plain text. Max 10 MB."
+    ),
     user: dict = Depends(get_current_user),
 ) -> UploadDocumentResponse:
     """Accept a document upload and create a tracking record in Firestore.
@@ -106,3 +148,34 @@ async def upload_document(
         file_name=document.file_name,
         size_bytes=document.size_bytes,
     )
+
+
+# FastAPI auto-generates an OpenAPI schema. We patch it here to inject the HTTP
+# Bearer security scheme so the Swagger UI at /docs shows an "Authorize" button.
+# Without this, devs have to paste tokens into curl manually for every request.
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Paste your Firebase ID token (without the 'Bearer ' prefix)",
+        }
+    }
+    schema["security"] = [{"BearerAuth": []}]
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
