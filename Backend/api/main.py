@@ -22,7 +22,7 @@ app = FastAPI(
     title="Document Processing API",
     version="1.0.0",
     description="""
-## API end points for ALIXIR Intelligence
+## API endpoints for Ailixir Intelligence
 """,
     contact={
         "name": "Hasnat Ahmed",
