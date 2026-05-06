@@ -1,11 +1,7 @@
 import { AuxiliaryOverview, ListFilters } from '@/components/molecules';
 import { DocumentsAction } from '@/components/molecules/documents-action';
-<<<<<<< HEAD
-import { DocumentsList } from '@/components/organisms';
-=======
-import DocumentsList from '@/components/organisms/documents-list';
->>>>>>> d964cd2 (feat: refactor documents screen into modular components)
 
+import { DocumentsList } from '@/components/organisms/documents-list';
 import { Document } from '@/interfaces/document';
 import React, { useState } from 'react';
 import { YStack } from 'tamagui';
