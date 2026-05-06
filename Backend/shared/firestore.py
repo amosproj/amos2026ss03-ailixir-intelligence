@@ -12,13 +12,22 @@ That makes local development and CI tests possible without a real service accoun
 
 import os
 import threading
+from pathlib import Path
 
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1 import Client
 
-_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "amos26-7b955")
-_CRED_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "api/serviceAccountKey.json")
+# Backend root is the parent of this `shared/` directory. Resolving once at import
+# time avoids surprises from changing working directories (e.g. uvicorn vs pytest).
+BACKEND_ROOT = Path(__file__).resolve().parent.parent
+
+_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "amos26")
+_KEY_RELATIVE_PATH = os.getenv(
+    "FIREBASE_KEY_RELATIVE_PATH",
+    "secrets/serviceAccountKey.json",
+)
+_KEY_PATH = BACKEND_ROOT / _KEY_RELATIVE_PATH
 
 _init_lock = threading.Lock()
 _db: Client | None = None
@@ -41,9 +50,17 @@ def ensure_firebase_app() -> None:
             return
         if _emulator_mode():
             firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
-        else:
-            cred = credentials.Certificate(_CRED_PATH)
-            firebase_admin.initialize_app(cred)
+            return
+        if not _KEY_PATH.exists():
+            raise FileNotFoundError(
+                f"Firebase service account key not found.\n"
+                f"  Expected at: {_KEY_PATH}\n"
+                f"  Backend root: {BACKEND_ROOT}\n"
+                f"  Relative path: {_KEY_RELATIVE_PATH}\n"
+                f"Set FIREBASE_KEY_RELATIVE_PATH to override the default location."
+            )
+        cred = credentials.Certificate(str(_KEY_PATH))
+        firebase_admin.initialize_app(cred)
 
 
 def get_firestore() -> Client:

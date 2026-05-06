@@ -27,6 +27,8 @@ serviceAccountKey.json
 *-serviceAccountKey.json
 *.firebase-credentials.json
 gcp-credentials.json
+Backend/secrets/
+secrets/
 
 # Firebase emulator artifacts
 .firebase/
