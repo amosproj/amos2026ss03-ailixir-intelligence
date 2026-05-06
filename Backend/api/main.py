@@ -152,9 +152,11 @@ async def upload_document(
     )
 
 
-# FastAPI auto-generates an OpenAPI schema. We patch it here to inject the HTTP
-# Bearer security scheme so the Swagger UI at /docs shows an "Authorize" button.
-# Without this, devs have to paste tokens into curl manually for every request.
+# FastAPI auto-generates an OpenAPI schema and emits a `HTTPBearer` security scheme
+# whenever a route uses `Depends(HTTPBearer())` — which `get_current_user` does.
+# We just decorate the auto-generated entry with `bearerFormat` and a description so
+# the Swagger UI Authorize dialog shows useful guidance. Replacing the scheme outright
+# would break the per-endpoint `security` references FastAPI already wired up.
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -166,15 +168,12 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    schema["components"]["securitySchemes"] = {
-        "BearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-            "description": "Paste your Firebase ID token (without the 'Bearer ' prefix)",
-        }
-    }
-    schema["security"] = [{"BearerAuth": []}]
+    schemes = schema.get("components", {}).get("securitySchemes", {})
+    if "HTTPBearer" in schemes:
+        schemes["HTTPBearer"]["bearerFormat"] = "JWT"
+        schemes["HTTPBearer"]["description"] = (
+            "Paste your Firebase ID token (without the 'Bearer ' prefix)"
+        )
 
     app.openapi_schema = schema
     return app.openapi_schema

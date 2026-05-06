@@ -1,65 +1,63 @@
-import os
-from pathlib import Path
+"""
+Firebase ID-token authentication for FastAPI endpoints.
+
+Inject `get_current_user` as a dependency on any route that should require a
+signed-in user. The function verifies the bearer token against Firebase Auth and
+returns the decoded user info, or raises 401 if the token is bad.
+
+Credential loading and Firebase app initialisation live in `shared/firestore.py`
+so the API and workers go through one place. Auth code itself stays focused on
+"verify a token, return a user."
+"""
+
+import logging
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from firebase_admin import auth
 
-import firebase_admin
-from firebase_admin import credentials, auth
+from shared.firestore import ensure_firebase_app
 
-# auth.py is inside: Backend/api/auth.py
-# Backend root is:   Backend/
-BACKEND_ROOT = Path(__file__).resolve().parent.parent
-
-FIREBASE_KEY_RELATIVE_PATH = os.getenv(
-    "FIREBASE_KEY_RELATIVE_PATH",
-    "shared/keys/amos26-firebase-adminsdk-fbsvc-c05787eb8f.json",
-)
-
-FIREBASE_KEY_PATH = BACKEND_ROOT / FIREBASE_KEY_RELATIVE_PATH
-
-
-if not firebase_admin._apps:
-    if not FIREBASE_KEY_PATH.exists():
-        raise FileNotFoundError(
-            f"Firebase key file not found.\n"
-            f"Resolved path: {FIREBASE_KEY_PATH}\n"
-            f"auth.py location: {Path(__file__).resolve()}\n"
-            f"Backend root: {BACKEND_ROOT}\n"
-            f"Relative key path: {FIREBASE_KEY_RELATIVE_PATH}"
-        )
-
-    cred = credentials.Certificate(str(FIREBASE_KEY_PATH))
-    firebase_admin.initialize_app(cred)
-
-
+_log = logging.getLogger(__name__)
 _bearer_scheme = HTTPBearer()
 
 
 def get_current_user(
-    credentials_obj: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    creds: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> dict:
-    token = credentials_obj.credentials
+    """Verify a Firebase ID token and return the decoded user info.
+
+    Returns a dict with `uid` and optionally `email`, `name`, and `email_verified`.
+    Raises HTTP 401 on any token-level failure. Infrastructure errors (e.g. unable
+    to reach Google's certificate endpoint) propagate as 500, which is correct —
+    those are not auth failures and the client retrying the same token won't help.
+    """
+    ensure_firebase_app()
 
     try:
-        decoded = auth.verify_id_token(token)
-
+        decoded = auth.verify_id_token(creds.credentials)
     except auth.ExpiredIdTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired. Please re-authenticate.",
         )
-
-    except auth.InvalidIdTokenError:
+    except auth.RevokedIdTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked.",
+        )
+    except auth.UserDisabledError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is disabled.",
         )
-
-    except Exception:
+    except (auth.InvalidIdTokenError, ValueError) as e:
+        # Generic message to the client; full reason logged server-side so we can
+        # debug invalid tokens without leaking auth internals to attackers.
+        _log.warning("invalid_id_token: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed.",
+            detail="Invalid token.",
         )
 
     return {
