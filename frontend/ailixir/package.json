@@ -33,6 +33,7 @@
     "expo-symbols": "~55.0.7",
     "expo-system-ui": "~55.0.15",
     "expo-web-browser": "~55.0.14",
+    "firebase": "^12.13.0",
     "jotai": "^2.20.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
