@@ -1,0 +1,99 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, "chore/issue-47-CI/CD-for-Backend"]
+    paths: ["Backend/**"]
+  pull_request:
+    paths: ["Backend/**"]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          cd Backend
+          pip install -r api/requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          cd Backend
+          flake8 api --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 api --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Verify application starts
+        run: |
+          cd Backend
+          timeout 10s uvicorn api.main:app --host 0.0.0.0 --port 8000 || [ $? -eq 124 ]
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: gcloud auth configure-docker --quiet
+
+      - name: Terraform Init
+        working-directory: Backend/terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: Backend/terraform
+        run: |
+          terraform plan -no-color -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: Backend/terraform
+        run: |
+          terraform apply -auto-approve tfplan
+
+      - name: Get Service URL
+        id: service-url
+        working-directory: Backend/terraform
+        run: |
+          SERVICE_URL=$(terraform output -raw service_url)
+          echo "Service URL: $SERVICE_URL"
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        run: |
+          cd Backend
+          IMAGE_TAG="gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:${{ github.sha }}"
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ailixir-backend \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:${{ github.sha }} \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
