@@ -46,8 +46,12 @@ dist/
 .idea/
 out/
 
-# Eclipse IDE
-.project
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
 bin/
 
 # MacOS
