@@ -2,7 +2,7 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [main, "chore/issue-47-CI/CD-for-Backend"]
+    branches: [main, "chore/issue-47-CI/CD-for-Backend","feature/**"]
     paths: ["Backend/**"]
   pull_request:
     paths: ["Backend/**"]
