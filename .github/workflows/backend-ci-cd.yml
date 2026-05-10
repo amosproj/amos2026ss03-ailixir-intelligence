@@ -78,6 +78,13 @@ jobs:
         working-directory: Backend/terraform
         run: terraform init
 
+      - name: Import existing Cloud Run service
+        working-directory: Backend/terraform
+        run: |
+          if gcloud run services describe ailixir-backend --region=europe-west3 --project=${{ secrets.GCP_PROJECT_ID }} > /dev/null 2>&1; then
+            terraform import google_cloud_run_service.backend projects/${{ secrets.GCP_PROJECT_ID }}/locations/europe-west3/services/ailixir-backend
+          fi
+
       - name: Terraform Plan
         working-directory: Backend/terraform
         run: terraform plan -no-color -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan
