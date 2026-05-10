@@ -2,10 +2,10 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [main, "chore/issue-47-CI/CD-for-Backend","feature/**"]
-    paths: ["Backend/**"]
+    branches: [main, "chore/issue-47-CI/CD-for-Backend", "feature/**"]
+    paths: ["Backend/**", ".github/workflows/backend-ci-cd.yml"]
   pull_request:
-    paths: ["Backend/**"]
+    paths: ["Backend/**", ".github/workflows/backend-ci-cd.yml"]
 
 jobs:
   ci:
@@ -38,7 +38,7 @@ jobs:
 
   deploy:
     # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    if : success()
+    if: success()
     needs: ci
     runs-on: ubuntu-latest
     steps:
