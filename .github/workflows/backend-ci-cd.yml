@@ -36,53 +36,53 @@ jobs:
           cd Backend
           timeout 10s uvicorn api.main:app --host 0.0.0.0 --port 8000 || [ $? -eq 124 ]
 
-deploy:
-  # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  deploy:
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-  if: success()
-  needs: ci
-  runs-on: ubuntu-latest
+    if: success()
+    needs: ci
+    runs-on: ubuntu-latest
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-    - name: Configure Docker
-      run: gcloud auth configure-docker --quiet
+      - name: Configure Docker
+        run: gcloud auth configure-docker --quiet
 
-    # ✅ 1. BUILD IMAGE FIRST
-    - name: Build Docker image
-      run: |
-        cd Backend
-        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest .
+      # ✅ 1. BUILD IMAGE FIRST
+      - name: Build Docker image
+        run: |
+          cd Backend
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest .
 
-    # ✅ 2. PUSH IMAGE SECOND
-    - name: Push Docker image
-      run: |
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest
+      # ✅ 2. PUSH IMAGE SECOND
+      - name: Push Docker image
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest
 
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: "1.5.0"
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
 
-    - name: Terraform Init
-      working-directory: Backend/terraform
-      run: terraform init
+      - name: Terraform Init
+        working-directory: Backend/terraform
+        run: terraform init
 
-    - name: Terraform Plan
-      working-directory: Backend/terraform
-      run: terraform plan -no-color -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan
+      - name: Terraform Plan
+        working-directory: Backend/terraform
+        run: terraform plan -no-color -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan
 
-    # ✅ 3. APPLY ONLY AFTER IMAGE EXISTS
-    - name: Terraform Apply
-      working-directory: Backend/terraform
-      run: terraform apply -auto-approve tfplan
+      # ✅ 3. APPLY ONLY AFTER IMAGE EXISTS
+      - name: Terraform Apply
+        working-directory: Backend/terraform
+        run: terraform apply -auto-approve tfplan
