@@ -37,7 +37,8 @@ jobs:
           timeout 10s uvicorn api.main:app --host 0.0.0.0 --port 8000 || [ $? -eq 124 ]
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if : success()
     needs: ci
     runs-on: ubuntu-latest
     steps:
