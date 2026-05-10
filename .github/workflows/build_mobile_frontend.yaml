@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - "**"
+    paths: ##only triggered on the change of front-end files 
+      - "frontend/**"
+      - ".github/workflows/buildmobile_frontend.yaml"
       # - main
   workflow_dispatch:
   # release:
