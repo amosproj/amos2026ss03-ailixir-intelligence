@@ -76,10 +76,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: Backend/terraform
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.GCP_TF_STATE_BUCKET }}" \
-            -backend-config="prefix=ailixir-backend"
+        run: terraform init -reconfigure
 
       - name: Import existing Cloud Run service
         working-directory: Backend/terraform
