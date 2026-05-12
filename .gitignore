@@ -29,6 +29,7 @@ serviceAccountKey.json
 gcp-credentials.json
 Backend/secrets/
 secrets/
+Backend/shared/keys
 
 # Firebase emulator artifacts
 .firebase/
