@@ -11,7 +11,7 @@ export const DocumentsList = ({ documents }: DocumentsListProps) => {
     <ScrollView showsVerticalScrollIndicator>
       <YStack mt={10} gap={10}>
         {documents.map((document) => (
-          <DocumentListItem key={document.title} document={document} />
+          <DocumentListItem key={document.id} document={document} />
         ))}
       </YStack>
     </ScrollView>
