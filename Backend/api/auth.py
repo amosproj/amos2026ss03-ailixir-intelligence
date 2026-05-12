@@ -1,13 +1,17 @@
 """
-Firebase ID-token authentication for FastAPI endpoints.
+Firebase identity operations for the API service.
 
-Inject `get_current_user` as a dependency on any route that should require a
-signed-in user. The function verifies the bearer token against Firebase Auth and
-returns the decoded user info, or raises 401 if the token is bad.
+Two distinct responsibilities live here:
+
+1. Token verification — `get_current_user` is the FastAPI dependency that turns
+   an `Authorization: Bearer <id_token>` header into a decoded user dict.
+2. User administration — `create_firebase_user` / `delete_firebase_user` wrap
+   the Firebase Admin SDK calls used during signup. Keeping these as thin
+   wrappers gives us one place to log, transform, or replace the underlying
+   call without touching every caller.
 
 Credential loading and Firebase app initialisation live in `shared/firestore.py`
-so the API and workers go through one place. Auth code itself stays focused on
-"verify a token, return a user."
+so the API and workers go through one place.
 """
 
 import logging
@@ -66,3 +70,39 @@ def get_current_user(
         "name": decoded.get("name"),
         "email_verified": decoded.get("email_verified", False),
     }
+
+
+def create_firebase_user(
+    *,
+    email: str,
+    password: str,
+    display_name: str,
+) -> str:
+    """Create a Firebase Auth user and return their UID.
+
+    Re-raises `firebase_admin.auth.EmailAlreadyExistsError` so the caller can map
+    it to an HTTP 409, and `ValueError` for inputs that pass our Pydantic gates
+    but fail the Admin SDK's own rules (e.g. password edge cases). Any other
+    exception bubbles up as a 500.
+    """
+    ensure_firebase_app()
+    record = auth.create_user(
+        email=email,
+        password=password,
+        display_name=display_name,
+    )
+    _log.info("firebase_user_created uid=%s", record.uid)
+    return record.uid
+
+
+def delete_firebase_user(uid: str) -> None:
+    """Delete a Firebase Auth user.
+
+    Used as the compensating action when a signup writes the Auth record but
+    fails to write the Firestore profile. Best-effort: callers should catch and
+    log failures rather than re-raise, since the original error is what we want
+    to surface to the client.
+    """
+    ensure_firebase_app()
+    auth.delete_user(uid)
+    _log.info("firebase_user_deleted uid=%s", uid)
