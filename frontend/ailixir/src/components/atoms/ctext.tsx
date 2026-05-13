@@ -1,26 +1,30 @@
 import { styled, Text } from 'tamagui';
+import { typography } from '../../constants/typography';
 
 export const CText = styled(Text, {
+  fontFamily: '$body',
   variants: {
     variant: {
+      h1: {
+        ...typography.h1,
+      },
+      h2: {
+        ...typography.h2,
+      },
       title: {
-        fontSize: 28,
-        fontWeight: '500',
+        ...typography.h1,
       },
       subtitle: {
-        fontSize: 20,
-        fontWeight: '500',
+        ...typography.h2,
       },
       lead: {
-        fontSize: 16,
-        fontWeight: '400',
+        ...typography.lead,
       },
       body: {
-        fontSize: 14,
+        ...typography.body,
       },
       caption: {
-        fontSize: 12,
-        color: '#7B7B7B',
+        ...typography.caption,
       },
     },
     bold: {

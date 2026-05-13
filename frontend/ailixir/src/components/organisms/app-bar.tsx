@@ -10,9 +10,7 @@ export function AppBar() {
     <>
       <XStack gap={10} justify="space-between" width={300}>
         <CButton icon={ChevronLeft} onPress={() => router.back()}></CButton>
-        <CText fontSize={40} fontWeight="bold">
-          AiLixir
-        </CText>
+        <CText variant="h1">AiLixir</CText>
         <Circle size={40} background="blue" />
       </XStack>
     </>

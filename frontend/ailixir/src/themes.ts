@@ -62,6 +62,15 @@ const accentDark = {
   accent12: 'hsla(250, 50%, 95%, 1)',
 };
 
+// Custom background colors for light and dark themes
+const backgroundLight = {
+  background: '#FFFFFF',
+};
+
+const backgroundDark = {
+  background: '#1a1a1a',
+};
+
 const builtThemes = createV5Theme({
   darkPalette,
   lightPalette,
@@ -86,6 +95,12 @@ const builtThemes = createV5Theme({
     success: {
       light: green,
       dark: greenDark,
+    },
+
+    // Custom background theme
+    background: {
+      light: backgroundLight,
+      dark: backgroundDark,
     },
   },
 });
