@@ -1,0 +1,51 @@
+Title	URL	Assignees	Status	Estimated size	Real size	Labels
+Generate Embeddings	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/60		Future Issues (Placeholder)			Backend, Blocked, medium priority
+Preview of Uploaded Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/12		Future Issues (Placeholder)			Frontend, medium priority
+Implement Welcome Screen with Appropriate Navigation Options	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/13		Future Issues (Placeholder)			Frontend, medium priority
+Finance Dashboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/20		Future Issues (Placeholder)			Frontend, low priority
+Medical Dashboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/19		Future Issues (Placeholder)			Frontend, low priority
+Documents and Metadata should be shared to configure/run model (OCR, etc.)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/7		Future Issues (Placeholder)			
+Docker GCP Reminder	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/64		Future Issues (Placeholder)			
+Document API: Knowledge Extraction	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/65		Future Issues (Placeholder)			
+Medical Document Extraction Pipeline	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/76		Future Issues (Placeholder)			Backend, high priority
+Voice Chat Backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/56		Future Issues (Placeholder)			Backend, medium priority
+Set up RAG DB	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/24	hasnatahmed331	Future Issues (Placeholder)	3		Backend, medium priority
+User Documentation	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/70		Future Issues (Placeholder)			
+Storage and Provisioning of a Knowledge Graph for the LLM	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/72		Future Issues (Placeholder)			Backend, high priority, parent issue
+Implement Graph Retrieval Interface for Subgraph Extraction	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/74		Future Issues (Placeholder)			Backend, low priority, Slice 2
+Knowledge Graph Context into LLM Prompts	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/75		Future Issues (Placeholder)			Backend, low priority, Slice 1
+Knowledge Graph Download Button	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/55		Product Backlog			Frontend, high priority
+UI for Knowledge Extraction	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/71		Product Backlog			Frontend, high priority, visual
+User Registration (Functionality)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/68		Product Backlog			Frontend, medium priority
+Extracting Knowledge Graphs from Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/44	Hossam-Amer, MuhammadZeeshan2	Product Backlog			Backend, high priority
+Backend Deployment: Knowledge Graph Components	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/89		Product Backlog			Backend, high priority
+Storing Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/86		Product Backlog			Backend, high priority
+Storing Knowledge Graphs	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/73		Product Backlog			Backend, high priority
+Connecting Document Views to Backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/69		Product Backlog			Blocked, Frontend, high priority
+Backend API for Knowledge Graph Visual Representation Export	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/77		Product Backlog			Backend, Blocked, high priority
+Wiki Articles: Release Manager, Merge Procedure	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/27	andrewluka	Product Backlog	2		Backend, Frontend, low priority
+Build Process Video	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/80		Product Backlog			urgent
+Backend API: Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/57		Sprint Backlog	5		Backend, high priority
+User Registration (Sign Up) View	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/54	andrewluka	Sprint Backlog	1		Frontend, medium priority, visual
+Document Details Overview	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/53	VogtIndustries	In Progress	3		Frontend, high priority, visual
+Consistent Layout	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/45	VogtIndustries	In Progress	5		Frontend, medium priority
+Chat Screen	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/52	andrewluka	In Progress	5		Frontend, medium priority, visual
+Knowledge Graph Pipeline Refinement	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/59	hasnatahmed331, MuhammadZeeshan2	In Progress	8		Backend, high priority
+Login Authentication Process 	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/37	AbdulHaseeb-SE, hannes-v, hasnatahmed331	In Progress	5		Backend, Frontend, medium priority
+Set up Database for App Persistent Storage	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/17	AbdulHaseeb-SE, hasnatahmed331	In Progress	5		Backend, Frontend, high priority
+CI/CD for Backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/47	Hossam-Amer	Awaiting Review	5		Backend, medium priority
+Set up API framework: User Authentication	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/25	AbdulHaseeb-SE, hasnatahmed331	Feature Archive	5		Backend, Frontend, medium priority
+Set up GCP	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/23	hasnatahmed331	Feature Archive	5	5	Backend, high priority
+App Navigation Tree	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/26	hannes-v	Feature Archive	5	5	Frontend, high priority
+Provision of LLM API Keys	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/50		Feature Archive			Backend, high priority
+Capturing Documents using Camera/Scanning	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/10	andrewluka	Feature Archive	5	3	Frontend, medium priority
+Frontend: Documents Overview	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/36	hannes-v	Feature Archive	3	5	Frontend, high priority, visual
+App Login Screen	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/18	hannes-v	Feature Archive	2	2	Frontend, medium priority, visual
+Interface includes a document upload screen	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/11	hannes-v	Feature Archive	3	2	Frontend, medium priority
+Frontend: GitHub Actions CI/CD Pipeline	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/3	andrewluka	Feature Archive	3	3	Frontend, medium priority
+Deliverable: Software Architecture Design	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/21	AbdulHaseeb-SE, hasnatahmed331	Feature Archive	8	8	Backend, Frontend, urgent
+Implement Document Analysis and Structured Data Output (JSON)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/16	Hossam-Amer, MuhammadZeeshan2	Feature Archive	8	8	Backend, high priority
+Research which extraction tool do we use? (Document AI, OCR, OCR with Google AI)	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/4	Hossam-Amer, MuhammadZeeshan2	Feature Archive			
+Frontend Setup Development Environment for App	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/8	hannes-v	Feature Archive			Frontend
+App Design Mockups / Wireframes / Moodboard	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/14	hannes-v	Feature Archive			Frontend, high priority
+Setup documentation README.md	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/2	hasnatahmed331, VogtIndustries	Feature Archive			
