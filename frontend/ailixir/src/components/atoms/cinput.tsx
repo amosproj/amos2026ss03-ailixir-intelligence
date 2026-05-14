@@ -1,11 +1,15 @@
 import { styled, Input } from 'tamagui';
 
 export const CInput = styled(Input, {
+  borderWidth: 0,
+  borderColor: 'transparent',
+  color: '$darkgray',
+  placeholderTextColor: '$gray',
   variants: {
     theme: {
-      green: {
-        backgroundColor: 'green',
-        color: 'white',
+      bright: {
+        backgroundColor: '$lightgray',
+        color: '$darkgray',
       },
     },
   } as const,

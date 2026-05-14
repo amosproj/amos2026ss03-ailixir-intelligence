@@ -13,10 +13,10 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
   return (
     <YStack gap={4} width="48%">
-      <CText variant="caption" color="#6D6D6D">
+      <CText variant="caption" color="$color9">
         {label}
       </CText>
-      <CText variant="body" bold color="#111111">
+      <CText variant="body" bold color="$color11">
         {value}
       </CText>
     </YStack>
@@ -32,7 +32,7 @@ export default function DocumentScreen() {
   if (!document) {
     return (
       <YStack flex={1} justify="center" items="center" px={24} bg="$background">
-        <CText variant="h2" color="#111111">
+        <CText variant="h2" color="$color11">
           Document not found
         </CText>
         <CText variant="caption" style={{ textAlign: 'center' }}>
@@ -50,21 +50,21 @@ export default function DocumentScreen() {
       <YStack gap={20} px={16} pt={16} pb={32}>
         <XStack items="center" gap={12}>
           <CButton icon={ChevronLeft} onPress={() => router.back()} />
-          <CText variant="h1" color="#111111" flex={1}>
+          <CText variant="h1" color="$color11" flex={1}>
             {document.title}
           </CText>
         </XStack>
 
-        <YStack gap={16} bg="#FFFFFF" p={16} borderWidth={1} borderColor="#E4E4E4" style={{ borderRadius: 20 }}>
+        <YStack gap={16} bg="$color0" p={16} borderWidth={1} borderColor="$color3" style={{ borderRadius: 20 }}>
           <XStack items="center" gap={12}>
-            <XStack width={48} height={48} bg="#EDEDED" items="center" justify="center" style={{ borderRadius: 14 }}>
-              <FileText size={24} color="#111111" />
+            <XStack width={48} height={48} bg="$color2" items="center" justify="center" style={{ borderRadius: 14 }}>
+              <FileText size={24} color="$color11" />
             </XStack>
             <YStack gap={4} flex={1}>
-              <CText variant="caption" color="#6D6D6D">
+              <CText variant="caption" color="$color9">
                 Status
               </CText>
-              <CText variant="lead" bold color="#111111">
+              <CText variant="lead" bold color="$color11">
                 {document.status ?? 'Unknown'}
               </CText>
             </YStack>
@@ -79,13 +79,13 @@ export default function DocumentScreen() {
           </XStack>
 
           <YStack gap={8}>
-            <CText variant="caption" color="#6D6D6D">
+            <CText variant="caption" color="$color9">
               Tags
             </CText>
             <XStack flexWrap="wrap" gap={8}>
               {document.tags.map((tag) => (
-                <XStack key={tag} px={12} py={6} bg="#E8F7ED" style={{ borderRadius: 999 }}>
-                  <CText variant="caption" color="#1F7A3A">
+                <XStack key={tag} px={12} py={6} bg="$color2" style={{ borderRadius: 999 }}>
+                  <CText variant="caption" color="$color10">
                     #{tag}
                   </CText>
                 </XStack>
@@ -95,7 +95,7 @@ export default function DocumentScreen() {
         </YStack>
 
         <YStack gap={12}>
-          <CText variant="h2" color="#111111">
+          <CText variant="h2" color="$color11">
             Pages
           </CText>
 
