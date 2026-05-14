@@ -1,17 +1,35 @@
 import { Raleway_400Regular, Raleway_500Medium, Raleway_600SemiBold, Raleway_700Bold, useFonts } from '@expo-google-fonts/raleway';
 import { Stack } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TamaguiProvider, useTheme } from '@tamagui/core';
 import { CText } from '@/components/atoms';
-import { Circle } from 'tamagui';
+import { Circle, Spinner } from 'tamagui';
+import { auth } from '@/lib/firebase';
+import { authLoadingAtom, isLoggedInAtom, userAtom } from '@/lib/authAtoms';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { View } from 'react-native';
 
 import { config } from '@/tamagui.config';
 
 void SplashScreen.preventAutoHideAsync();
 
-function RootStackNavigator() {
+export default function RootStackNavigator() {
+  const setUser = useSetAtom(userAtom);
+  const setAuthLoading = useSetAtom(authLoadingAtom);
+  const authLoading = useAtomValue(authLoadingAtom);
+  const isLoggedIn = useAtomValue(isLoggedInAtom);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, [setUser, setAuthLoading]);
+
   const theme = useTheme();
   const bgColor = theme.background.val as string;
 
@@ -32,8 +50,15 @@ function RootStackNavigator() {
     return null;
   }
 
-  const isLoggedIn = false;
-  const loggedIn: boolean = Boolean(isLoggedIn);
+  if (authLoading) {
+    return (
+      <TamaguiProvider config={config} defaultTheme="light">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Spinner size="large" />
+        </View>
+      </TamaguiProvider>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -45,22 +70,14 @@ function RootStackNavigator() {
           headerTitle: () => <CText variant="h1">AiLixir</CText>,
           headerRight: () => <Circle size={40} background="blue" mr={16} />,
         }}>
-        <Stack.Protected guard={loggedIn}>
+        <Stack.Protected guard={isLoggedIn}>
           <Stack.Screen name="(private)" options={{ title: 'App', headerShown: false }} />
         </Stack.Protected>
 
-        <Stack.Protected guard={!loggedIn}>
+        <Stack.Protected guard={!isLoggedIn}>
           <Stack.Screen name="(auth)" options={{ title: 'Auth' }} />
         </Stack.Protected>
       </Stack>
     </SafeAreaView>
-  );
-}
-
-export default function TabLayout() {
-  return (
-    <TamaguiProvider config={config} defaultTheme="light">
-      <RootStackNavigator />
-    </TamaguiProvider>
   );
 }
