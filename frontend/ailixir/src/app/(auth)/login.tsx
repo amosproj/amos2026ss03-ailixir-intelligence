@@ -1,6 +1,5 @@
 import { CText } from '@/components/atoms';
 import { LoginForm } from '@/components/organisms';
-import { AppBar } from '@/components/organisms/app-bar';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
