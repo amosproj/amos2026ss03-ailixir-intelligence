@@ -1,6 +1,8 @@
 import { Link } from 'expo-router';
 
 import { CText } from '@/components/atoms';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import { YStack } from 'tamagui';
 
 export default function HomeScreen() {
@@ -14,6 +16,10 @@ export default function HomeScreen() {
       <Link href="/chats" asChild>
         <CText>Chats</CText>
       </Link>
+
+      <CText color="$blue10" onPress={() => signOut(auth)}>
+        Sign Out
+      </CText>
     </YStack>
   );
 }
