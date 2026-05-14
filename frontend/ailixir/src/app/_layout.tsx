@@ -16,47 +16,17 @@ import { config } from '@/tamagui.config';
 
 void SplashScreen.preventAutoHideAsync();
 
-export default function RootStackNavigator() {
-  const setUser = useSetAtom(userAtom);
-  const setAuthLoading = useSetAtom(authLoadingAtom);
-  const authLoading = useAtomValue(authLoadingAtom);
-  const isLoggedIn = useAtomValue(isLoggedInAtom);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setAuthLoading(false);
-    });
-    return unsubscribe;
-  }, [setUser, setAuthLoading]);
-
+function RootStackContent() {
   const theme = useTheme();
+  const isLoggedIn = useAtomValue(isLoggedInAtom);
+  const authLoading = useAtomValue(authLoadingAtom);
   const bgColor = theme.background.val as string;
-
-  const [fontsLoaded] = useFonts({
-    Raleway_400Regular,
-    Raleway_500Medium,
-    Raleway_600SemiBold,
-    Raleway_700Bold,
-  });
-
-  React.useEffect(() => {
-    if (fontsLoaded) {
-      void SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) {
-    return null;
-  }
 
   if (authLoading) {
     return (
-      <TamaguiProvider config={config} defaultTheme="light">
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Spinner size="large" />
-        </View>
-      </TamaguiProvider>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Spinner size="large" />
+      </View>
     );
   }
 
@@ -79,5 +49,39 @@ export default function RootStackNavigator() {
         </Stack.Protected>
       </Stack>
     </SafeAreaView>
+  );
+}
+
+export default function RootStackNavigator() {
+  const setUser = useSetAtom(userAtom);
+  const setAuthLoading = useSetAtom(authLoadingAtom);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, [setUser, setAuthLoading]);
+
+  const [fontsLoaded] = useFonts({
+    Raleway_400Regular,
+    Raleway_500Medium,
+    Raleway_600SemiBold,
+    Raleway_700Bold,
+  });
+
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
+  return (
+    <TamaguiProvider config={config} defaultTheme="light">
+      <RootStackContent />
+    </TamaguiProvider>
   );
 }
