@@ -1,6 +1,7 @@
 import { defaultConfig } from '@tamagui/config/v5';
 import { createFont, createTamagui, isWeb } from 'tamagui';
-import { themes } from './themes';
+import { themes } from './tamagui/themes';
+import { tokens } from './tamagui/tokens';
 
 const ralewayFont = createFont({
   family: isWeb ? 'Raleway, sans-serif' : 'Raleway',
@@ -30,6 +31,10 @@ const ralewayFont = createFont({
 
 export const config = createTamagui({
   ...defaultConfig,
+  tokens: {
+    ...defaultConfig.tokens,
+    ...tokens,
+  },
   fonts: {
     ...defaultConfig.fonts,
     body: ralewayFont,

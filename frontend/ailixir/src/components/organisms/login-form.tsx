@@ -36,26 +36,45 @@ export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data
         </CText>
       </XStack>
 
-      <Controller
-        name="email"
-        control={control}
-        rules={{ required: FORM_MESSAGES.requiredEmail }}
-        render={({ field: { onBlur, onChange, value } }) => (
-          <CInput placeholder={FORM_MESSAGES.emailPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} autoCapitalize="none" keyboardType="email-address" />
-        )}
-      />
+      <YStack gap={6}>
+        <CText variant="caption" color="$color9">
+          E-Mail
+        </CText>
+        <Controller
+          name="email"
+          control={control}
+          rules={{ required: FORM_MESSAGES.requiredEmail }}
+          render={({ field: { onBlur, onChange, value } }) => (
+            <CInput
+              theme="bright"
+              placeholder={FORM_MESSAGES.emailPlaceholder}
+              width={width}
+              value={value}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          )}
+        />
+      </YStack>
 
-      <Controller
-        name="password"
-        control={control}
-        rules={{
-          required: FORM_MESSAGES.requiredPassword,
-          validate: (value) => value === 'password' || FORM_MESSAGES.invalidPassword,
-        }}
-        render={({ field: { onBlur, onChange, value } }) => (
-          <CInput placeholder={FORM_MESSAGES.passwordPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />
-        )}
-      />
+      <YStack gap={6}>
+        <CText variant="caption" color="$color9">
+          Password
+        </CText>
+        <Controller
+          name="password"
+          control={control}
+          rules={{
+            required: FORM_MESSAGES.requiredPassword,
+            validate: (value) => value === 'password' || FORM_MESSAGES.invalidPassword,
+          }}
+          render={({ field: { onBlur, onChange, value } }) => (
+            <CInput theme="bright" placeholder={FORM_MESSAGES.passwordPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />
+          )}
+        />
+      </YStack>
 
       <XStack gap={10} justify="space-between" width={width}>
         <CText variant="caption" color="green" fontWeight={600}>
@@ -66,7 +85,7 @@ export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data
         </CText>
       </XStack>
       <XStack width={width} justify="flex-end">
-        <CButton icon={ChevronRight} onPress={handleSubmit(onSubmit)}>
+        <CButton theme="blue" icon={ChevronRight} onPress={handleSubmit(onSubmit)}>
           {FORM_MESSAGES.submitLabel}
         </CButton>
       </XStack>

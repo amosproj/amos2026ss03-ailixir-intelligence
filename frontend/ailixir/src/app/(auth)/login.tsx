@@ -15,7 +15,7 @@ export default function LoginScreen() {
   return (
     <YStack width="100%" height="100%" background="$background" justify="center" items="center" gap={5}>
       <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} />
-      <CText variant="body" color="darkgray">
+      <CText variant="caption" color="darkgray">
         Don{"'"}t have an account?{' '}
         <CText color="$blue10" onPress={() => router.push('./signup')}>
           Sign Up
