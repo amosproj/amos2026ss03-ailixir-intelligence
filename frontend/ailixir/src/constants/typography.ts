@@ -29,9 +29,9 @@ export const typography = {
   },
   caption: {
     fontFamily: '$body',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '400',
-    color: '#7B7B7B',
+    color: '#454545',
     lineHeight: 16,
   },
 } as const;

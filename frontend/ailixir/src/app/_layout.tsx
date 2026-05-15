@@ -32,7 +32,7 @@ function RootStackNavigator() {
     return null;
   }
 
-  const isLoggedIn = true;
+  const isLoggedIn = false;
   const loggedIn: boolean = Boolean(isLoggedIn);
 
   return (

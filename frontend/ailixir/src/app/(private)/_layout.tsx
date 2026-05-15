@@ -23,18 +23,7 @@ export default function PrivateLayout() {
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       <Stack.Screen name="chats/index" options={{ title: 'Chats' }} />
       <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />
-      <Stack.Screen
-        name="documents/index"
-        options={({ navigation }) => ({
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 12 }}>
-              <ChevronLeft size={20} color="#111111" />
-            </TouchableOpacity>
-          ),
-          headerTitle: () => <CText variant="h1">Documents</CText>,
-        })}
-      />
+      <Stack.Screen name="documents/index" options={{ title: 'Documents' }} />
       <Stack.Screen name="documents/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="documents/capture" options={{ title: 'Capture' }} />
       <Stack.Screen name="documents/upload" options={{ title: 'Upload' }} />
