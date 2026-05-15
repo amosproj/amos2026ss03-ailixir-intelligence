@@ -13,14 +13,15 @@ assignees: ''
 3. So that {}
 
 ## Acceptance criteria
-* Criterion 1
-* Criterion 2
-* ...
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] ...
 
 ## Definition of done (DoD)
-* Added only after week 5
-* The same for all features
-* Here goes the project specific part
+* The feature code has been reviewed and approved by at least one team member (e.g. pull request approved).
+* The feature code is merged into the main branch without breaking other functionality.
+* The feature was manually tested and works as expected without critical bugs.
+* Feature components are demo-ready.
 
 ## DoD general criteria
 * Feature has been fully implemented
