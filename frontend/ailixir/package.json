@@ -18,7 +18,6 @@
     "@tamagui/config": "^2.0.0-rc.41",
     "@tamagui/lucide-icons-2": "^2.0.0-rc.41",
     "@tanstack/react-query": "^5.100.9",
-    "eslint-config-expo": "~55.0.1",
     "expo": "~55.0.15",
     "expo-constants": "~55.0.14",
     "expo-device": "~55.0.15",
@@ -50,14 +49,11 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "@typescript-eslint/eslint-plugin": "^8.59.3",
-    "@typescript-eslint/parser": "^8.59.3",
-    "eslint": "^9.39.4",
+    "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-config-universe": "^15.0.3",
     "eslint-plugin-prettier": "^5.5.5",
-    "eslint-plugin-react": "^7.37.5",
     "prettier": "^3.8.3",
     "typescript": "~5.9.2"
   },
