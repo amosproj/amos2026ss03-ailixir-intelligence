@@ -1,10 +1,12 @@
 import { CButton, CInput, CText } from '@/components/atoms';
 import { ChevronRight } from '@tamagui/lucide-icons-2';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ScrollView } from 'react-native';
 import { YStack } from 'tamagui';
+import { auth } from '@/lib/firebase';
 
 const PASSWORD_MIN_LENGTH = 8;
 
@@ -17,6 +19,7 @@ type SignUpFormValues = {
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const [error, setError] = useState('');
 
   const {
     control,
@@ -31,9 +34,15 @@ export default function SignUpScreen() {
     },
   });
 
-  const onSubmit = handleSubmit(() => {
-    // TODO: Show success message and navigate to login screen
-    router.push('./login');
+  const onSubmit = handleSubmit(async (data) => {
+    try {
+      setError('');
+      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      router.push('./login');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'An unexpected error occurred';
+      setError(message);
+    }
   });
 
   return (
@@ -126,6 +135,12 @@ export default function SignUpScreen() {
               ) : null}
             </YStack>
           </YStack>
+
+          {error ? (
+            <CText variant="caption" color="$red10">
+              {error}
+            </CText>
+          ) : null}
 
           <CButton theme="blue" iconButton icon={ChevronRight} onPress={onSubmit} width="100%">
             continue
