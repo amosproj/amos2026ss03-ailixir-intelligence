@@ -1,20 +1,32 @@
-import { AppBar } from '@/components/organisms';
 import { Stack } from 'expo-router';
 import React from 'react';
+import { TouchableOpacity } from 'react-native';
+import { ChevronLeft } from '@tamagui/lucide-icons-2';
+import { CText } from '@/components/atoms';
 
 export default function PrivateLayout() {
   return (
-    <>
-      <AppBar />
-      <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-        <Stack.Screen name="chats" options={{ title: 'Chats' }} />
-        <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />
-        <Stack.Screen name="documents" options={{ title: 'Documents' }} />
-        <Stack.Screen name="documents/[id]" options={{ title: 'Document' }} />
-        <Stack.Screen name="documents/capture" options={{ title: 'Capture' }} />
-        <Stack.Screen name="documents/upload" options={{ title: 'Upload' }} />
-      </Stack>
-    </>
+    <Stack
+      initialRouteName="index"
+      // show a back button automatically when the nav stack can go back
+      screenOptions={({ navigation }) => ({
+        headerShown: true,
+        headerShadowVisible: false,
+        headerLeft: () =>
+          navigation.canGoBack() ? (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 12 }}>
+              <ChevronLeft size={20} color="#111111" />
+            </TouchableOpacity>
+          ) : null,
+        headerTitle: (props: any) => <CText variant="h1">{props?.children ?? props?.title ?? ''}</CText>,
+      })}>
+      <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+      <Stack.Screen name="chats/index" options={{ title: 'Chats' }} />
+      <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />
+      <Stack.Screen name="documents/index" options={{ title: 'Documents' }} />
+      <Stack.Screen name="documents/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="documents/capture" options={{ title: 'Capture' }} />
+      <Stack.Screen name="documents/upload" options={{ title: 'Upload' }} />
+    </Stack>
   );
 }
