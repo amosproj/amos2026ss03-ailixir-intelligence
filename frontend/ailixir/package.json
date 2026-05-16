@@ -19,6 +19,7 @@
     "@tamagui/config": "^2.0.0-rc.41",
     "@tamagui/lucide-icons-2": "^2.0.0-rc.41",
     "@tanstack/react-query": "^5.100.9",
+    "axios": "^1.16.1",
     "expo": "~55.0.15",
     "expo-constants": "~55.0.14",
     "expo-device": "~55.0.15",
