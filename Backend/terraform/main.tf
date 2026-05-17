@@ -12,10 +12,6 @@ provider "google" {
   region  = var.region
 }
 
-data "google_project" "current" {
-  project_id = var.project_id
-}
-
 # -----------------------------
 # BACKEND (PUBLIC)
 # -----------------------------
@@ -67,15 +63,6 @@ resource "google_cloud_run_v2_service" "worker" {
       }
     }
   }
-}
-
-# Allow Pub/Sub SA to invoke worker
-resource "google_cloud_run_v2_service_iam_member" "worker_invoker" {
-  name     = google_cloud_run_v2_service.worker.name
-  location = google_cloud_run_v2_service.worker.location
-  role     = "roles/run.invoker"
-
-  member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
 
 # -----------------------------

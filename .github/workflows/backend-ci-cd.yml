@@ -94,3 +94,7 @@ jobs:
       - name: Terraform Apply
         working-directory: Backend/terraform
         run: terraform apply -auto-approve tfplan
+
+      - name: Show Cloud Run URLs
+        working-directory: Backend/terraform
+        run: terraform output -no-color
