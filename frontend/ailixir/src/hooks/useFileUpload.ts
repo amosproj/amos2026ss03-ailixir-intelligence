@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { useState } from 'react';
+import apiClient from '@/lib/axios';
 
 export interface SelectedFile {
   uri: string;
@@ -17,10 +17,8 @@ const uploadFileApi = async (file: SelectedFile, onProgress: (progress: number) 
     type: file.type,
   } as any);
 
-  const response = await axios.post('https://ailixir-backend-5mg2ellzaa-ue.a.run.app/document/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+  const response = await apiClient.post('/document/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (progressEvent) => {
       const total = progressEvent.total ?? 1;
       const percentCompleted = Math.round((progressEvent.loaded * 100) / total);
