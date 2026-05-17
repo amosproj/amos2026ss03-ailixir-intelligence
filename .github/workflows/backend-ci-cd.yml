@@ -58,15 +58,15 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker --quiet
 
-      # ✅ 1. BUILD IMAGE FIRST
       - name: Build Docker image
         working-directory: Backend
-        run: docker build -f api/Dockerfile -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest .
+        run: |
+          docker build -f api/Dockerfile \
+            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:${{ github.sha }} .
 
-      # ✅ 2. PUSH IMAGE SECOND
       - name: Push Docker image
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:${{ github.sha }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -77,19 +77,14 @@ jobs:
         working-directory: Backend/terraform
         run: terraform init -reconfigure
 
-      - name: Import existing Cloud Run service
-        working-directory: Backend/terraform
-        run: |
-          if gcloud run services describe ailixir-backend --region=europe-west3 --project=${{ secrets.GCP_PROJECT_ID }} > /dev/null 2>&1; then
-            PROJECT_NUMBER=$(gcloud projects describe ${{ secrets.GCP_PROJECT_ID }} --format="value(projectNumber)")
-            terraform import google_cloud_run_service.backend locations/europe-west3/namespaces/$PROJECT_NUMBER/services/ailixir-backend
-          fi
-
       - name: Terraform Plan
         working-directory: Backend/terraform
-        run: terraform plan -no-color -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -out=tfplan
+        run: |
+          terraform plan -no-color \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="image_tag=${{ github.sha }}" \
+            -out=tfplan
 
-      # ✅ 3. APPLY ONLY AFTER IMAGE EXISTS
       - name: Terraform Apply
         working-directory: Backend/terraform
         run: terraform apply -auto-approve tfplan

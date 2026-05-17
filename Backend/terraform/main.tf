@@ -21,7 +21,7 @@ resource "google_cloud_run_v2_service" "backend" {
 
   template {
     containers {
-      image = "gcr.io/${var.project_id}/ailixir-backend:latest"
+      image = "gcr.io/${var.project_id}/ailixir-backend:${var.image_tag}"
 
       ports {
         container_port = 8000
@@ -51,7 +51,7 @@ resource "google_cloud_run_v2_service" "worker" {
 
   template {
     containers {
-      image = "gcr.io/${var.project_id}/ailixir-worker:latest"
+      image = "gcr.io/${var.project_id}/ailixir-worker:${var.image_tag}"
 
       ports {
         container_port = 8080
