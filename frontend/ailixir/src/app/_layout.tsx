@@ -80,7 +80,13 @@ export default function RootStackNavigator() {
 
   if (!fontsLoaded) return null;
 
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
