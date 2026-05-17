@@ -3,7 +3,7 @@ name: Worker CI/CD
 on:
   push:
     branches: [main, "feature/**", "chore/issue-47-CI/CD-for-Backend"]
-    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
+    paths: ["Backend/**", ".github/workflows/worker-ci-cd.yml"]
   pull_request:
     paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
 
