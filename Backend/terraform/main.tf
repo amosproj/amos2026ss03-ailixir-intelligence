@@ -71,10 +71,10 @@ resource "google_cloud_run_service" "worker" {
 
 # Grant Cloud Pub/Sub service account access to invoke the worker service
 resource "google_cloud_run_service_iam_member" "pubsub_invoker" {
-  service  = google_cloud_run_service.worker.name
-  location = google_cloud_run_service.worker.location
+  location = google_cloud_run_v2_service.worker.location
+  service  = google_cloud_run_v2_service.worker.name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:service-${data.google_client_config.current.project_number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+  member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
 
 data "google_client_config" "current" {}
