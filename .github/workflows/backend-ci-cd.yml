@@ -60,9 +60,8 @@ jobs:
 
       # ✅ 1. BUILD IMAGE FIRST
       - name: Build Docker image
-        run: |
-          cd Backend/api
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest .
+        working-directory: Backend/api
+        run: docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest .
 
       # ✅ 2. PUSH IMAGE SECOND
       - name: Push Docker image
