@@ -12,79 +12,79 @@ provider "google" {
   region  = var.region
 }
 
-resource "google_cloud_run_service" "backend" {
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
+# -----------------------------
+# BACKEND (PUBLIC)
+# -----------------------------
+resource "google_cloud_run_v2_service" "backend" {
   name     = "ailixir-backend"
   location = var.region
 
   template {
-    spec {
-      containers {
-        image = "gcr.io/${var.project_id}/ailixir-backend:latest"
-        ports {
-          container_port = 8000
-        }
-        env {
-          name  = "GCP_PROJECT_ID"
-          value = var.project_id
-        }
+    containers {
+      image = "gcr.io/${var.project_id}/ailixir-backend:latest"
+
+      ports {
+        container_port = 8000
+      }
+
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = var.project_id
       }
     }
   }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
 }
 
-resource "google_cloud_run_service_iam_member" "public" {
-  service  = google_cloud_run_service.backend.name
-  location = google_cloud_run_service.backend.location
+resource "google_cloud_run_v2_service_iam_member" "backend_public" {
+  name     = google_cloud_run_v2_service.backend.name
+  location = google_cloud_run_v2_service.backend.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
 
-resource "google_cloud_run_service" "worker" {
+# -----------------------------
+# WORKER (PRIVATE)
+# -----------------------------
+resource "google_cloud_run_v2_service" "worker" {
   name     = "ailixir-worker"
   location = var.region
 
   template {
-    spec {
-      containers {
-        image = "gcr.io/${var.project_id}/ailixir-worker:latest"
-        ports {
-          container_port = 8080
-        }
-        env {
-          name  = "GCP_PROJECT_ID"
-          value = var.project_id
-        }
+    containers {
+      image = "gcr.io/${var.project_id}/ailixir-worker:latest"
+
+      ports {
+        container_port = 8080
+      }
+
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = var.project_id
       }
     }
   }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
 }
 
-# Grant Cloud Pub/Sub service account access to invoke the worker service
-resource "google_cloud_run_service_iam_member" "pubsub_invoker" {
+# Allow Pub/Sub SA to invoke worker
+resource "google_cloud_run_v2_service_iam_member" "worker_invoker" {
+  name     = google_cloud_run_v2_service.worker.name
   location = google_cloud_run_v2_service.worker.location
-  service  = google_cloud_run_v2_service.worker.name
   role     = "roles/run.invoker"
+
   member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
 }
 
-data "google_client_config" "current" {}
-
-output "backend_service_url" {
-  value       = google_cloud_run_service.backend.status[0].url
-  description = "URL of the ailixir-backend service"
+# -----------------------------
+# OUTPUTS
+# -----------------------------
+output "backend_url" {
+  value = google_cloud_run_v2_service.backend.uri
 }
 
-output "worker_service_url" {
-  value       = google_cloud_run_service.worker.status[0].url
-  description = "URL of the ailixir-worker service"
+output "worker_url" {
+  value = google_cloud_run_v2_service.worker.uri
 }
