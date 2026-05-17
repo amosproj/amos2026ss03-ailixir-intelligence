@@ -5,6 +5,12 @@
       "source": "tamagui/tamagui",
       "sourceType": "github",
       "computedHash": "c16ef17b45cf188289a72600898110f6245c295c41cf5493b8ead3fd45027544"
+    },
+    "tanstack-query": {
+      "source": "tanstack-skills/tanstack-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/tanstack-query/skills/tanstack-query/SKILL.md",
+      "computedHash": "b8a0477cd4d7bf8fa54d27f8e64d82388402f0d502591db50a357df5b9995c75"
     }
   }
 }
