@@ -2,7 +2,7 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main, "feature/**","chore/issue-47-CI/CD-for-Backend"]
     paths: ["Backend/**", ".github/workflows/backend-ci-cd.yml"]
   pull_request:
     paths: ["Backend/**", ".github/workflows/backend-ci-cd.yml"]
