@@ -76,6 +76,14 @@ jobs:
         working-directory: Backend/workers/terraform
         run: terraform init -reconfigure
 
+      - name: Import existing Cloud Run service
+        working-directory: Backend/workers/terraform
+        run: |
+          terraform import \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            google_cloud_run_v2_service.worker \
+            projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-worker || true
+
       - name: Terraform Plan
         working-directory: Backend/workers/terraform
         run: |
@@ -87,7 +95,3 @@ jobs:
       - name: Terraform Apply
         working-directory: Backend/workers/terraform
         run: terraform apply -auto-approve tfplan
-
-      - name: Show Cloud Run URL
-        working-directory: Backend/workers/terraform
-        run: terraform output -no-color

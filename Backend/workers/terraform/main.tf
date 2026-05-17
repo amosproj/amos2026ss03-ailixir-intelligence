@@ -3,10 +3,6 @@ provider "google" {
   region  = var.region
 }
 
-import {
-  id = "projects/${var.project_id}/locations/${var.region}/services/ailixir-worker"
-  to = google_cloud_run_v2_service.worker
-}
 
 resource "google_cloud_run_v2_service" "worker" {
   name     = "ailixir-worker"
