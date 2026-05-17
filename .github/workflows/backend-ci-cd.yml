@@ -74,11 +74,11 @@ jobs:
           terraform_version: "1.5.0"
 
       - name: Terraform Init
-        working-directory: Backend/terraform
+        working-directory: Backend/api/terraform
         run: terraform init -reconfigure
 
       - name: Terraform Plan
-        working-directory: Backend/terraform
+        working-directory: Backend/api/terraform
         run: |
           terraform plan -no-color \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
@@ -86,9 +86,9 @@ jobs:
             -out=tfplan
 
       - name: Terraform Apply
-        working-directory: Backend/terraform
+        working-directory: Backend/api/terraform
         run: terraform apply -auto-approve tfplan
 
-      - name: Show Cloud Run URLs
-        working-directory: Backend/terraform
+      - name: Show Cloud Run URL
+        working-directory: Backend/api/terraform
         run: terraform output -no-color
