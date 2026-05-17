@@ -1,11 +1,11 @@
-name: Backend CI/CD
+name: Worker CI/CD
 
 on:
   push:
     branches: [main, "feature/**"]
-    paths: ["Backend/**", ".github/workflows/backend-ci-cd.yml"]
+    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
   pull_request:
-    paths: ["Backend/**", ".github/workflows/backend-ci-cd.yml"]
+    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
 
 jobs:
   ci:
@@ -22,22 +22,22 @@ jobs:
       - name: Install dependencies
         run: |
           cd Backend
-          pip install -r api/requirements.txt
+          pip install -r workers/requirements.txt
 
       - name: Lint with flake8
         run: |
           pip install flake8
           cd Backend
-          flake8 api --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 api --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 workers --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 workers --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Verify application starts
         run: |
           cd Backend
-          timeout 10s uvicorn api.main:app --host 0.0.0.0 --port 8000 || [ $? -eq 124 ]
+          timeout 10s uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
 
   deploy:
-#     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    #     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     if: success()
     needs: ci
@@ -61,13 +61,13 @@ jobs:
       # ✅ 1. BUILD IMAGE FIRST
       - name: Build Docker image
         run: |
-          cd Backend/api
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest .
+          cd Backend
+          docker build -f workers/Dockerfile -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-worker:latest .
 
       # ✅ 2. PUSH IMAGE SECOND
       - name: Push Docker image
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:latest
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-worker:latest
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -81,9 +81,9 @@ jobs:
       - name: Import existing Cloud Run service
         working-directory: Backend/terraform
         run: |
-          if gcloud run services describe ailixir-backend --region=europe-west3 --project=${{ secrets.GCP_PROJECT_ID }} > /dev/null 2>&1; then
+          if gcloud run services describe ailixir-worker --region=europe-west3 --project=${{ secrets.GCP_PROJECT_ID }} > /dev/null 2>&1; then
             PROJECT_NUMBER=$(gcloud projects describe ${{ secrets.GCP_PROJECT_ID }} --format="value(projectNumber)")
-            terraform import google_cloud_run_service.backend locations/europe-west3/namespaces/$PROJECT_NUMBER/services/ailixir-backend
+            terraform import google_cloud_run_service.worker locations/europe-west3/namespaces/$PROJECT_NUMBER/services/ailixir-worker
           fi
 
       - name: Terraform Plan
