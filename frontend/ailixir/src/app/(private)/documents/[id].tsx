@@ -2,8 +2,11 @@ import { CButton, CText } from '@/components/atoms';
 import { DocumentPageThumbnail } from '@/components/molecules';
 import { MOCK_DOCUMENTS } from '@/constants/mock-documents';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
-import React from 'react';
+import React, { useCallback } from 'react';
+import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
@@ -28,6 +31,25 @@ export default function DocumentScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
 
   const document = MOCK_DOCUMENTS.find((entry) => entry.id === params.id);
+
+  const handleDownloadGraph = useCallback(async () => {
+    const isAvailable = await Sharing.isAvailableAsync();
+
+    if (!isAvailable) {
+      Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
+      return;
+    }
+
+    const graphAsset = Asset.fromModule(require('../../../static/graph-1.png'));
+    await graphAsset.downloadAsync();
+
+    const uri = graphAsset.localUri ?? graphAsset.uri;
+    await Sharing.shareAsync(uri, {
+      mimeType: 'image/png',
+      UTI: 'public.png',
+      dialogTitle: 'Download graph',
+    });
+  }, []);
 
   if (!document) {
     return (
@@ -93,6 +115,8 @@ export default function DocumentScreen() {
             </XStack>
           </YStack>
         </YStack>
+
+        <CButton onPress={handleDownloadGraph}>Download graph</CButton>
 
         <YStack gap={12}>
           <CText variant="h2" color="$color11">
