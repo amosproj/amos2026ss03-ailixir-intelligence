@@ -77,16 +77,15 @@ jobs:
         working-directory: Backend/api/terraform
         run: terraform init -reconfigure
 
-      - name: Import if unmanaged
-        working-directory: Backend/workers/terraform # or backend/terraform
+      - name: Import existing Cloud Run service if unmanaged
+        working-directory: Backend/api/terraform
         run: |
-          terraform state show google_cloud_run_v2_service.worker > /dev/null 2>&1 \
-            && echo "Already managed, skipping." \
+          terraform state show google_cloud_run_v2_service.backend > /dev/null 2>&1 \
+            && echo "Already in state, skipping import." \
             || terraform import \
                 -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
-                -var="image_tag=${{ github.sha }}" \
-                google_cloud_run_v2_service.worker \
-                projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-worker
+                google_cloud_run_v2_service.backend \
+                projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-backend
 
       - name: Terraform Plan
         working-directory: Backend/api/terraform
