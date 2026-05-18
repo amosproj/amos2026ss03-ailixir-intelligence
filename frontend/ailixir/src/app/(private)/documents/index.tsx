@@ -3,6 +3,7 @@ import { DocumentsAction } from '@/components/molecules/documents-action';
 
 import { DocumentsList } from '@/components/organisms/documents-list';
 import { MOCK_DOCUMENTS } from '@/constants/mock-documents';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { YStack } from 'tamagui';
 
@@ -17,8 +18,7 @@ export default function DocumentsScreen() {
   };
 
   const onUploadDocument = () => {
-    // Placeholder for upload document functionality
-    alert('Upload document functionality is not implemented yet.');
+    router.navigate('/documents/upload');
   };
 
   const filterItems = ['ALL', 'MEDICAL REPORTS', 'LAB RESULTS'];

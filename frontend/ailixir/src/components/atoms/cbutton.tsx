@@ -18,14 +18,17 @@ export const CButton = styled(Button, {
         gap: 8,
       },
     },
+    fullWidth: {
+      true: {
+        width: '100%',
+      },
+    },
     emphasis: {
       high: {
-        backgroundColor: '#E25353',
+        backgroundColor: '$accent9',
         borderRadius: 999,
         color: 'white',
-        pressStyle: {
-          backgroundColor: '#E25353',
-        },
+        pressStyle: {},
       },
       medium: {},
       low: {},

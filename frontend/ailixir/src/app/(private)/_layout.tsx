@@ -14,7 +14,7 @@ export default function PrivateLayout() {
         headerShadowVisible: false,
         headerLeft: () =>
           navigation.canGoBack() ? (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 12 }}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 0 }}>
               <ChevronLeft size={20} color="#111111" />
             </TouchableOpacity>
           ) : null,

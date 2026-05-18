@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Raleway_400Regular, Raleway_500Medium, Raleway_600SemiBold, Raleway_700Bold, useFonts } from '@expo-google-fonts/raleway';
 import { Stack } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -79,9 +80,19 @@ export default function RootStackNavigator() {
 
   if (!fontsLoaded) return null;
 
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
   return (
-    <TamaguiProvider config={config} defaultTheme="light">
-      <RootStackContent />
-    </TamaguiProvider>
+    <QueryClientProvider client={queryClient}>
+      <TamaguiProvider config={config} defaultTheme="light">
+        <RootStackContent />
+      </TamaguiProvider>
+    </QueryClientProvider>
   );
 }
