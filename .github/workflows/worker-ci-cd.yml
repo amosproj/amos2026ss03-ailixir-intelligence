@@ -1,9 +1,9 @@
-name: Worker CI/CD
+name: Workers CI/CD
 
 on:
   push:
-    branches: [main, "feature/**", "chore/issue-47-CI/CD-for-Backend"]
-    paths: ["Backend/**", ".github/workflows/worker-ci-cd.yml"]
+    branches: [main, "feature/**", "chore/"]
+    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
   pull_request:
     paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
 
@@ -70,7 +70,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.5.0"  
+          terraform_version: "1.5.0"
 
       - name: Terraform Init
         working-directory: Backend/workers/terraform
