@@ -70,20 +70,30 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "1.5.0"
+          terraform_version: "1.5.0"  
 
       - name: Terraform Init
         working-directory: Backend/workers/terraform
         run: terraform init -reconfigure
 
+      - name: Check Terraform State
+        working-directory: Backend/workers/terraform
+        id: tfstate
+        run: |
+          if terraform state list | grep -q "google_cloud_run_v2_service.worker"; then
+            echo "managed=true" >> $GITHUB_OUTPUT
+          else
+            echo "managed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Import existing Cloud Run service
+        if: steps.tfstate.outputs.managed == 'false'
         working-directory: Backend/workers/terraform
         run: |
           terraform import \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
             google_cloud_run_v2_service.worker \
-            projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-worker || true
-
+            projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-worker
       - name: Terraform Plan
         working-directory: Backend/workers/terraform
         run: |
