@@ -1,11 +1,11 @@
-name: API CI/CD
+name: Workers CI/CD
 
 on:
   push:
-    branches: [main, "feature/**", "chore/issue-47-CI/CD-for-Backend"]
-    paths: ["Backend/api/**", ".github/workflows/backend-ci-cd.yml"]
+    branches: [main, "feature/**", "chore/"]
+    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
   pull_request:
-    paths: ["Backend/api/**", ".github/workflows/backend-ci-cd.yml"]
+    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
 
 jobs:
   ci:
@@ -22,23 +22,22 @@ jobs:
       - name: Install dependencies
         run: |
           cd Backend
-          pip install -r api/requirements.txt
+          pip install -r workers/requirements.txt
 
       - name: Lint with flake8
         run: |
           pip install flake8
           cd Backend
-          flake8 api --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 api --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 workers --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 workers --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Verify application starts
         run: |
           cd Backend
-          timeout 10s uvicorn api.main:app --host 0.0.0.0 --port 8000 || [ $? -eq 124 ]
+          timeout 10s uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
 
   deploy:
     #     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     if: success()
     needs: ci
     runs-on: ubuntu-latest
@@ -61,12 +60,12 @@ jobs:
       - name: Build Docker image
         working-directory: Backend
         run: |
-          docker build -f api/Dockerfile \
-            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:${{ github.sha }} .
+          docker build -f workers/Dockerfile \
+            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-worker:${{ github.sha }} .
 
       - name: Push Docker image
         run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-backend:${{ github.sha }}
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/ailixir-worker:${{ github.sha }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -74,21 +73,29 @@ jobs:
           terraform_version: "1.5.0"
 
       - name: Terraform Init
-        working-directory: Backend/api/terraform
+        working-directory: Backend/workers/terraform
         run: terraform init -reconfigure
 
-      - name: Import existing Cloud Run service if unmanaged
-        working-directory: Backend/api/terraform
+      - name: Check Terraform State
+        working-directory: Backend/workers/terraform
+        id: tfstate
         run: |
-          terraform state show google_cloud_run_v2_service.backend > /dev/null 2>&1 \
-            && echo "Already in state, skipping import." \
-            || terraform import \
-                -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
-                google_cloud_run_v2_service.backend \
-                projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-backend
+          if terraform state list | grep -q "google_cloud_run_v2_service.worker"; then
+            echo "managed=true" >> $GITHUB_OUTPUT
+          else
+            echo "managed=false" >> $GITHUB_OUTPUT
+          fi
 
+      - name: Import existing Cloud Run service
+        if: steps.tfstate.outputs.managed == 'false'
+        working-directory: Backend/workers/terraform
+        run: |
+          terraform import \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            google_cloud_run_v2_service.worker \
+            projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-worker
       - name: Terraform Plan
-        working-directory: Backend/api/terraform
+        working-directory: Backend/workers/terraform
         run: |
           terraform plan -no-color \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
@@ -96,5 +103,5 @@ jobs:
             -out=tfplan
 
       - name: Terraform Apply
-        working-directory: Backend/api/terraform
+        working-directory: Backend/workers/terraform
         run: terraform apply -auto-approve tfplan

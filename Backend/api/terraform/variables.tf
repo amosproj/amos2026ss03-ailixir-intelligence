@@ -9,3 +9,9 @@ variable "region" {
   type        = string
   default     = "us-east1"
 }
+
+variable "image_tag" {
+  description = "Docker image tag (git SHA from CI)"
+  type        = string
+  default     = "latest"
+}
