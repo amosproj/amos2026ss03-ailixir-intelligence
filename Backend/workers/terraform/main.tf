@@ -24,13 +24,6 @@ resource "google_cloud_run_v2_service" "worker" {
   }
 }
 
-resource "google_cloud_run_v2_service_iam_member" "worker_invoker" {
-  name     = google_cloud_run_v2_service.worker.name
-  location = google_cloud_run_v2_service.worker.location
-  role     = "roles/run.invoker"
-  member   = "projectNumber:${var.project_id}/serviceAccounts/${var.project_id}@appspot.gserviceaccount.com"
-}
-
 output "worker_url" {
   value = google_cloud_run_v2_service.worker.uri
 }
