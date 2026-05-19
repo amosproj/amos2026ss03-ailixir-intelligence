@@ -4,16 +4,9 @@ AI-powered mobile application to extract, structure, and understand information 
 
 ---
 
-## Overview
+## Project Mission
 
-**AIlixir Intelligence** is a full-stack, AI-native app that helps users turn complex documents into actionable insights.
-
-Users can:
-- Upload or scan documents (e.g. medical reports, invoices)
-- Extract structured data using domain-specific schemas
-- Store data in a personal knowledge base
-- Ask questions about their documents in natural language
-- Enrich insights with relevant external knowledge (research, regulations, benchmarks)
+The mission of this project is to create an MVP that runs on mobile devices. Core functionality includes extracting structured information from uploaded documents, storing and organising it within a personal knowledge base, and enabling conversational querying using RAG with optional enrichment from external knowledge sources such as research papers. The system will demonstrate domain configurability using medical documents as the primary domain and finance as a secondary domain.
 
 ---
 
