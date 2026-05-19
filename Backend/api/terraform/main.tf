@@ -125,6 +125,15 @@ resource "google_project_iam_member" "api_firestore_user" {
   member  = "serviceAccount:${google_service_account.api.email}"
 }
 
+# Firebase Auth admin: required for the /auth/signup endpoint, which calls
+# firebase_admin.auth.create_user under the hood. Without this, every signup
+# request fails with a permission-denied error wrapped in a generic 500.
+resource "google_project_iam_member" "api_firebase_auth_admin" {
+  project = var.project_id
+  role    = "roles/firebaseauth.admin"
+  member  = "serviceAccount:${google_service_account.api.email}"
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Cloud Run API service.
@@ -175,6 +184,7 @@ resource "google_cloud_run_v2_service" "backend" {
     google_storage_bucket_iam_member.api_documents_admin,
     google_pubsub_topic_iam_member.api_publisher,
     google_project_iam_member.api_firestore_user,
+    google_project_iam_member.api_firebase_auth_admin,
   ]
 }
 

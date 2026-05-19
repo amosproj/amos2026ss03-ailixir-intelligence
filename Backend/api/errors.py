@@ -27,24 +27,37 @@ class APIError(HTTPException):
         self.code = code
 
 
-def _envelope(code: ErrorCode, message: str) -> dict:
-    """Build the structured error body. Reads the request id from the
-    contextvar — the pure-ASGI middleware in `api/middleware.py` guarantees
-    propagation through the exception-handler scope."""
+def _resolve_request_id(request: Request) -> str | None:
+    """Pick the request id from the most reliable source.
+
+    `request.state.request_id` is backed by the ASGI scope and survives every
+    middleware boundary, including FastAPI's ServerErrorMiddleware (which runs
+    the bare `Exception`/500 handler from a scope outside our RequestIDMiddleware).
+    The contextvar is the secondary source for callers that don't have a
+    request handle (log records, background helpers).
+    """
+    rid = getattr(request.state, "request_id", "") or request_id_var.get("")
+    return rid or None
+
+
+def _envelope(request: Request, code: ErrorCode, message: str) -> dict:
     return ErrorResponse(
         error=ErrorDetail(
             code=code,
             message=message,
-            request_id=request_id_var.get("") or None,
+            request_id=_resolve_request_id(request),
         )
     ).model_dump()
 
 
-async def api_error_handler(_: Request, exc: APIError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content=_envelope(exc.code, exc.detail))
+async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_envelope(request, exc.code, exc.detail),
+    )
 
 
-async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Wrap FastAPI/Starlette's built-in HTTPExceptions into our envelope.
 
     Covers things like the 403 emitted by `HTTPBearer` when the Authorization
@@ -56,10 +69,13 @@ async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSO
         403: ErrorCode.UNAUTHENTICATED,
     }.get(exc.status_code, ErrorCode.INTERNAL_SERVER_ERROR)
     message = exc.detail if isinstance(exc.detail, str) else "request failed"
-    return JSONResponse(status_code=exc.status_code, content=_envelope(code, message))
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_envelope(request, code, message),
+    )
 
 
-async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Flatten Pydantic's structured errors into a single human-readable message.
 
     Surfaces up to three field errors — enough for the client to fix one
@@ -70,14 +86,19 @@ async def validation_error_handler(_: Request, exc: RequestValidationError) -> J
         loc = ".".join(str(x) for x in err.get("loc", ()) if x != "body")
         parts.append(f"{loc}: {err['msg']}" if loc else err["msg"])
     message = "; ".join(parts) or "validation failed"
-    return JSONResponse(status_code=422, content=_envelope(ErrorCode.VALIDATION_FAILED, message))
+    return JSONResponse(
+        status_code=422,
+        content=_envelope(request, ErrorCode.VALIDATION_FAILED, message),
+    )
 
 
-async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
-    """Last-resort handler. Logs the full stack server-side; client gets only
-    the generic code plus the request id for tracing."""
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Last-resort handler. Runs from ServerErrorMiddleware (outermost), so
+    `request.state` is the only reliable carrier for the request id here —
+    the contextvar from our inner middleware is already reset by this point.
+    """
     _log.exception("unhandled_exception: %s", exc)
     return JSONResponse(
         status_code=500,
-        content=_envelope(ErrorCode.INTERNAL_SERVER_ERROR, "An internal error occurred."),
+        content=_envelope(request, ErrorCode.INTERNAL_SERVER_ERROR, "An internal error occurred."),
     )

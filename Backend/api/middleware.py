@@ -63,6 +63,18 @@ class RequestIDMiddleware:
         incoming = _read_incoming_header(scope)
         request_id = incoming[:64] if incoming else _generate_request_id()
 
+        # FastAPI routes the bare `Exception` / 500 handler through Starlette's
+        # ServerErrorMiddleware, which is the *outermost* middleware — outside
+        # this one. When an unhandled exception escapes, our `finally` resets
+        # the contextvar before that handler runs, so the contextvar is empty
+        # by the time the handler builds the response body. ASGI scope state
+        # is the right channel here: it survives the entire request lifecycle
+        # regardless of middleware structure, and `request.state` reads from
+        # it. Set it before any downstream code runs.
+        if "state" not in scope:
+            scope["state"] = {}
+        scope["state"]["request_id"] = request_id
+
         async def send_with_header(message):
             if message["type"] == "http.response.start":
                 # Defensively drop any pre-existing header so ours wins.
