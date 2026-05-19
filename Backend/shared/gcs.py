@@ -24,9 +24,17 @@ import threading
 from datetime import timedelta
 from pathlib import Path
 
+import google.auth
+from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.cloud import storage
 from google.oauth2 import service_account
+
+
+# IAM Credentials' SignBlob endpoint requires this scope. The storage client
+# requests narrower devstorage.* scopes for its own calls, so we maintain a
+# separate credentials object specifically for v4 URL signing.
+_SIGNING_SCOPES = ("https://www.googleapis.com/auth/cloud-platform",)
 
 _log = logging.getLogger(__name__)
 
@@ -48,6 +56,8 @@ DEFAULT_SIGNED_URL_TTL = timedelta(
 
 _init_lock = threading.Lock()
 _client: storage.Client | None = None
+_signing_creds: Credentials | None = None
+_signing_init_lock = threading.Lock()
 
 
 def _init_client() -> storage.Client:
@@ -96,16 +106,46 @@ def build_object_path(*, uid: str, document_id: str, file_id: str, extension: st
     return f"users/{uid}/documents/{document_id}/{file_id}.{extension}"
 
 
-def _signing_kwargs() -> dict:
-    """Return kwargs for `generate_signed_url` that route signing through the
-    IAM Credentials API when no local private key is available.
+def _get_signing_credentials() -> Credentials:
+    """Resolve a credentials object suitable for v4 URL signing.
 
-    A `service_account.Credentials` instance (loaded from a JSON key) can sign
-    in-process and needs no extra kwargs. Any other credentials object — most
-    notably the Cloud Run default SA — must sign via IAM Credentials, which
-    requires both `service_account_email` and a refreshed `access_token`.
+    Important: the storage client's own credentials are scoped to `devstorage.*`,
+    which is sufficient for object operations but NOT for IAM Credentials'
+    SignBlob call. Reusing them produces `ACCESS_TOKEN_SCOPE_INSUFFICIENT` 403s
+    in production. We maintain a separate credentials object explicitly scoped
+    to `cloud-platform` for signing.
     """
-    creds = get_storage_client()._credentials
+    global _signing_creds
+    if _signing_creds is not None:
+        return _signing_creds
+    with _signing_init_lock:
+        if _signing_creds is not None:
+            return _signing_creds
+
+        if _KEY_RELATIVE_PATH and _KEY_PATH.is_file():
+            # JSON service account key: returns service_account.Credentials,
+            # which has a local private signer and never needs IAM Credentials.
+            _signing_creds = service_account.Credentials.from_service_account_file(
+                str(_KEY_PATH),
+                scopes=list(_SIGNING_SCOPES),
+            )
+        else:
+            # ADC path (Cloud Run): request the cloud-platform scope explicitly
+            # so the metadata-server token can satisfy IAM Credentials.SignBlob.
+            creds, _ = google.auth.default(scopes=list(_SIGNING_SCOPES))
+            _signing_creds = creds
+
+    return _signing_creds
+
+
+def _signing_kwargs() -> dict:
+    """Return kwargs for `generate_signed_url`.
+
+    Service-account-with-private-key: sign in-process, no kwargs needed.
+    Compute-engine ADC: pass `service_account_email` + a freshly-refreshed
+    `access_token` so the library uses IAM Credentials' SignBlob.
+    """
+    creds = _get_signing_credentials()
     if isinstance(creds, service_account.Credentials):
         return {}
 
