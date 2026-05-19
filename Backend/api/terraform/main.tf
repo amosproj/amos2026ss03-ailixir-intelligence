@@ -3,6 +3,36 @@ provider "google" {
   region  = var.region
 }
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Required GCP APIs.
+#
+# Enabling them in terraform keeps fresh-project provisioning self-contained:
+# nothing has to be clicked in the console for a new environment to come up.
+# `disable_on_destroy = false` prevents `terraform destroy` from yanking the
+# API out from under sibling services that depend on it.
+# ──────────────────────────────────────────────────────────────────────────────
+
+locals {
+  required_apis = [
+    "run.googleapis.com",
+    "firestore.googleapis.com",
+    "storage.googleapis.com",
+    "pubsub.googleapis.com",
+    "identitytoolkit.googleapis.com",   # Firebase Auth (signup/signin)
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",    # v4 signed URLs without a private key
+  ]
+}
+
+resource "google_project_service" "apis" {
+  for_each = toset(local.required_apis)
+  service  = each.value
+
+  disable_on_destroy         = false
+  disable_dependent_services = false
+}
+
 # Local names referenced repeatedly. Keeping them as locals lets us rename in
 # one place if the team converges on a different convention later.
 locals {
