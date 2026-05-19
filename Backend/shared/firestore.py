@@ -51,15 +51,26 @@ def ensure_firebase_app() -> None:
         if _emulator_mode():
             firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
             return
-        if _KEY_PATH.exists():
-            cred = credentials.Certificate(str(_KEY_PATH))
-            firebase_admin.initialize_app(cred)
+
+        # Empty env var is the explicit opt-in to Application Default
+        # Credentials — the production / Cloud Run path, where the metadata
+        # server supplies the runtime service account.
+        if not _KEY_RELATIVE_PATH:
+            firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
             return
-        # Production / Cloud Run: no JSON key on disk. Fall back to Application
-        # Default Credentials, which pick up the runtime service account from
-        # the metadata server. The project id must still be supplied explicitly
-        # because ADC alone doesn't carry it.
-        firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
+
+        # Env var set but pointing at nothing is almost always a typo. Fail
+        # loudly with the resolved path so the operator can fix it, rather
+        # than silently degrading to ADC and confusing the next bug report.
+        if not _KEY_PATH.is_file():
+            raise FileNotFoundError(
+                f"Firebase credentials file not found at {_KEY_PATH}.\n"
+                f"Set FIREBASE_KEY_RELATIVE_PATH to a valid file, "
+                f"or leave it empty to use Application Default Credentials."
+            )
+
+        cred = credentials.Certificate(str(_KEY_PATH))
+        firebase_admin.initialize_app(cred)
 
 
 def get_firestore() -> Client:

@@ -1,22 +1,24 @@
 """
 Request-ID propagation.
 
-Every inbound request gets a unique id, exposed back to the client via the
+Every inbound HTTP request gets a unique id, exposed back to the client via the
 `X-Request-ID` response header and stored in a `contextvars.ContextVar` so any
 log line emitted while handling the request includes it automatically.
 
-This is the seam that turns a user complaint ("upload failed at 14:23") into
-exact log lines: client gets the request id in the response, sends it to
-support, support greps the logs for it.
+Implemented as a pure ASGI middleware rather than Starlette's
+`BaseHTTPMiddleware`. `BaseHTTPMiddleware` runs the downstream app in a
+separate `asyncio` task, which breaks `ContextVar` inheritance into FastAPI's
+exception-handler scope — the symptom in production was `request_id: null` on
+500 responses. Pure ASGI wraps the entire request handling chain in one
+coroutine, so the contextvar set here is visible everywhere downstream,
+including in exception handlers.
 """
 
 import contextvars
 import logging
 import uuid
 
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 # Empty default so log records emitted outside a request (startup, scheduled
@@ -26,7 +28,7 @@ request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
 )
 
 
-_HEADER = "X-Request-ID"
+_HEADER_NAME = b"x-request-id"
 
 
 def _generate_request_id() -> str:
@@ -34,29 +36,50 @@ def _generate_request_id() -> str:
     return f"req_{uuid.uuid4().hex[:16]}"
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Honor a client-supplied request id when present, else mint a new one.
+def _read_incoming_header(scope: Scope) -> str:
+    """Read a client-supplied X-Request-ID from the ASGI scope headers."""
+    for raw_name, raw_value in scope.get("headers", []):
+        if raw_name.lower() == _HEADER_NAME:
+            return raw_value.decode("latin-1", errors="ignore").strip()
+    return ""
 
-    A client sending its own id lets the mobile app correlate a network call
-    on its side with the matching server-side trace.
+
+class RequestIDMiddleware:
+    """Pure ASGI middleware that sets a per-request `X-Request-ID`.
+
+    Honors a client-supplied id (capped to 64 chars to prevent log injection
+    and pathological lengths), else mints one. The id is written into the
+    outgoing response headers and held in a `ContextVar` for the lifetime of
+    the request.
     """
 
     def __init__(self, app: ASGIApp) -> None:
-        super().__init__(app)
+        self.app = app
 
-    async def dispatch(self, request: Request, call_next):
-        incoming = request.headers.get(_HEADER, "").strip()
-        # Cap user-supplied ids to avoid log injection / pathological lengths.
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        incoming = _read_incoming_header(scope)
         request_id = incoming[:64] if incoming else _generate_request_id()
+
+        async def send_with_header(message):
+            if message["type"] == "http.response.start":
+                # Defensively drop any pre-existing header so ours wins.
+                headers = [
+                    (name, value)
+                    for name, value in message.get("headers", [])
+                    if name.lower() != _HEADER_NAME
+                ]
+                headers.append((_HEADER_NAME, request_id.encode("ascii")))
+                message["headers"] = headers
+            await send(message)
 
         token = request_id_var.set(request_id)
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_with_header)
         finally:
             request_id_var.reset(token)
-
-        response.headers[_HEADER] = request_id
-        return response
 
 
 class RequestIDLogFilter(logging.Filter):

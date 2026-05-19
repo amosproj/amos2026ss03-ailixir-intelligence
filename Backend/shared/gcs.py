@@ -51,12 +51,25 @@ _client: storage.Client | None = None
 
 
 def _init_client() -> storage.Client:
-    """Create the GCS client once, using the same JSON key as Firebase if
-    available, otherwise the metadata-server default credentials."""
-    if _KEY_PATH.exists():
-        return storage.Client.from_service_account_json(str(_KEY_PATH))
-    # On Cloud Run / GKE the metadata server supplies credentials automatically.
-    return storage.Client()
+    """Create the GCS client once.
+
+    Three distinct paths matching `shared/firestore.py`:
+      - empty env var → Application Default Credentials (Cloud Run path)
+      - non-empty + valid file → load JSON key
+      - non-empty + missing file → fail loudly (a typo masquerading as ADC
+        intent is a real production hazard)
+    """
+    if not _KEY_RELATIVE_PATH:
+        return storage.Client()
+
+    if not _KEY_PATH.is_file():
+        raise FileNotFoundError(
+            f"Firebase credentials file not found at {_KEY_PATH}.\n"
+            f"Set FIREBASE_KEY_RELATIVE_PATH to a valid file, "
+            f"or leave it empty to use Application Default Credentials."
+        )
+
+    return storage.Client.from_service_account_json(str(_KEY_PATH))
 
 
 def get_storage_client() -> storage.Client:

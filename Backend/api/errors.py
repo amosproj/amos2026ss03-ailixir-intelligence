@@ -2,8 +2,8 @@
 Exception types and handlers that emit structured error responses.
 
 Every error response carries a stable `code` so mobile clients can switch on
-it without parsing message strings, plus the `request_id` so support
-can trace a complaint to exact log lines.
+it without parsing message strings, plus the `request_id` so support can
+trace a complaint to exact log lines.
 """
 
 import logging
@@ -28,6 +28,9 @@ class APIError(HTTPException):
 
 
 def _envelope(code: ErrorCode, message: str) -> dict:
+    """Build the structured error body. Reads the request id from the
+    contextvar — the pure-ASGI middleware in `api/middleware.py` guarantees
+    propagation through the exception-handler scope."""
     return ErrorResponse(
         error=ErrorDetail(
             code=code,
@@ -45,13 +48,9 @@ async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSO
     """Wrap FastAPI/Starlette's built-in HTTPExceptions into our envelope.
 
     Covers things like the 403 emitted by `HTTPBearer` when the Authorization
-    header is missing entirely. Our own domain errors go through `APIError` and
-    its dedicated handler, so the mapping here is intentionally narrow — we
-    only map statuses that the framework itself produces.
+    header is missing entirely. Domain errors flow through `APIError` and its
+    dedicated handler, so the mapping here is intentionally narrow.
     """
-    # 401/403: missing or rejected bearer credentials (FastAPI's HTTPBearer).
-    # Everything else gets a generic code so we don't mis-label, e.g., a
-    # path-not-found as a "DOCUMENT_NOT_FOUND".
     code = {
         401: ErrorCode.UNAUTHENTICATED,
         403: ErrorCode.UNAUTHENTICATED,
@@ -63,7 +62,7 @@ async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSO
 async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
     """Flatten Pydantic's structured errors into a single human-readable message.
 
-    We surface up to three field errors — enough for the client to fix one
+    Surfaces up to three field errors — enough for the client to fix one
     request without dumping a wall of text on the user.
     """
     parts = []
@@ -75,7 +74,8 @@ async def validation_error_handler(_: Request, exc: RequestValidationError) -> J
 
 
 async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
-    """Last-resort handler. Logs the full stack server-side; client gets the code only."""
+    """Last-resort handler. Logs the full stack server-side; client gets only
+    the generic code plus the request id for tracing."""
     _log.exception("unhandled_exception: %s", exc)
     return JSONResponse(
         status_code=500,
