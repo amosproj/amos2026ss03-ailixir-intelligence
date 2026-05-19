@@ -1,0 +1,407 @@
+[
+  {
+    "file": "image (0).jpg",
+    "success": true,
+    "extracted_data": {
+      "document_type": "lab_report",
+      "confidence_score": 0.95,
+      "metadata": {
+        "language": "en",
+        "date_detected": "2025-04-16"
+      },
+      "extracted_fields": {
+        "patient_info": {
+          "patient": null,
+          "bill_no": null,
+          "ward_room_bed": null
+        },
+        "collection_info": {
+          "collection_date": "15-Apr-2025",
+          "collection_time": "11:05 PM",
+          "report_date": "16-Apr-2025",
+          "report_time": "07:47 AM",
+          "ref_by": null,
+          "department": "PAEDIATRICS",
+          "specimen": "Serum",
+          "unit": "UNIT-I"
+        },
+        "test_results": [
+          {
+            "parameter": "CRP QUANTITATIVE",
+            "results": "0.23 mg/dL",
+            "biological_reference": "< 0.50 mg/dL"
+          },
+          {
+            "parameter": "IONIC CALCIUM",
+            "results": "4.96 mg/dl",
+            "biological_reference": "4.4 - 5.2 mg/dl"
+          }
+        ],
+        "additional_info": {
+          "suggested_clinical_correlation": "If necessary, Please discuss",
+          "verified_by": null,
+          "test_notes": "Test results related only to the item tested.\nNo part of the report can be reproduced without written permission of the laboratory."
+        }
+      },
+      "tables": [],
+      "raw_text_blocks": [
+        "MAHARISHI MARKANDESHWAR COLLEGE\nOF MEDICAL SCIENCES AND RESEARCH\nSADOPUR - AMBALA\nDEPARTMENT OF BIOCHEMISTRY\nPatient\nBill : 15-Apr-2025 11:05 PM\nCollection Date: 15-Apr-2025 11:05 PM\nReport Date : 16-Apr-2025 07:47 AM\nRef By : UNIT-I\nDepartment : PAEDIATRICS\nNo : SER932573 /\nWard/Room/Bed :\nSpecimen : Serum\nParameter Results Biological Reference\nCRP QUANTITATIVE 0.23 mg/dL < 0.50 mg/dL\nIONIC CALCIUM 4.96 mg/dl 4.4 - 5.2 mg/dl\n*** End Of Report ***\nTest Notes :\nSuggested Clinical Correlation * If neccessary, Please\ndiscuss\nVerified By :\nTest results related only to the item tested.\nNo part of the report can be reproduced without written permission of the laboratory."
+      ]
+    },
+    "tokens_used": {
+      "prompt_tokens": 2915,
+      "completion_tokens": 623,
+      "total_tokens": 3538,
+      "cost": 0.001196,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.001196,
+        "upstream_inference_prompt_cost": 0.00072875,
+        "upstream_inference_completions_cost": 0.00046725
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "file": "image (1).jpg",
+    "success": true,
+    "extracted_data": {
+      "document_type": "lab_report",
+      "confidence_score": 0.95,
+      "metadata": {
+        "language": "en",
+        "date_detected": "2025-04-27"
+      },
+      "extracted_fields": {
+        "hospital_name": "Fortis Hospital",
+        "hospital_address": "A Block, Shalimar Bagh, New Delhi - 110088",
+        "department": "DEPARTMENT OF OBSTETRICS & GYNAECOLOGY",
+        "report_title": "Discharge Summary",
+        "patient_info": {
+          "name": null,
+          "age": null,
+          "gender": null,
+          "admission_date": null,
+          "discharge_date": null
+        },
+        "doctors": [
+          "Dr. Sunita Verma & Team",
+          "Dr. Sunita Varma",
+          "Dr. Poonam Lata Singh",
+          "Dr. Netra Singh"
+        ],
+        "test_date": "25-04-2025"
+      },
+      "tables": [
+        {
+          "headers": [
+            "Parameter Name",
+            "Value"
+          ],
+          "rows": [
+            [
+              "PH",
+              "7.0"
+            ],
+            [
+              "SPECIFIC GRAVITY",
+              "1.020"
+            ],
+            [
+              "PROTEIN",
+              "NOT DETECTED"
+            ],
+            [
+              "GLUCOSE",
+              "NOT DETECTED"
+            ],
+            [
+              "KETONES",
+              "NOT DETECTED"
+            ],
+            [
+              "BLOOD",
+              "NOT DETECTED"
+            ],
+            [
+              "BILIRUBIN",
+              "NOT DETECTED"
+            ],
+            [
+              "UROBILINOGEN",
+              "NORMAL"
+            ],
+            [
+              "NITRITE",
+              "NOT DETECTED"
+            ],
+            [
+              "LEUKOCYTE ESTERASE",
+              "NEGATIVE"
+            ],
+            [
+              "RED BLOOD CELLS",
+              "NOT DETECTED"
+            ],
+            [
+              "BLOOD UREA NITROGEN",
+              "8"
+            ],
+            [
+              "CREATININE",
+              "0.61"
+            ],
+            [
+              "BUN/CREAT RATIO",
+              "13.11"
+            ],
+            [
+              "SODIUM",
+              "138"
+            ],
+            [
+              "POTASSIUM",
+              "3.92"
+            ],
+            [
+              "CHLORIDE",
+              "103"
+            ],
+            [
+              "URIC ACID",
+              "5.3"
+            ],
+            [
+              "ASPARTATE AMINOTRANSFERASE (AST/SGOT)",
+              "28"
+            ],
+            [
+              "ALANINE AMINOTRANSFERASE (ALT/SGPT)",
+              "30"
+            ],
+            [
+              "ALKALINE PHOSPHATASE",
+              "263"
+            ],
+            [
+              "BILIRUBIN, TOTAL",
+              "0.61"
+            ],
+            [
+              "BILIRUBIN, DIRECT",
+              "0.10"
+            ],
+            [
+              "BILIRUBIN, INDIRECT",
+              "0.51"
+            ],
+            [
+              "GAMMA GLUTAMYL TRANSFERASE (GGT)",
+              "26"
+            ],
+            [
+              "LACTATE DEHYDROGENASE",
+              "219"
+            ]
+          ]
+        }
+      ],
+      "raw_text_blocks": [
+        "Fortis Hospital\nA Block, Shalimar Bagh,\nNew Delhi - 110088\nTel : +91 11 4530 2222\nFax : +91 11 4530 2211\nEmergency : +91 11 4788 4788\nAmbulance : 900 900 1050\nHOSPITAL\nShalimar Bagh\nDate: 27 Apr/2025\nDEPARTMENT OF OBSTETRICS & GYNAECOLOGY\nDischarge Summary\nPatient\nROUTINE\nDr. Sunita Verma & Team, Dr. Sunita Varma, Dr. Poonam Lata Singh, Dr. Netra Singh\nParameter Name\t25-04-2025\nPH\t7.0\nSPECIFIC GRAVITY\t1.020\nPROTEIN\tNOT DETECTED\nGLUCOSE\tNOT DETECTED\nKETONES\tNOT DETECTED\nBLOOD\tNOT DETECTED\nBILIRUBIN\tNOT DETECTED\nUROBILINOGEN\tNORMAL\nNITRITE\tNOT DETECTED\nLEUKOCYTE ESTERASE\tNEGATIVE\nRED BLOOD CELLS\tNOT DETECTED\nBLOOD UREA NITROGEN\t8\nCREATININE\t0.61\nBUN/CREAT RATIO\t13.11\nSODIUM\t138\nPOTASSIUM\t3.92\nCHLORIDE\t103\nURIC ACID\t5.3\nASPARTATE AMINOTRANSFERASE (AST/SGOT)\t28\nALANINE AMINOTRANSFERASE (ALT/SGPT)\t30\nALKALINE PHOSPHATASE\t263\nBILIRUBIN, TOTAL\t0.61\nBILIRUBIN, DIRECT\t0.10\nBILIRUBIN, INDIRECT\t0.51\nGAMMA GLUTAMYL TRANSFERASE (GGT)\t26\nLACTATE DEHYDROGENASE\t219\nFORTIS HEALTHCARE LIMITED\nRegd. Office: Fortis Hospital, Sector-62, Phase VIII, Mohali – 160062, Punjab\nTel: +91 11 2682 5000, Fax: +91 11 4162 8435 CIN: L85110PB1996PLC045933\nFortis SPECIALITY Hospital"
+      ]
+    },
+    "tokens_used": {
+      "prompt_tokens": 2854,
+      "completion_tokens": 1252,
+      "total_tokens": 4106,
+      "cost": 0.0016525,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0016525,
+        "upstream_inference_prompt_cost": 0.0007135,
+        "upstream_inference_completions_cost": 0.000939
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "file": "image (2).jpg",
+    "success": true,
+    "extracted_data": {
+      "document_type": "prescription",
+      "confidence_score": 0.95,
+      "metadata": {
+        "language": "en",
+        "date_detected": "2024-12-16"
+      },
+      "extracted_fields": {
+        "clinic_name": "City Health Clinic",
+        "clinic_address": "678 Orchard Ln.",
+        "prescribed_by": "Dr. M Lee",
+        "date": "2024-12-16",
+        "patient_info": {
+          "name": "John Doe",
+          "age": 63
+        }
+      },
+      "tables": [
+        {
+          "medication": "Glibenclamide",
+          "dose": "50 mg",
+          "instructions": "After meals"
+        },
+        {
+          "medication": "Atorvastatin",
+          "dose": "250 mg",
+          "instructions": "Before meals"
+        },
+        {
+          "medication": "Omeprazole",
+          "dose": "20 mg",
+          "instructions": "With food"
+        },
+        {
+          "medication": "Hydrochlorothiazide",
+          "dose": "100 mg",
+          "instructions": "With food"
+        }
+      ],
+      "raw_text_blocks": [
+        "City Health Clinic",
+        "678 Orchard Ln.",
+        "Prescribed by: Dr. M Lee",
+        "Date: 2024-12-16",
+        "Patient: John Doe, Age: 63",
+        "Glibenclamide 50 mg - After meals",
+        "Atorvastatin 250 mg - Before meals",
+        "Omeprazole 20 mg - With food",
+        "Hydrochlorothiazide 100 mg - With food",
+        "Signature: Dr. M Lee"
+      ]
+    },
+    "tokens_used": {
+      "prompt_tokens": 1336,
+      "completion_tokens": 420,
+      "total_tokens": 1756,
+      "cost": 0.000649,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.000649,
+        "upstream_inference_prompt_cost": 0.000334,
+        "upstream_inference_completions_cost": 0.000315
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  {
+    "file": "image (3).jpg",
+    "success": true,
+    "extracted_data": {
+      "document_type": "prescription",
+      "confidence_score": 0.95,
+      "metadata": {
+        "language": "en",
+        "date_detected": "2024-12-16"
+      },
+      "extracted_fields": {
+        "clinic_name": "City Health Clinic",
+        "clinic_address": "123 Main St.",
+        "prescribed_by": "Dr. M Lee",
+        "date": "2024-12-16",
+        "patient_info": {
+          "patient_name": "Fatima Ali",
+          "age": 36
+        },
+        "medications": [
+          {
+            "name": "Lisinopril",
+            "dose": "5 mg",
+            "instructions": "Take twice daily"
+          },
+          {
+            "name": "Ciprofloxacin",
+            "dose": "500 mg",
+            "instructions": "As needed for pain"
+          },
+          {
+            "name": "Hydrochlorothiazide",
+            "dose": "25 mg",
+            "instructions": "Before meals"
+          },
+          {
+            "name": "Omeprazole",
+            "dose": "20 mg",
+            "instructions": "Every 12 hours"
+          }
+        ],
+        "signature": "Dr. M Lee"
+      },
+      "tables": [],
+      "raw_text_blocks": [
+        "City Health Clinic",
+        "123 Main St.",
+        "Prescribed by: Dr. M Lee",
+        "Date: 2024-12-16",
+        "Patient: Fatima Ali, Age: 36",
+        "Lisinopril 5 mg - Take twice daily",
+        "Ciprofloxacin 500 mg - As needed for pain",
+        "Hydrochlorothiazide 25 mg - Before meals",
+        "Omeprazole 20 mg - Every 12 hours",
+        "Signature: Dr. M Lee"
+      ]
+    },
+    "tokens_used": {
+      "prompt_tokens": 1336,
+      "completion_tokens": 442,
+      "total_tokens": 1778,
+      "cost": 0.0006655,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0006655,
+        "upstream_inference_prompt_cost": 0.000334,
+        "upstream_inference_completions_cost": 0.0003315
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  }
+]
