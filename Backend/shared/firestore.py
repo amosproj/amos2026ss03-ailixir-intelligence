@@ -51,16 +51,15 @@ def ensure_firebase_app() -> None:
         if _emulator_mode():
             firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
             return
-        if not _KEY_PATH.exists():
-            raise FileNotFoundError(
-                f"Firebase service account key not found.\n"
-                f"  Expected at: {_KEY_PATH}\n"
-                f"  Backend root: {BACKEND_ROOT}\n"
-                f"  Relative path: {_KEY_RELATIVE_PATH}\n"
-                f"Set FIREBASE_KEY_RELATIVE_PATH to override the default location."
-            )
-        cred = credentials.Certificate(str(_KEY_PATH))
-        firebase_admin.initialize_app(cred)
+        if _KEY_PATH.exists():
+            cred = credentials.Certificate(str(_KEY_PATH))
+            firebase_admin.initialize_app(cred)
+            return
+        # Production / Cloud Run: no JSON key on disk. Fall back to Application
+        # Default Credentials, which pick up the runtime service account from
+        # the metadata server. The project id must still be supplied explicitly
+        # because ADC alone doesn't carry it.
+        firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
 
 
 def get_firestore() -> Client:
