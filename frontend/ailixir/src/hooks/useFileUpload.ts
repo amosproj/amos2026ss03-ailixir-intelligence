@@ -29,6 +29,10 @@ const uploadFileApi = async (file: SelectedFile, onProgress: (progress: number) 
   return response.data;
 };
 
+/**
+ *
+ * @deprecated use useCreateDocument() and useUploadDocument() instead.
+ */
 export function useFileUpload() {
   const queryClient = useQueryClient();
   const [uploadProgress, setUploadProgress] = useState<number>(0);
