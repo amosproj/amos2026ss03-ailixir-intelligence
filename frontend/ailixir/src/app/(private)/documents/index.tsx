@@ -2,13 +2,15 @@ import { AuxiliaryOverview, ListFilters } from '@/components/molecules';
 import { DocumentsAction } from '@/components/molecules/documents-action';
 
 import { DocumentsList } from '@/components/organisms/documents-list';
-import { MOCK_DOCUMENTS } from '@/constants/mock-documents';
+import { documentsAtom } from '@/lib/documentAtoms';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { useAtomValue } from 'jotai';
 import { YStack } from 'tamagui';
 
 export default function DocumentsScreen() {
   const [activeFilter, setActiveFilter] = useState('ALL');
+  const documents = useAtomValue(documentsAtom);
 
   const overviewItems = ['6 Documents', '2 Uploads pending', 'Another information'];
 
@@ -28,7 +30,7 @@ export default function DocumentsScreen() {
       <AuxiliaryOverview items={overviewItems} />
       <DocumentsAction onUploadDocument={onUploadDocument} onScanDocument={onScanDocument} />
       <ListFilters items={filterItems} active={activeFilter} setActive={setActiveFilter} />
-      <DocumentsList documents={MOCK_DOCUMENTS} />
+      <DocumentsList documents={documents} />
     </YStack>
   );
 }
