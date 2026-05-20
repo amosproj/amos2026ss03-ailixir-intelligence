@@ -1,36 +1,86 @@
 """
 Ailixir Documents API.
 
-Sync HTTP entrypoint for the mobile client. The endpoints here are tuned for low
-latency: heavy work (OCR, LLM extraction, embedding) lives in the worker services
-and is reached asynchronously via Pub/Sub.
+Sync HTTP entrypoint for the mobile client. The API never streams file bytes
+through itself — clients receive time-limited signed URLs and upload directly
+to GCS. Heavy AI work (OCR, extraction) happens in the worker service,
+triggered via Pub/Sub events the API publishes after finalize.
 
 Run from the `Backend/` directory:
     uvicorn api.main:app --reload
 """
 
+import asyncio
 import logging
+import os
+import re
+import unicodedata
+from datetime import datetime, timezone
+from typing import Annotated
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from firebase_admin import auth as firebase_auth
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.auth import (
     create_firebase_user,
     delete_firebase_user,
     get_current_user,
 )
-from shared.models.document import DocumentStatus
+from api.errors import (
+    APIError,
+    api_error_handler,
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_error_handler,
+)
+from api.middleware import RequestIDLogFilter, RequestIDMiddleware
+from shared import gcs, pubsub
+from shared.models.document import (
+    ALLOWED_FILE_CONTENT_TYPES,
+    EXTENSION_BY_CONTENT_TYPE,
+    MAX_FILE_SIZE_BYTES,
+    MAX_FILES_PER_DOCUMENT,
+    MAX_TOTAL_SIZE_BYTES,
+    SUPPORTED_DOMAINS,
+    Document,
+    DocumentFile,
+    DocumentStatus,
+)
+from shared.models.errors import ErrorCode
 from shared.models.user import UserProfile
-from shared.repositories.documents import create_document
+from shared.repositories.documents import (
+    DocumentStateError,
+    FileCreationSpec,
+    create_document_with_files,
+    decode_cursor,
+    find_document_by_idempotency_key,
+    find_document_for_user,
+    list_documents_for_user,
+    mark_uploaded,
+    pending_files,
+    soft_delete,
+)
 from shared.repositories.users import create_user_profile, get_user_profile
 
 load_dotenv()
 
+# Inject request id into every log line. Format is keep-it-simple key=value so
+# Cloud Logging parses it reasonably without a custom JSON formatter for v1.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s request_id=%(request_id)s %(message)s",
+)
+for handler in logging.getLogger().handlers:
+    handler.addFilter(RequestIDLogFilter())
+
 _log = logging.getLogger(__name__)
+
 
 app = FastAPI(
     title="Document Processing API",
@@ -47,6 +97,8 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+app.add_middleware(RequestIDMiddleware)
+
 # CORS only matters to browser clients. React Native does not enforce it. The
 # middleware is kept so the FastAPI Swagger UI at /docs works during local dev.
 app.add_middleware(
@@ -57,18 +109,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Request / response models
+# Shared validation helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Characters we never let into a stored file name. Excludes path separators
+# (defence in depth — we don't trust the client name even though the GCS path
+# is built server-side from `file_id`), and ASCII control characters.
+_INVALID_FILENAME_CHARS = re.compile(r"[\\/:\*\?\"<>\|\x00-\x1f]")
+
+
+def _sanitize_filename(name: str) -> str:
+    """Strip path components, control chars, and unicode lookalikes; cap length."""
+    name = os.path.basename(name)
+    name = unicodedata.normalize("NFKC", name)
+    name = _INVALID_FILENAME_CHARS.sub("", name).strip()
+    if not name or name.startswith(".") or name in {".", ".."}:
+        raise ValueError("file_name resolves to empty or reserved value")
+    return name[:255]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Auth — request / response models
 # ──────────────────────────────────────────────────────────────────────────────
 
 class SignupRequest(BaseModel):
-    """Body for POST /auth/signup.
-
-    Password length follows NIST 800-63B: at least 8 characters, no composition
-    rules. The 128-character cap exists to prevent denial-of-service via giant
-    payloads — Firebase Auth itself accepts much longer strings.
-    """
+    """Body for POST /auth/signup. NIST 800-63B password policy: 8 chars min,
+    no composition rules. The 128-char cap prevents giant-payload DoS."""
 
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
@@ -85,8 +158,7 @@ class SignupRequest(BaseModel):
 
 
 class SignupResponse(BaseModel):
-    """Returned on successful signup. The client must call Firebase Auth SDK with
-    the same email + password to obtain an ID token for subsequent API calls."""
+    """Client must now sign in via Firebase Auth SDK to obtain an ID token."""
 
     uid: str
     email: EmailStr
@@ -94,15 +166,142 @@ class SignupResponse(BaseModel):
     last_name: str
 
 
-class UploadDocumentResponse(BaseModel):
+# ──────────────────────────────────────────────────────────────────────────────
+# Documents — request / response models
+# ──────────────────────────────────────────────────────────────────────────────
+
+class CreateDocumentFileRequest(BaseModel):
+    file_name: str = Field(..., min_length=1, max_length=512)
+    content_type: str
+    size_bytes: int = Field(..., gt=0)
+
+    @field_validator("file_name")
+    @classmethod
+    def _sanitize(cls, value: str) -> str:
+        try:
+            return _sanitize_filename(value)
+        except ValueError as exc:
+            raise ValueError(str(exc))
+
+    @field_validator("content_type")
+    @classmethod
+    def _check_content_type(cls, value: str) -> str:
+        if value not in ALLOWED_FILE_CONTENT_TYPES:
+            raise ValueError(
+                f"unsupported content_type {value!r}; "
+                f"allowed: {sorted(ALLOWED_FILE_CONTENT_TYPES)}"
+            )
+        return value
+
+    @field_validator("size_bytes")
+    @classmethod
+    def _check_size(cls, value: int) -> int:
+        if value > MAX_FILE_SIZE_BYTES:
+            raise ValueError(
+                f"size_bytes exceeds per-file limit of {MAX_FILE_SIZE_BYTES} bytes"
+            )
+        return value
+
+
+class CreateDocumentRequest(BaseModel):
+    domain: str
+    title: str | None = Field(default=None, max_length=200)
+    files: list[CreateDocumentFileRequest] = Field(..., min_length=1, max_length=MAX_FILES_PER_DOCUMENT)
+
+    @field_validator("domain")
+    @classmethod
+    def _check_domain(cls, value: str) -> str:
+        if value not in SUPPORTED_DOMAINS:
+            raise ValueError(
+                f"unsupported domain {value!r}; allowed: {sorted(SUPPORTED_DOMAINS)}"
+            )
+        return value
+
+    @field_validator("title")
+    @classmethod
+    def _strip_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class DocumentFileUploadInstruction(BaseModel):
+    """Everything the client needs to PUT one file to GCS.
+
+    The signed URL binds method, content type, and size range — the client must
+    send these headers exactly or GCS rejects the upload.
+    """
+
+    file_id: str
+    file_name: str
+    content_type: str
+    size_bytes: int
+    upload_method: str = "PUT"
+    upload_url: str
+    upload_headers: dict[str, str]
+    upload_expires_at: datetime
+
+
+class CreateDocumentResponse(BaseModel):
     document_id: str
     status: DocumentStatus
+    domain: str
+    title: str | None
+    file_count: int
+    total_bytes: int
+    files: list[DocumentFileUploadInstruction]
+    created_at: datetime
+
+
+class DocumentFileResponse(BaseModel):
+    file_id: str
     file_name: str
+    content_type: str
     size_bytes: int
+    upload_completed_at: datetime | None
+    download_url: str | None
+    download_expires_at: datetime | None
 
 
-_ALLOWED_TYPES = {"application/pdf", "image/jpeg", "image/png", "text/plain"}
-_MAX_SIZE_BYTES = 10 * 1024 * 1024
+class DocumentResponse(BaseModel):
+    document_id: str
+    status: DocumentStatus
+    domain: str
+    title: str | None
+    file_count: int
+    total_bytes: int
+    files: list[DocumentFileResponse]
+    created_at: datetime
+    updated_at: datetime
+    finalized_at: datetime | None
+
+
+class DocumentListItem(BaseModel):
+    """List-view summary. No download URLs to keep response size bounded."""
+
+    document_id: str
+    status: DocumentStatus
+    domain: str
+    title: str | None
+    file_count: int
+    total_bytes: int
+    created_at: datetime
+    updated_at: datetime
+    finalized_at: datetime | None
+    thumbnail_url: str | None
+    thumbnail_expires_at: datetime | None
+
+
+class ListDocumentsResponse(BaseModel):
+    documents: list[DocumentListItem]
+    next_cursor: str | None
+
+
+class RefreshUploadURLsResponse(BaseModel):
+    document_id: str
+    status: DocumentStatus
+    files: list[DocumentFileUploadInstruction]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -130,12 +329,6 @@ def health() -> dict:
     tags=["Auth"],
     summary="Create a new user account",
     response_description="Account created; client must now sign in via Firebase Auth SDK",
-    responses={
-        201: {"description": "Signup successful"},
-        400: {"description": "Inputs rejected by Firebase Admin SDK"},
-        409: {"description": "An account with this email already exists"},
-        422: {"description": "Request body failed validation (email/password/name rules)"},
-    },
 )
 def signup(payload: SignupRequest) -> SignupResponse:
     """Create a Firebase Auth user and the matching Firestore profile atomically.
@@ -144,11 +337,6 @@ def signup(payload: SignupRequest) -> SignupResponse:
     with the Firebase Auth SDK to obtain an ID token. This endpoint exists only
     to atomically capture the profile fields (first_name, last_name) that
     Firebase Auth does not store.
-
-    Atomicity is best-effort: if the Firestore write fails after the Firebase
-    Auth record is created, we delete the Firebase user to compensate. A real
-    distributed transaction across the two systems is not possible, so a
-    background reconciliation job will eventually be needed for production.
     """
     display_name = f"{payload.first_name} {payload.last_name}"
 
@@ -159,18 +347,17 @@ def signup(payload: SignupRequest) -> SignupResponse:
             display_name=display_name,
         )
     except firebase_auth.EmailAlreadyExistsError:
-        raise HTTPException(
+        raise APIError(
             status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists.",
+            code=ErrorCode.EMAIL_ALREADY_EXISTS,
+            message="An account with this email already exists.",
         )
     except ValueError as exc:
-        # Firebase Admin SDK raises ValueError for inputs that pass our Pydantic
-        # gate but fail its own rules. Surface the reason as a 400 so the client
-        # can show it to the user.
         _log.warning("firebase_create_user_rejected reason=%s", exc)
-        raise HTTPException(
+        raise APIError(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            code=ErrorCode.VALIDATION_FAILED,
+            message=str(exc),
         )
 
     try:
@@ -181,31 +368,19 @@ def signup(payload: SignupRequest) -> SignupResponse:
             last_name=payload.last_name,
         )
     except Exception as profile_error:
-        # Compensation: roll back the Firebase user so the system never holds an
-        # auth record without a matching profile. If cleanup itself fails we log
-        # the orphan for offline reconciliation and still return 500 to the
-        # client — the original error is what they need to act on.
-        _log.error(
-            "profile_write_failed_compensating uid=%s error=%s",
-            uid, profile_error,
-        )
+        _log.error("profile_write_failed_compensating uid=%s error=%s", uid, profile_error)
         try:
             delete_firebase_user(uid)
         except Exception as cleanup_error:
-            # TODO(orphan-cleanup): production needs a periodic job that scans
-            # Firebase Auth for users with no Firestore profile and either
-            # provisions a profile (if recoverable) or deletes the user.
-            _log.error(
-                "orphan_firebase_user uid=%s cleanup_error=%s",
-                uid, cleanup_error,
-            )
-        raise HTTPException(
+            # Orphan Firebase user; reconciliation job picks this up later.
+            _log.error("orphan_firebase_user uid=%s cleanup_error=%s", uid, cleanup_error)
+        raise APIError(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Signup failed; please retry.",
+            code=ErrorCode.INTERNAL_SERVER_ERROR,
+            message="Signup failed; please retry.",
         )
 
     _log.info("signup_succeeded uid=%s", uid)
-
     return SignupResponse(
         uid=uid,
         email=payload.email,
@@ -219,111 +394,436 @@ def signup(payload: SignupRequest) -> SignupResponse:
     response_model=UserProfile,
     tags=["Auth"],
     summary="Get current user profile",
-    response_description="Profile from Firestore, keyed by the authenticated Firebase UID",
-    responses={
-        200: {"description": "Profile returned"},
-        401: {"description": "Missing or invalid Firebase token"},
-        404: {"description": "Profile not found — user must complete signup via /auth/signup"},
-    },
 )
 def get_me(user: dict = Depends(get_current_user)) -> UserProfile:
-    """Return the authenticated user's profile.
+    """Return the authenticated user's Firestore profile.
 
-    A 404 here typically means the user was created directly in the Firebase
-    Console without going through /auth/signup — there's an Auth record but no
-    profile. The fix is to delete the Auth record and have the user sign up
-    properly through the API.
+    404 if the profile is missing — typically a user that was created directly
+    in Firebase Console without going through /auth/signup.
     """
     profile = get_user_profile(user["uid"])
     if profile is None:
-        raise HTTPException(
+        raise APIError(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found. Please complete signup.",
+            code=ErrorCode.USER_PROFILE_NOT_FOUND,
+            message="User profile not found. Please complete signup.",
         )
     return profile
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Documents
+# Documents — helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _upload_headers_for(file: DocumentFile) -> dict[str, str]:
+    """Headers the client must send when PUTting to GCS, in addition to the
+    body. The signed URL signature includes these — mismatches cause 403."""
+    return {
+        "Content-Type": file.content_type,
+        "x-goog-content-length-range": f"0,{file.size_bytes}",
+        "x-goog-if-generation-match": "0",
+    }
+
+
+def _make_upload_instruction(file: DocumentFile) -> DocumentFileUploadInstruction:
+    upload_url = gcs.generate_upload_url(
+        object_path=file.gcs_object_path,
+        content_type=file.content_type,
+        max_size_bytes=file.size_bytes,
+    )
+    return DocumentFileUploadInstruction(
+        file_id=file.file_id,
+        file_name=file.file_name,
+        content_type=file.content_type,
+        size_bytes=file.size_bytes,
+        upload_url=upload_url,
+        upload_headers=_upload_headers_for(file),
+        upload_expires_at=datetime.now(timezone.utc) + gcs.DEFAULT_SIGNED_URL_TTL,
+    )
+
+
+def _make_file_response(file: DocumentFile) -> DocumentFileResponse:
+    """Build the read-side representation of a file. Download URL only for
+    files whose upload completed."""
+    download_url: str | None = None
+    download_expires_at: datetime | None = None
+    if file.upload_completed_at is not None:
+        download_url = gcs.generate_download_url(object_path=file.gcs_object_path)
+        download_expires_at = datetime.now(timezone.utc) + gcs.DEFAULT_SIGNED_URL_TTL
+    return DocumentFileResponse(
+        file_id=file.file_id,
+        file_name=file.file_name,
+        content_type=file.content_type,
+        size_bytes=file.size_bytes,
+        upload_completed_at=file.upload_completed_at,
+        download_url=download_url,
+        download_expires_at=download_expires_at,
+    )
+
+
+def _to_document_response(document: Document) -> DocumentResponse:
+    return DocumentResponse(
+        document_id=document.id,
+        status=document.status,
+        domain=document.domain,
+        title=document.title,
+        file_count=document.file_count,
+        total_bytes=document.total_bytes,
+        files=[_make_file_response(f) for f in document.files],
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        finalized_at=document.finalized_at,
+    )
+
+
+def _to_list_item(document: Document) -> DocumentListItem:
+    """Summary representation. Includes one signed download URL (the first
+    completed file) as a thumbnail; full URLs require GET /documents/{id}."""
+    first_completed = next((f for f in document.files if f.upload_completed_at), None)
+    thumb_url: str | None = None
+    thumb_expires: datetime | None = None
+    if first_completed is not None:
+        thumb_url = gcs.generate_download_url(object_path=first_completed.gcs_object_path)
+        thumb_expires = datetime.now(timezone.utc) + gcs.DEFAULT_SIGNED_URL_TTL
+    return DocumentListItem(
+        document_id=document.id,
+        status=document.status,
+        domain=document.domain,
+        title=document.title,
+        file_count=document.file_count,
+        total_bytes=document.total_bytes,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        finalized_at=document.finalized_at,
+        thumbnail_url=thumb_url,
+        thumbnail_expires_at=thumb_expires,
+    )
+
+
+def _enforce_total_size(files: list[CreateDocumentFileRequest]) -> None:
+    total = sum(f.size_bytes for f in files)
+    if total > MAX_TOTAL_SIZE_BYTES:
+        raise APIError(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            code=ErrorCode.TOTAL_SIZE_EXCEEDED,
+            message=(
+                f"declared total of {total} bytes exceeds limit of "
+                f"{MAX_TOTAL_SIZE_BYTES} bytes"
+            ),
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Documents — endpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
 @app.post(
-    "/documents/upload",
+    "/documents",
     status_code=status.HTTP_201_CREATED,
-    response_model=UploadDocumentResponse,
+    response_model=CreateDocumentResponse,
     tags=["Documents"],
-    summary="Upload a document",
-    response_description="Document tracking record created",
-    responses={
-        201: {"description": "Document accepted; tracking record created in Firestore"},
-        401: {"description": "Missing or invalid Firebase token"},
-        413: {"description": "File exceeds 10 MB size limit"},
-        415: {"description": "Unsupported file type"},
-    },
+    summary="Create a document and obtain upload URLs",
 )
-async def upload_document(
-    file: UploadFile = File(
-        ..., description="PDF, JPEG, PNG, or plain text. Max 10 MB."
-    ),
+def create_document(
+    payload: CreateDocumentRequest,
     user: dict = Depends(get_current_user),
-) -> UploadDocumentResponse:
-    """Accept a document upload and create a tracking record in Firestore.
+    idempotency_key: Annotated[
+        str | None,
+        Header(
+            alias="Idempotency-Key",
+            description=(
+                "Client-generated unique key. Retries with the same key + same uid "
+                "return the original document instead of creating a duplicate. "
+                "Stored for 24h."
+            ),
+            max_length=128,
+        ),
+    ] = None,
+) -> CreateDocumentResponse:
+    """Atomically create a Document plus a per-file record for each declared
+    file, returning a signed PUT URL for each.
 
-    The bytes are not yet persisted to GCS — that is a follow-up step. A Firestore
-    document is created in PENDING_UPLOAD state so the rest of the pipeline (and
-    the mobile client) has a stable id to refer to.
+    The client uploads each file directly to GCS using the returned URLs +
+    headers, then calls POST /documents/{document_id}/finalize.
     """
-    if file.content_type not in _ALLOWED_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"File type '{file.content_type}' is not allowed.",
-        )
+    _enforce_total_size(payload.files)
 
-    # TODO(streaming): reading the entire body into memory is not safe for
-    # large uploads. Switch to a streaming size validator before raising the
-    # 10 MB cap.
-    contents = await file.read()
-    if len(contents) > _MAX_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File exceeds {_MAX_SIZE_BYTES // (1024 * 1024)} MB limit.",
-        )
+    uid = user["uid"]
 
-    # TODO(idempotency): a client retry will create duplicate records. Wire an
-    # Idempotency-Key header from mobile and dedupe on it before this insert.
-    # TODO(domain): currently hardcoded; pull from the request body once mobile
-    # sends it. Domain-configurability is the load-bearing requirement of the project.
-    document = create_document(
-        uid=user["uid"],
-        file_name=file.filename or "unknown",
-        content_type=file.content_type,
-        size_bytes=len(contents),
-        domain="medical",
+    # Idempotency short-circuit: if the same (uid, key) already created a
+    # document, return it (with fresh signed URLs for any pending files) rather
+    # than creating a duplicate.
+    if idempotency_key:
+        existing = find_document_by_idempotency_key(uid, idempotency_key)
+        if existing is not None:
+            return _create_response_from_existing(existing)
+
+    document = create_document_with_files(
+        uid=uid,
+        domain=payload.domain,
+        title=payload.title,
+        file_specs=[
+            FileCreationSpec(
+                file_name=f.file_name,
+                content_type=f.content_type,
+                size_bytes=f.size_bytes,
+            )
+            for f in payload.files
+        ],
+        idempotency_key=idempotency_key,
+        # Repository mints the document_id then calls back with it so we can
+        # compose the full GCS object path here without knowing the id upfront.
+        object_path_builder=lambda *, document_id, file_id, extension: gcs.build_object_path(
+            uid=uid,
+            document_id=document_id,
+            file_id=file_id,
+            extension=extension,
+        ),
     )
 
-    # TODO(gcs): upload bytes to GCS and update the Firestore record with
-    # gcs_uri + status=UPLOADED.
-    # TODO(pubsub): publish a DocumentUploaded event so the ingestion worker
-    # can pick this up.
-
-    return UploadDocumentResponse(
+    return CreateDocumentResponse(
         document_id=document.id,
         status=document.status,
-        file_name=document.file_name,
-        size_bytes=document.size_bytes,
+        domain=document.domain,
+        title=document.title,
+        file_count=document.file_count,
+        total_bytes=document.total_bytes,
+        files=[_make_upload_instruction(f) for f in document.files],
+        created_at=document.created_at,
     )
+
+
+def _create_response_from_existing(document: Document) -> CreateDocumentResponse:
+    """For idempotent retries: return the previously-created document with
+    fresh signed URLs for any files that have not yet been uploaded."""
+    instructions = [
+        _make_upload_instruction(f)
+        for f in document.files
+        if f.upload_completed_at is None
+    ]
+    return CreateDocumentResponse(
+        document_id=document.id,
+        status=document.status,
+        domain=document.domain,
+        title=document.title,
+        file_count=document.file_count,
+        total_bytes=document.total_bytes,
+        files=instructions,
+        created_at=document.created_at,
+    )
+
+
+@app.post(
+    "/documents/{document_id}/finalize",
+    response_model=DocumentResponse,
+    tags=["Documents"],
+    summary="Finalize a pending document after uploading files to GCS",
+)
+async def finalize_document(
+    document_id: str,
+    user: dict = Depends(get_current_user),
+) -> DocumentResponse:
+    """Verify uploaded files exist in GCS, transition status to `uploaded`, and
+    publish a DocumentUploaded event for the worker to pick up."""
+    uid = user["uid"]
+
+    document = find_document_for_user(document_id, uid)
+    if document is None:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            message="Document not found.",
+        )
+    if document.status is not DocumentStatus.PENDING_UPLOAD:
+        raise APIError(
+            status_code=status.HTTP_409_CONFLICT,
+            code=ErrorCode.DOCUMENT_ALREADY_FINALIZED,
+            message=f"document is in state {document.status.value}",
+        )
+
+    # Verify all files exist in GCS in parallel. Tolerates partial uploads —
+    # only the files that actually landed get marked uploaded.
+    existence = await asyncio.gather(
+        *(gcs.verify_object_exists(f.gcs_object_path) for f in document.files)
+    )
+    uploaded_ids = [f.file_id for f, ok in zip(document.files, existence) if ok]
+
+    if not uploaded_ids:
+        raise APIError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code=ErrorCode.NO_FILES_UPLOADED,
+            message="No files were uploaded to GCS for this document.",
+        )
+
+    try:
+        document = mark_uploaded(document_id, uid, uploaded_ids)
+    except LookupError:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            message="Document not found.",
+        )
+    except DocumentStateError as exc:
+        raise APIError(
+            status_code=status.HTTP_409_CONFLICT,
+            code=ErrorCode.DOCUMENT_ALREADY_FINALIZED,
+            message=str(exc),
+        )
+
+    # Publish AFTER Firestore commit. If publish fails the document is still
+    # marked uploaded — a reconciliation job re-publishes stale `uploaded`
+    # documents that have no corresponding worker activity within N minutes.
+    try:
+        pubsub.publish_document_uploaded(document)
+    except Exception as exc:
+        _log.error(
+            "pubsub_publish_failed document_id=%s error=%s",
+            document_id, exc,
+        )
+
+    return _to_document_response(document)
+
+
+@app.post(
+    "/documents/{document_id}/upload-urls/refresh",
+    response_model=RefreshUploadURLsResponse,
+    tags=["Documents"],
+    summary="Reissue signed URLs for files that have not been uploaded yet",
+)
+def refresh_upload_urls(
+    document_id: str,
+    user: dict = Depends(get_current_user),
+) -> RefreshUploadURLsResponse:
+    """Replace expired signed URLs without losing the document.
+
+    Useful when a long-paused mobile upload outlives the URL TTL. Only files
+    without an `upload_completed_at` get fresh URLs; already-uploaded files
+    return nothing because they're write-once.
+    """
+    document = find_document_for_user(document_id, user["uid"])
+    if document is None:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            message="Document not found.",
+        )
+    if document.status is not DocumentStatus.PENDING_UPLOAD:
+        raise APIError(
+            status_code=status.HTTP_409_CONFLICT,
+            code=ErrorCode.DOCUMENT_ALREADY_FINALIZED,
+            message=f"document is in state {document.status.value}",
+        )
+    return RefreshUploadURLsResponse(
+        document_id=document.id,
+        status=document.status,
+        files=[_make_upload_instruction(f) for f in pending_files(document)],
+    )
+
+
+@app.get(
+    "/documents",
+    response_model=ListDocumentsResponse,
+    tags=["Documents"],
+    summary="List the current user's documents (paginated, filterable)",
+)
+def list_documents(
+    user: dict = Depends(get_current_user),
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    cursor: str | None = None,
+    domain: str | None = None,
+    status_filter: Annotated[DocumentStatus | None, Query(alias="status")] = None,
+) -> ListDocumentsResponse:
+    """Paginated list of documents newest-first.
+
+    Filters: `domain` (medical, finance, ...), `status` (any DocumentStatus
+    value). Cursor is opaque; clients pass back whatever `next_cursor` was
+    returned in the previous response.
+    """
+    if domain is not None and domain not in SUPPORTED_DOMAINS:
+        raise APIError(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code=ErrorCode.INVALID_DOMAIN,
+            message=f"unsupported domain {domain!r}",
+        )
+
+    if cursor is not None:
+        try:
+            decode_cursor(cursor)
+        except ValueError:
+            raise APIError(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                code=ErrorCode.INVALID_PAGINATION_CURSOR,
+                message="cursor is malformed",
+            )
+
+    documents, next_cursor = list_documents_for_user(
+        user["uid"],
+        domain=domain,
+        status=status_filter,
+        limit=limit,
+        cursor=cursor,
+    )
+    return ListDocumentsResponse(
+        documents=[_to_list_item(d) for d in documents],
+        next_cursor=next_cursor,
+    )
+
+
+@app.get(
+    "/documents/{document_id}",
+    response_model=DocumentResponse,
+    tags=["Documents"],
+    summary="Read a single document, including signed download URLs for files",
+)
+def get_document(
+    document_id: str,
+    user: dict = Depends(get_current_user),
+) -> DocumentResponse:
+    document = find_document_for_user(document_id, user["uid"])
+    if document is None:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            message="Document not found.",
+        )
+    return _to_document_response(document)
+
+
+@app.delete(
+    "/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Documents"],
+    summary="Soft-delete a document",
+)
+def delete_document(
+    document_id: str,
+    user: dict = Depends(get_current_user),
+) -> None:
+    """Mark the document as deleted. Refuses if a worker is mid-processing —
+    callers should poll until status leaves `processing` before retrying."""
+    try:
+        soft_delete(document_id, user["uid"])
+    except LookupError:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            message="Document not found.",
+        )
+    except DocumentStateError:
+        raise APIError(
+            status_code=status.HTTP_409_CONFLICT,
+            code=ErrorCode.DOCUMENT_IN_PROCESSING,
+            message="document is currently being processed; try again shortly",
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # OpenAPI customisation
 # ──────────────────────────────────────────────────────────────────────────────
 
-# FastAPI auto-generates an OpenAPI schema and emits a `HTTPBearer` security scheme
-# whenever a route uses `Depends(HTTPBearer())` — which `get_current_user` does.
-# We just decorate the auto-generated entry with `bearerFormat` and a description so
-# the Swagger UI Authorize dialog shows useful guidance. Replacing the scheme outright
-# would break the per-endpoint `security` references FastAPI already wired up.
 def custom_openapi():
+    """Decorate FastAPI's auto-generated HTTPBearer scheme with description and
+    bearer format so Swagger UI's Authorize dialog is useful."""
     if app.openapi_schema:
         return app.openapi_schema
 
