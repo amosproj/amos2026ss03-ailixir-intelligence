@@ -1,6 +1,6 @@
 import { CButton, CText } from '@/components/atoms';
 import { DocumentPageThumbnail } from '@/components/molecules';
-import { MOCK_DOCUMENTS } from '@/constants/mock-documents';
+import { documentsAtom, updateDocumentStatusAtom } from '@/lib/documentAtoms';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
@@ -8,6 +8,19 @@ import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
+import { useAtomValue, useSetAtom } from 'jotai';
+
+const statusLabels = {
+  not_extracted: 'Not extracted',
+  extracting: 'Extraction in progress',
+  extracted: 'Knowledge extracted',
+} as const;
+
+const statusStyles = {
+  not_extracted: { backgroundColor: '$yellow2', color: '$yellow11' },
+  extracting: { backgroundColor: '$blue2', color: '$blue11' },
+  extracted: { backgroundColor: '$green2', color: '$green11' },
+} as const;
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
   if (!value) {
@@ -29,8 +42,10 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
+  const documents = useAtomValue(documentsAtom);
+  const updateDocumentStatus = useSetAtom(updateDocumentStatusAtom);
 
-  const document = MOCK_DOCUMENTS.find((entry) => entry.id === params.id);
+  const document = documents.find((entry) => entry.id === params.id);
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
@@ -50,6 +65,14 @@ export default function DocumentScreen() {
       dialogTitle: 'Download graph',
     });
   }, []);
+
+  const handleStartExtraction = useCallback(() => {
+    if (!document || document.status !== 'not_extracted') {
+      return;
+    }
+
+    updateDocumentStatus({ documentId: document.id, status: 'extracting' });
+  }, [document, updateDocumentStatus]);
 
   if (!document) {
     return (
@@ -86,9 +109,11 @@ export default function DocumentScreen() {
               <CText variant="caption" color="$color9">
                 Status
               </CText>
-              <CText variant="lead" bold color="$color11">
-                {document.status ?? 'Unknown'}
-              </CText>
+              <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
+                <CText variant="caption" color={statusStyles[document.status].color}>
+                  {statusLabels[document.status]}
+                </CText>
+              </XStack>
             </YStack>
           </XStack>
 
@@ -115,6 +140,8 @@ export default function DocumentScreen() {
             </XStack>
           </YStack>
         </YStack>
+
+        {document.status === 'not_extracted' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
 
         <CButton onPress={handleDownloadGraph}>Download graph</CButton>
 

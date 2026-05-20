@@ -1,3 +1,5 @@
+export type DocumentExtractionStatus = 'not_extracted' | 'extracting' | 'extracted';
+
 export interface Document {
   id: string;
   title: string;
@@ -8,7 +10,7 @@ export interface Document {
 
   // Optional metadata for the document detail view
   fileName?: string;
-  status?: string;
+  status: DocumentExtractionStatus;
   fromDate?: string;
   uploadedDate?: string;
   facilityName?: string;
