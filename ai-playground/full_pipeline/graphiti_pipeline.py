@@ -24,9 +24,16 @@ import asyncio
 import json
 import os
 import sys
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend (no display needed)
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import networkx as nx
+from neo4j import GraphDatabase
 from dotenv import load_dotenv
 
 # ── Environment ──────────────────────────────────────────────────────────────
@@ -101,6 +108,10 @@ async def run_pipeline(image_source: str | None = None) -> None:
         embedder=embedder,
     )
 
+    # Output folder for PNG files
+    graph_out_dir = _HERE / "graph_outputs"
+    graph_out_dir.mkdir(exist_ok=True)
+
     # Build vector + fulltext indices once (idempotent)
     print("Building Neo4j indices (first run only)...")
     await graphiti.build_indices_and_constraints()
@@ -143,7 +154,7 @@ async def run_pipeline(image_source: str | None = None) -> None:
         print(f"  ✓ OCR done  doc_type={doc_type}  confidence={confidence}  tokens={tokens}")
 
         # ── Step 2: Add to Graphiti ───────────────────────────────────────
-        print("  Step 2/2  Graphiti entity extraction → Neo4j...")
+        print("  Step 2/3  Graphiti entity extraction → Neo4j...")
 
         episode_name = f"{img_path.stem}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         episode_body = _build_episode_text(img_path.name, ocr_data)
@@ -158,12 +169,29 @@ async def run_pipeline(image_source: str | None = None) -> None:
                 ),
                 reference_time=datetime.now(timezone.utc),
             )
-            print(f"  ✓ Episode '{episode_name}' stored in Neo4j\n")
+            print(f"  ✓ Episode '{episode_name}' stored in Neo4j")
+
+            # Browser link for this document's subgraph
+            browser_link = neo4j_browser_link(episode_name)
+            print(f"  🔗 Neo4j Browser → {browser_link}")
+
+            # ── Step 3: Export knowledge graph as PNG ─────────────────────
+            print("  Step 3/3  Rendering knowledge graph PNG...")
+            png_path = graph_out_dir / f"{img_path.stem}_graph.png"
+            try:
+                save_graph_png(episode_name, png_path)
+                print(f"  ✓ Graph PNG → {png_path}\n")
+            except Exception as exc:
+                print(f"  ⚠  PNG generation failed: {exc}\n")
+                png_path = None
+
             results.append({
                 "file": img_path.name,
                 "status": "ok",
                 "episode": episode_name,
                 "doc_type": doc_type,
+                "graph_png": str(png_path) if png_path else None,
+                "browser_link": browser_link,
             })
         except Exception as exc:
             print(f"  ✗ Graphiti error: {exc}\n")
@@ -175,8 +203,13 @@ async def run_pipeline(image_source: str | None = None) -> None:
     ok_count = sum(1 for r in results if r["status"] == "ok")
     print("=" * 60)
     print(f"  Done: {ok_count}/{len(images)} images ingested successfully")
-    print(f"  Neo4j browser : http://localhost:7474")
-    print(f"  Quick query   : MATCH (n) RETURN n LIMIT 50")
+    print(f"  Neo4j browser (full graph) : http://localhost:7474")
+    print()
+    print("  Per-document links (open in browser, then click Run):")
+    for r in results:
+        if r.get("browser_link"):
+            print(f"    {r['file']}")
+            print(f"      {r['browser_link']}")
     print("=" * 60)
 
     summary_path = _HERE / "pipeline_run.json"
@@ -194,6 +227,132 @@ async def run_pipeline(image_source: str | None = None) -> None:
             ensure_ascii=False,
         )
     print(f"\n  Run summary → {summary_path}\n")
+
+
+# ── Neo4j Browser link generator ─────────────────────────────────────────────
+
+def neo4j_browser_link(episode_name: str) -> str:
+    """
+    Return a localhost Neo4j Browser URL with a Cypher query pre-filled
+    for the given episode. Clicking the link opens the graph instantly.
+    """
+    cypher = (
+        f"MATCH (ep:Episodic {{name:'{episode_name}'}})-[r*1..2]-(n) "
+        f"RETURN ep, r, n"
+    )
+    encoded = urllib.parse.quote(cypher, safe="")
+    return f"http://localhost:7474/browser/?cmd=edit&arg={encoded}"
+
+
+# ── Knowledge graph PNG export ───────────────────────────────────────────────
+
+# Node colour per label type (Graphiti uses these label names)
+_LABEL_COLOURS: dict[str, str] = {
+    "Entity":       "#4A90D9",
+    "Person":       "#E67E22",
+    "Organization": "#27AE60",
+    "Location":     "#8E44AD",
+    "Date":         "#E74C3C",
+    "Episodic":     "#95A5A6",
+}
+_DEFAULT_COLOUR = "#BDC3C7"
+
+
+def save_graph_png(episode_name: str, output_path: Path) -> None:
+    """
+    Query Neo4j for all entity nodes and relationships, build a networkx DiGraph,
+    and save a labelled PNG. The episode that was just added is highlighted.
+    """
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
+    G = nx.DiGraph()
+    node_labels: dict[str, str] = {}   # node_id → display label
+    node_colours: dict[str, str] = {}  # node_id → colour
+    edge_labels: dict[tuple, str] = {} # (src, tgt) → rel type
+
+    with driver.session() as session:
+        # Pull entity nodes (skip raw Episodic metadata nodes for clarity)
+        node_result = session.run("""
+            MATCH (n)
+            WHERE NOT n:Episodic
+            RETURN
+                elementId(n)  AS nid,
+                labels(n)     AS lbls,
+                coalesce(n.name, n.uuid, elementId(n)) AS display
+            LIMIT 200
+        """)
+        for rec in node_result:
+            nid = rec["nid"]
+            lbls: list[str] = rec["lbls"] or []
+            display: str = str(rec["display"])
+            G.add_node(nid)
+            node_labels[nid] = display[:30]  # truncate long names
+            colour = _DEFAULT_COLOUR
+            for lbl in lbls:
+                if lbl in _LABEL_COLOURS:
+                    colour = _LABEL_COLOURS[lbl]
+                    break
+            node_colours[nid] = colour
+
+        # Pull relationships
+        rel_result = session.run("""
+            MATCH (a)-[r]->(b)
+            WHERE NOT a:Episodic AND NOT b:Episodic
+            RETURN
+                elementId(a) AS src,
+                elementId(b) AS tgt,
+                type(r)      AS rtype
+            LIMIT 300
+        """)
+        for rec in rel_result:
+            src, tgt, rtype = rec["src"], rec["tgt"], rec["rtype"]
+            if G.has_node(src) and G.has_node(tgt):
+                G.add_edge(src, tgt)
+                edge_labels[(src, tgt)] = rtype or ""
+
+    driver.close()
+
+    if G.number_of_nodes() == 0:
+        # Nothing to draw yet — create a placeholder
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.text(0.5, 0.5, "No entities extracted yet", ha="center", va="center",
+                fontsize=14, color="gray")
+        ax.axis("off")
+        plt.savefig(output_path, dpi=120, bbox_inches="tight")
+        plt.close()
+        return
+
+    fig, ax = plt.subplots(figsize=(18, 12))
+    fig.patch.set_facecolor("#1A1A2E")
+    ax.set_facecolor("#1A1A2E")
+
+    pos = nx.spring_layout(G, seed=42, k=2.5)
+
+    colours = [node_colours.get(n, _DEFAULT_COLOUR) for n in G.nodes()]
+    nx.draw_networkx_nodes(G, pos, node_color=colours, node_size=1800,
+                           alpha=0.92, ax=ax)
+    nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=7,
+                            font_color="white", ax=ax)
+    nx.draw_networkx_edges(G, pos, edge_color="#AAAAAA", arrows=True,
+                           arrowsize=15, width=1.2,
+                           connectionstyle="arc3,rad=0.1", ax=ax)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
+                                 font_size=6, font_color="#DDDDDD", ax=ax)
+
+    # Legend
+    legend_handles = [
+        mpatches.Patch(color=c, label=lbl)
+        for lbl, c in _LABEL_COLOURS.items()
+    ]
+    ax.legend(handles=legend_handles, loc="upper left",
+              facecolor="#2C2C54", labelcolor="white", fontsize=8)
+
+    ax.set_title(f"Knowledge Graph — {episode_name}", color="white", fontsize=11, pad=12)
+    ax.axis("off")
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close()
 
 
 # ── Episode text builder ──────────────────────────────────────────────────────

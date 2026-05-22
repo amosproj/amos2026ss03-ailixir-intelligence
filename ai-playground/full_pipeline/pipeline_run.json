@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-05-19T23:21:40.301595+00:00",
+  "run_at": "2026-05-20T10:27:50.553614+00:00",
   "neo4j_uri": "bolt://localhost:7687",
   "images_processed": 4,
   "success_count": 4,
@@ -7,26 +7,34 @@
     {
       "file": "image (0).jpg",
       "status": "ok",
-      "episode": "image (0)_20260519_231847",
-      "doc_type": "lab_report"
+      "episode": "image (0)_20260520_102256",
+      "doc_type": "lab_report",
+      "graph_png": "C:\\AI Masters\\AMOS\\amos2026ss03-ailixir-intelligence\\ai-playground\\full_pipeline\\graph_outputs\\image (0)_graph.png",
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27image%20%280%29_20260520_102256%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
     },
     {
       "file": "image (1).jpg",
       "status": "ok",
-      "episode": "image (1)_20260519_231957",
-      "doc_type": "lab_report"
+      "episode": "image (1)_20260520_102436",
+      "doc_type": "lab_report",
+      "graph_png": "C:\\AI Masters\\AMOS\\amos2026ss03-ailixir-intelligence\\ai-playground\\full_pipeline\\graph_outputs\\image (1)_graph.png",
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27image%20%281%29_20260520_102436%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
     },
     {
       "file": "image (2).jpg",
       "status": "ok",
-      "episode": "image (2)_20260519_232040",
-      "doc_type": "prescription"
+      "episode": "image (2)_20260520_102611",
+      "doc_type": "prescription",
+      "graph_png": "C:\\AI Masters\\AMOS\\amos2026ss03-ailixir-intelligence\\ai-playground\\full_pipeline\\graph_outputs\\image (2)_graph.png",
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27image%20%282%29_20260520_102611%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
     },
     {
       "file": "image (3).jpg",
       "status": "ok",
-      "episode": "image (3)_20260519_232119",
-      "doc_type": "prescription"
+      "episode": "image (3)_20260520_102652",
+      "doc_type": "prescription",
+      "graph_png": "C:\\AI Masters\\AMOS\\amos2026ss03-ailixir-intelligence\\ai-playground\\full_pipeline\\graph_outputs\\image (3)_graph.png",
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27image%20%283%29_20260520_102652%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
     }
   ]
 }
