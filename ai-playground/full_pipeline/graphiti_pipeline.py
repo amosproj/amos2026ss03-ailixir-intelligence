@@ -624,23 +624,60 @@ def save_graph_json(
     episode_name: str, img_name: str, doc_type: str, output_path: Path
 ) -> None:
     """
-    Write a structured JSON file with nodes + edges ready for frontend
-    rendering (D3.js, Cytoscape, React Flow, vis.js, etc.).
+    Write a minimal, display-only JSON for the frontend.
+    Strips all Graphiti internals (embeddings, timestamps, group_id, etc.).
+    Compatible with D3.js, Cytoscape, React Flow, vis.js.
     """
-    nodes, edges = _fetch_episode_graph(episode_name)
+    _STRIP_PROPS = {
+        "embedding", "name_embedding", "summary_embedding",
+        "group_id", "uuid", "created_at", "expired_at",
+        "valid_at", "invalid_at", "source_episode_names",
+        "episodes", "element_id",
+    }
+
+    raw_nodes, raw_edges = _fetch_episode_graph(episode_name)
+
+    # ── Nodes: only id, name, type, and human-readable properties ────────────
+    clean_nodes = []
+    for n in raw_nodes:
+        user_props = {
+            k: v for k, v in n.get("properties", {}).items()
+            if k not in _STRIP_PROPS
+            and not k.endswith("_embedding")
+            and not isinstance(v, list)   # drop any vector arrays
+        }
+        clean_nodes.append({
+            "id":    n["id"],
+            "name":  n["name"],
+            "type":  n["type"],
+            **( {"summary": n["properties"]["summary"]}
+                if "summary" in n.get("properties", {}) else {} ),
+            **user_props,
+        })
+
+    # ── Edges: only source, target, type, label ───────────────────────────────
+    clean_edges = [
+        {
+            "source": e["source"],
+            "target": e["target"],
+            "type":   e["type"],
+            "label":  e["label"],
+        }
+        for e in raw_edges
+    ]
 
     payload = {
         "meta": {
-            "source_image": img_name,
-            "episode_name": episode_name,
-            "doc_type": doc_type,
-            "exported_at": datetime.now(timezone.utc).isoformat(),
-            "node_count": len(nodes),
-            "edge_count": len(edges),
-            "browser_link": neo4j_browser_link(episode_name),
+            "source_image":  img_name,
+            "episode_name":  episode_name,
+            "doc_type":      doc_type,
+            "exported_at":   datetime.now(timezone.utc).isoformat(),
+            "node_count":    len(clean_nodes),
+            "edge_count":    len(clean_edges),
+            "browser_link":  neo4j_browser_link(episode_name),
         },
-        "nodes": nodes,
-        "edges": edges,
+        "nodes": clean_nodes,
+        "edges": clean_edges,
     }
 
     output_path.write_text(
