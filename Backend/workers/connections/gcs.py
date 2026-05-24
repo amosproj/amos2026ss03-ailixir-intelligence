@@ -1,12 +1,14 @@
 """
 Singleton GCS client with helpers for the pipeline.
 
-  download_bytes(gcs_uri)         → (bytes, mime_type)   — fetch document for OCR
-  upload_text(content, doc_id, suffix) → gcs_uri         — store Cypher file
+  download_bytes(gcs_uri)              → (bytes, mime_type)  — fetch document for OCR
+  upload_text(content, doc_id, suffix) → gcs_uri             — store Cypher file
 
-Configure via:
-  GCS_BUCKET_NAME   — bucket where pipeline outputs are written
-  GOOGLE_APPLICATION_CREDENTIALS  — path to service account key (or use Workload Identity)
+Two buckets:
+  GCS_DOCUMENTS_BUCKET  — uploaded documents (written by the API, read by workers)
+  GCS_CYPHER_BUCKET     — exported Cypher graph files (written by workers, read by frontend)
+
+GOOGLE_APPLICATION_CREDENTIALS — path to service account key (or use Workload Identity on Cloud Run)
 """
 
 from __future__ import annotations
@@ -40,12 +42,12 @@ def download_bytes(gcs_uri: str) -> tuple[bytes, str]:
 
 def upload_text(content: str, doc_id: str, suffix: str, folder: str = "graphs") -> str:
     """
-    Upload a text file to GCS.
+    Upload a text file to the Cypher bucket.
 
     Object path:  {folder}/{doc_id}_{suffix}
-    Returns the GCS URI:  gs://{GCS_BUCKET_NAME}/{folder}/{doc_id}_{suffix}
+    Returns the GCS URI:  gs://{GCS_CYPHER_BUCKET}/{folder}/{doc_id}_{suffix}
     """
-    bucket_name = os.environ["GCS_BUCKET_NAME"]
+    bucket_name = os.environ["GCS_CYPHER_BUCKET"]
     blob_name = f"{folder}/{doc_id}_{suffix}"
     blob = get_client().bucket(bucket_name).blob(blob_name)
     blob.upload_from_string(content, content_type="text/plain; charset=utf-8")
