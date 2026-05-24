@@ -217,245 +217,29 @@ def find_document_by_idempotency_key(uid: str, idempotency_key: str) -> Document
     `firestore.indexes.json`.
     """
     db = get_firestore()
-    query = (
-        db.collection(_COLLECTION)
-        .where(filter=FieldFilter("uid", "==", uid))
-        .where(filter=FieldFilter("idempotency_key", "==", idempotency_key))
-        .limit(1)
-    )
-    for snapshot in query.stream():
-        return _snapshot_to_document(snapshot)
-    return None
-
-
-def list_documents_for_user(
-    uid: str,
-    *,
-    domain: str | None = None,
-    status: DocumentStatus | None = None,
-    limit: int = 50,
-    cursor: str | None = None,
-) -> tuple[list[Document], str | None]:
-    """Paginated list of a user's documents, newest first.
-
-    Returns `(documents, next_cursor)`. `next_cursor` is None when no further
-    pages remain. Excludes soft-deleted documents.
-    """
-    db = get_firestore()
-    query = (
-        db.collection(_COLLECTION)
-        .where(filter=FieldFilter("uid", "==", uid))
-        .where(filter=FieldFilter("deleted_at", "==", None))
-        .order_by("created_at", direction=Query.DESCENDING)
-        .order_by("id", direction=Query.DESCENDING)
-    )
-
-    if domain is not None:
-        query = query.where(filter=FieldFilter("domain", "==", domain))
-    if status is not None:
-        query = query.where(filter=FieldFilter("status", "==", status.value))
-
-    # Fetch one extra to detect "is there a next page".
-    query = query.limit(limit + 1)
-
-    if cursor:
-        cursor_dt, cursor_id = decode_cursor(cursor)
-        query = query.start_after([cursor_dt, cursor_id])
-
-    snapshots = list(query.stream())
-    has_next = len(snapshots) > limit
-    if has_next:
-        snapshots = snapshots[:limit]
-
-    documents = [_snapshot_to_document(s) for s in snapshots]
-
-    next_cursor: str | None = None
-    if has_next and documents:
-        last = documents[-1]
-        next_cursor = _encode_cursor(last.created_at, last.id)
-
-    return documents, next_cursor
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# State transitions
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-class DocumentStateError(Exception):
-    """Raised when a transition is attempted from an incompatible state."""
-
-    def __init__(self, current_status: DocumentStatus):
-        super().__init__(f"document is in state {current_status.value}")
-        self.current_status = current_status
-
-
-def mark_uploaded(
-    document_id: str,
-    uid: str,
-    uploaded_file_ids: Iterable[str],
-) -> Document:
-    """Atomically transition `pending_upload` → `uploaded`.
-
-    Uses a Firestore transaction so concurrent finalize attempts cannot both
-    succeed. Refuses if the document is missing, owned by another user, soft
-    deleted, or in any state other than `pending_upload`.
-
-    `uploaded_file_ids` is the set of files verified to exist in GCS — these
-    get an `upload_completed_at` stamp. The document's `file_count` is updated
-    to match (partial uploads are tolerated; the worker handles them).
-    """
-    db = get_firestore()
-    doc_ref = db.collection(_COLLECTION).document(document_id)
-    uploaded_ids = set(uploaded_file_ids)
-    now = datetime.now(timezone.utc)
-
-    @transactional
-    def _txn(transaction: Transaction) -> Document:
-        snapshot = doc_ref.get(transaction=transaction)
-        if not snapshot.exists:
-            raise LookupError("document not found")
-
-        data = snapshot.to_dict() or {}
-        if data.get("uid") != uid or data.get("deleted_at") is not None:
-            raise LookupError("document not found")
-
-        current_status = DocumentStatus(data["status"])
-        if current_status is not DocumentStatus.PENDING_UPLOAD:
-            raise DocumentStateError(current_status)
-
-        files: list[dict] = list(data.get("files", []))
-        updated_files: list[dict] = []
-        for file_dict in files:
-            if file_dict["file_id"] in uploaded_ids:
-                file_dict = {**file_dict, "upload_completed_at": now}
-            updated_files.append(file_dict)
-
-        transaction.update(
-            doc_ref,
-            {
-                "status": DocumentStatus.UPLOADED.value,
-                "files": updated_files,
-                "file_count": len(uploaded_ids),
-                "finalized_at": firebase_firestore.SERVER_TIMESTAMP,
-                "updated_at": firebase_firestore.SERVER_TIMESTAMP,
-            },
-        )
-
-        return Document(
-            **{
-                **data,
-                "status": DocumentStatus.UPLOADED.value,
-                "files": updated_files,
-                "file_count": len(uploaded_ids),
-                "finalized_at": now,
-                "updated_at": now,
-            }
-        )
-
-    document = _txn(db.transaction())
-
-    _log.info(
-        "document_finalized document_id=%s uid=%s uploaded_count=%d declared_count=%d",
-        document_id,
-        uid,
-        len(uploaded_ids),
-        document.file_count,
-    )
-    return document
-
-
-def soft_delete(document_id: str, uid: str) -> None:
-    """Mark a document as deleted. Refuses if status is `processing`.
-
-    Files in GCS are not touched here — a background reconciliation job
-    hard-deletes them after the retention window. This keeps the delete
-    user-facing latency low and gives operators a window to undo.
-    """
-    db = get_firestore()
-    doc_ref = db.collection(_COLLECTION).document(document_id)
-
-    @transactional
-    def _txn(transaction: Transaction) -> None:
-        snapshot = doc_ref.get(transaction=transaction)
-        if not snapshot.exists:
-            raise LookupError("document not found")
-
-        data = snapshot.to_dict() or {}
-        if data.get("uid") != uid or data.get("deleted_at") is not None:
-            raise LookupError("document not found")
-
-        current_status = DocumentStatus(data["status"])
-        if current_status is DocumentStatus.PROCESSING:
-            raise DocumentStateError(current_status)
-
-        transaction.update(
-            doc_ref,
-            {
-                "deleted_at": firebase_firestore.SERVER_TIMESTAMP,
-                "updated_at": firebase_firestore.SERVER_TIMESTAMP,
-            },
-        )
-
-    _txn(db.transaction())
-    _log.info("document_soft_deleted document_id=%s uid=%s", document_id, uid)
-
-
-def pending_files(document: Document) -> list[DocumentFile]:
-    """Return files in a document that have not yet completed upload."""
-    return [f for f in document.files if f.upload_completed_at is None]
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Worker pipeline updates
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-def update_status(
-    document_id: str,
-    new_status: DocumentStatus,
-    *,
-    error: str | None = None,
-) -> None:
-    """Transition a document to a new pipeline status.
-
-    Called by the worker at each stage (PROCESSING → EXTRACTED / FAILED).
-    Optionally records an error message on failure.
-    """
-    db = get_firestore()
     patch: dict = {
-        "status": new_status.value,
-        "updated_at": firebase_firestore.SERVER_TIMESTAMP,
+        "status": status.value,
+        "updated_at": firestore.SERVER_TIMESTAMP,
     }
     if error is not None:
         patch["error"] = error
-    db.collection(_COLLECTION).document(document_id).update(patch)
-    _log.info("document_status_updated id=%s status=%s", document_id, new_status.value)
+    db.collection(_COLLECTION).document(doc_id).update(patch)
+    _log.info("document_status_updated id=%s status=%s", doc_id, status.value)
 
 
-def update_processing_step(document_id: str, step: str) -> None:
-    """Write a human-readable progress label for frontend polling.
-
-    Example values: 'downloading', 'ocr', 'saving_extraction',
-    'building_graph', 'exporting_cypher'.
-    """
+def update_processing_step(doc_id: str, step: str) -> None:
+    """Write a human-readable progress step for frontend polling (e.g. 'ocr', 'graph')."""
     db = get_firestore()
-    db.collection(_COLLECTION).document(document_id).update(
-        {"processing_step": step, "updated_at": firebase_firestore.SERVER_TIMESTAMP}
+    db.collection(_COLLECTION).document(doc_id).update(
+        {"processing_step": step, "updated_at": firestore.SERVER_TIMESTAMP}
     )
-    _log.info("document_step_updated id=%s step=%s", document_id, step)
+    _log.info("document_step_updated id=%s step=%s", doc_id, step)
 
 
-def update_cypher_uri(document_id: str, cypher_gcs_uri: str) -> None:
-    """Attach the GCS URI of the exported Cypher file once the pipeline finishes.
-
-    The frontend reads this field to know the graph is ready and where to fetch it.
-    """
+def update_cypher_uri(doc_id: str, cypher_gcs_uri: str) -> None:
+    """Attach the GCS URI of the exported Cypher file once the pipeline finishes."""
     db = get_firestore()
-    db.collection(_COLLECTION).document(document_id).update(
-        {
-            "cypher_gcs_uri": cypher_gcs_uri,
-            "updated_at": firebase_firestore.SERVER_TIMESTAMP,
-        }
+    db.collection(_COLLECTION).document(doc_id).update(
+        {"cypher_gcs_uri": cypher_gcs_uri, "updated_at": firestore.SERVER_TIMESTAMP}
     )
-    _log.info("document_cypher_uri_set id=%s uri=%s", document_id, cypher_gcs_uri)
+    _log.info("document_cypher_uri_set id=%s uri=%s", doc_id, cypher_gcs_uri)

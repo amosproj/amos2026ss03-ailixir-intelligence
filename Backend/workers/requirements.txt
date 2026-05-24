@@ -3,11 +3,9 @@ uvicorn==0.46.0
 python-dotenv==1.0.1
 
 # AI pipeline
-graphiti-core[google-genai]>=0.3.17
-google-genai>=1.0.0
-
-# Document OCR
-google-cloud-documentai>=2.20.0
+graphiti-core>=0.3.17
+openai>=1.57.0
+requests>=2.31.0
 
 # Neo4j
 neo4j>=5.0.0
