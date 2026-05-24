@@ -1,10 +1,15 @@
 import { CText } from '@/components/atoms';
-import { Document } from '@/interfaces/document';
 import { FileText } from '@tamagui/lucide-icons-2';
 import { XStack, YStack } from 'tamagui';
 
+export type DocumentPage = {
+  id: string;
+  pageNumber?: number;
+  thumbnail?: string;
+};
+
 export type DocumentPageThumbnailProps = {
-  page: NonNullable<Document['pages']>[number];
+  page: DocumentPage;
 };
 
 export function DocumentPageThumbnail({ page }: DocumentPageThumbnailProps) {

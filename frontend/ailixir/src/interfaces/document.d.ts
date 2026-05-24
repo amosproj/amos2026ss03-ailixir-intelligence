@@ -1,4 +1,5 @@
 export type DocumentExtractionStatus = 'not_extracted' | 'extracting' | 'extracted';
+export type DocumentDraft = Pick<Document, 'title' | 'size'>;
 
 export interface Document {
   id: string;

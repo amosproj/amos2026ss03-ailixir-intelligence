@@ -1,22 +1,41 @@
 import { CText } from '@/components/atoms';
-import type { Document } from '@/interfaces/document';
+import type { DocumentStatus } from '@/hooks/useDocuments';
 import { Link } from 'expo-router';
 import { ChevronRight, File } from '@tamagui/lucide-icons-2';
 import { XStack, YStack } from 'tamagui';
 
-const statusLabels: Record<Document['status'], string> = {
-  not_extracted: 'Not extracted',
-  extracting: 'Extracting',
+export type DocumentListItemData = {
+  id: string;
+  title: string;
+  timestamp: string;
+  size: string;
+  status: DocumentStatus;
+  tags?: string[];
+};
+
+const statusLabels: Record<DocumentStatus, string> = {
+  pending_upload: 'Pending upload',
+  uploaded: 'Uploaded',
+  processing: 'Processing',
   extracted: 'Extracted',
+  failed: 'Failed',
 };
 
-const statusStyles: Record<Document['status'], { backgroundColor: '$yellow2' | '$blue2' | '$green2'; color: '$yellow11' | '$blue11' | '$green11' }> = {
-  not_extracted: { backgroundColor: '$yellow2', color: '$yellow11' },
-  extracting: { backgroundColor: '$blue2', color: '$blue11' },
+const statusStyles: Record<
+  DocumentStatus,
+  {
+    backgroundColor: '$yellow2' | '$blue2' | '$orange2' | '$green2' | '$red2';
+    color: '$yellow11' | '$blue11' | '$orange11' | '$green11' | '$red11';
+  }
+> = {
+  pending_upload: { backgroundColor: '$yellow2', color: '$yellow11' },
+  uploaded: { backgroundColor: '$blue2', color: '$blue11' },
+  processing: { backgroundColor: '$orange2', color: '$orange11' },
   extracted: { backgroundColor: '$green2', color: '$green11' },
+  failed: { backgroundColor: '$red2', color: '$red11' },
 };
 
-export function DocumentListItem({ document }: { document: Document }) {
+export function DocumentListItem({ document }: { document: DocumentListItemData }) {
   const statusStyle = statusStyles[document.status];
 
   return (
@@ -37,9 +56,11 @@ export function DocumentListItem({ document }: { document: Document }) {
                   {statusLabels[document.status]}
                 </CText>
               </XStack>
-              <CText variant="caption" tag>
-                {document.tags.map((tag) => `#${tag}`).join(' ')}
-              </CText>
+              {!!document.tags?.length && (
+                <CText variant="caption" tag>
+                  {document.tags.map((tag) => `#${tag}`).join(' ')}
+                </CText>
+              )}
             </XStack>
           </YStack>
         </XStack>

@@ -1,6 +1,7 @@
 import { CButton, CText } from '@/components/atoms';
 import { DocumentPageThumbnail } from '@/components/molecules';
-import { documentsAtom, updateDocumentStatusAtom } from '@/lib/documentAtoms';
+import { useDocument } from '@/hooks/useDocument';
+import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
@@ -8,18 +9,21 @@ import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
-import { useAtomValue, useSetAtom } from 'jotai';
 
 const statusLabels = {
-  not_extracted: 'Not extracted',
-  extracting: 'Extraction in progress',
-  extracted: 'Knowledge extracted',
+  pending_upload: 'Pending upload',
+  uploaded: 'Uploaded',
+  processing: 'Processing',
+  extracted: 'Extracted',
+  failed: 'Failed',
 } as const;
 
 const statusStyles = {
-  not_extracted: { backgroundColor: '$yellow2', color: '$yellow11' },
-  extracting: { backgroundColor: '$blue2', color: '$blue11' },
+  pending_upload: { backgroundColor: '$yellow2', color: '$yellow11' },
+  uploaded: { backgroundColor: '$blue2', color: '$blue11' },
+  processing: { backgroundColor: '$orange2', color: '$orange11' },
   extracted: { backgroundColor: '$green2', color: '$green11' },
+  failed: { backgroundColor: '$red2', color: '$red11' },
 } as const;
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
@@ -42,10 +46,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const documents = useAtomValue(documentsAtom);
-  const updateDocumentStatus = useSetAtom(updateDocumentStatusAtom);
-
-  const document = documents.find((entry) => entry.id === params.id);
+  const { data: document, isLoading, isError } = useDocument(params.id);
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
@@ -67,21 +68,27 @@ export default function DocumentScreen() {
   }, []);
 
   const handleStartExtraction = useCallback(() => {
-    if (!document || document.status !== 'not_extracted') {
+    if (!document || document.status !== 'pending_upload') {
       return;
     }
+  }, [document]);
 
-    updateDocumentStatus({ documentId: document.id, status: 'extracting' });
-  }, [document, updateDocumentStatus]);
+  if (isLoading) {
+    return (
+      <YStack flex={1} justify="center" items="center" px={24} bg="$background">
+        <CText variant="caption">Loading document...</CText>
+      </YStack>
+    );
+  }
 
-  if (!document) {
+  if (isError || !document) {
     return (
       <YStack flex={1} justify="center" items="center" px={24} bg="$background">
         <CText variant="h2" color="$color11">
           Document not found
         </CText>
         <CText variant="caption" style={{ textAlign: 'center' }}>
-          The requested document is not available in the current mock data.
+          The requested document is not available.
         </CText>
         <CButton icon={ChevronLeft} onPress={() => router.back()} mt={16}>
           Back
@@ -89,6 +96,10 @@ export default function DocumentScreen() {
       </YStack>
     );
   }
+
+  const uploadedDate = formatDate(document.created_at);
+  const sizeLabel = formatSize(document.total_bytes);
+  const fileLabel = document.file_count > 1 ? `${document.file_count} files` : document.files[0]?.file_name;
 
   return (
     <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
@@ -118,30 +129,13 @@ export default function DocumentScreen() {
           </XStack>
 
           <XStack flexWrap="wrap" justify="space-between" gap={16}>
-            <DetailRow label="Filename" value={document.fileName} />
-            <DetailRow label="Size" value={document.size} />
-            <DetailRow label="From" value={document.fromDate} />
-            <DetailRow label="Uploaded" value={document.uploadedDate} />
-            <DetailRow label="Facility" value={document.facilityName} />
+            <DetailRow label="Filename" value={fileLabel} />
+            <DetailRow label="Size" value={sizeLabel} />
+            <DetailRow label="Uploaded" value={uploadedDate} />
           </XStack>
-
-          <YStack gap={8}>
-            <CText variant="caption" color="$color9">
-              Tags
-            </CText>
-            <XStack flexWrap="wrap" gap={8}>
-              {document.tags.map((tag) => (
-                <XStack key={tag} px={12} py={6} bg="$color2" style={{ borderRadius: 999 }}>
-                  <CText variant="caption" color="$color10">
-                    #{tag}
-                  </CText>
-                </XStack>
-              ))}
-            </XStack>
-          </YStack>
         </YStack>
 
-        {document.status === 'not_extracted' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
+        {document.status === 'uploaded' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
 
         <CButton onPress={handleDownloadGraph}>Download graph</CButton>
 
@@ -152,8 +146,8 @@ export default function DocumentScreen() {
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <XStack gap={12} pb={8}>
-              {(document.pages ?? []).map((page) => (
-                <DocumentPageThumbnail key={page.id} page={page} />
+              {document.files.map((file, index) => (
+                <DocumentPageThumbnail key={file.file_id} page={{ id: file.file_id, pageNumber: index + 1 }} />
               ))}
             </XStack>
           </ScrollView>

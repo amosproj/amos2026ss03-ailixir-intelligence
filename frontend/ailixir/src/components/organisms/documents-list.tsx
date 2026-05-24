@@ -1,9 +1,8 @@
-import { DocumentListItem } from '@/components/molecules';
-import { Document } from '@/interfaces/document';
+import { DocumentListItem, type DocumentListItemData } from '@/components/molecules';
 import { ScrollView, YStack } from 'tamagui';
 
 export type DocumentsListProps = {
-  documents: Document[];
+  documents: DocumentListItemData[];
 };
 
 export const DocumentsList = ({ documents }: DocumentsListProps) => {
