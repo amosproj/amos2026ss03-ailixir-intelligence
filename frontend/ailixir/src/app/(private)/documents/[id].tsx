@@ -9,7 +9,6 @@ import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
-import { useSetAtom } from 'jotai';
 
 const statusLabels = {
   pending_upload: 'Pending upload',
@@ -48,10 +47,6 @@ export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { data: document, isLoading, isError } = useDocument(params.id);
-  //const documents = useAtomValue(documentsAtom);
-  // const updateDocumentStatus = useSetAtom(updateDocumentStatusAtom);
-
-  //const document = documents.find((entry) => entry.id === params.id);
 
   // useExtractionStateUpdate(document?.id ?? '');
 
