@@ -53,20 +53,28 @@ async def run(*, doc_id: str, uid: str, gcs_uri: str, file_name: str) -> None:
     Parameters come directly from the Pub/Sub message payload published
     after a document is uploaded to GCS.
     """
-    _log.info("pipeline_start doc_id=%s uid=%s", doc_id, uid)
-    update_status(doc_id, DocumentStatus.PROCESSING)
+    _log.info("pipeline_start document_id=%s uid=%s", document_id, uid)
+
+    # ── 0. Dedup: skip if a prior delivery already claimed this document ───────
+    # Pub/Sub is at-least-once; a duplicate delivery would re-run all LLM calls.
+    document = find_document_for_user(document_id, uid)
+    if document is None:
+        _log.warning("pipeline_skip_not_found document_id=%s uid=%s", document_id, uid)
+        return
+    if document.status in (DocumentStatus.PROCESSING, DocumentStatus.EXTRACTED):
+        _log.warning(
+            "pipeline_skip_duplicate document_id=%s status=%s",
+            document_id, document.status.value,
+        )
+        return
+
+    update_status(document_id, DocumentStatus.PROCESSING)
 
     try:
-        # ── 1. Download from GCS ──────────────────────────────────────────────
-        update_processing_step(doc_id, "downloading")
-        image_bytes, mime_type = download_bytes(gcs_uri)
-        _log.info("pipeline_downloaded doc_id=%s bytes=%d", doc_id, len(image_bytes))
-
-        # ── 2. OCR extraction ─────────────────────────────────────────────────
-        update_processing_step(doc_id, "ocr")
-        ocr_data = ocr_extract(image_bytes, mime_type)
-        doc_type = ocr_data.get("document_type", "unknown")
-        _log.info("pipeline_ocr_done doc_id=%s doc_type=%s", doc_id, doc_type)
+        # ── 1. Validate uploaded files (document already fetched above) ────────
+        uploaded_files = [f for f in document.files if f.upload_completed_at is not None]
+        if not uploaded_files:
+            raise ValueError(f"Document {document_id} has no uploaded files to process")
 
         # ── 3. Save extraction to Firestore (private, clean) ──────────────────
         update_processing_step(doc_id, "saving_extraction")

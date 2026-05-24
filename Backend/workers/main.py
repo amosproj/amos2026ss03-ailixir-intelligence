@@ -18,7 +18,6 @@ Pub/Sub message payload (base64-encoded JSON):
     }
 """
 
-import asyncio
 import base64
 import json
 import logging
@@ -121,7 +120,91 @@ class PubSubEnvelope(BaseModel):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@app.get("/health", tags=["System"], summary="Health check")
+
+def _verify_oidc_token(authorization_header: str | None) -> None:
+    """Validate the OIDC token Pub/Sub attached to the push request.
+
+    Raises 401 if the token is missing, malformed, expired, signed by an
+    untrusted issuer, has the wrong audience, or was minted by an unexpected
+    service account.
+
+    Skipped entirely when `PUBSUB_SKIP_OIDC_VERIFICATION=1` (local emulator).
+    """
+    if _SKIP_OIDC_VERIFICATION:
+        return
+
+    if not authorization_header or not authorization_header.lower().startswith(
+        "bearer "
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token."
+        )
+
+    token = authorization_header.split(" ", 1)[1].strip()
+
+    try:
+        claims = id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            audience=_OIDC_AUDIENCE or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"OIDC verification failed: {exc}",
+        ) from exc
+
+    if _OIDC_TRUSTED_EMAIL and claims.get("email") != _OIDC_TRUSTED_EMAIL:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="OIDC token from unexpected service account.",
+        )
+    if not claims.get("email_verified", False):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="OIDC token email not verified.",
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Event dispatch
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_document_uploaded(payload: dict[str, Any]) -> None:
+    document_id = payload.get("document_id")
+    uid = payload.get("uid")
+    if not document_id or not uid:
+        logger.error(
+            "document_uploaded_missing_fields payload=%s", payload
+        )
+        return
+    logger.info(
+        "document_uploaded_event document_id=%s uid=%s domain=%s file_count=%s",
+        document_id,
+        uid,
+        payload.get("domain"),
+        payload.get("file_count"),
+    )
+    from workers.pipeline.document_pipeline import run as run_pipeline
+    await run_pipeline(document_id=document_id, uid=uid)
+
+
+_EVENT_HANDLERS = {
+    "DocumentUploaded": _handle_document_uploaded,
+}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Routes
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@app.get(
+    "/health",
+    tags=["System"],
+    summary="Health check",
+)
 def health() -> dict:
     return {"status": "ok"}
 

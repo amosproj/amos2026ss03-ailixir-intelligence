@@ -37,20 +37,9 @@ variable "neo4j_password" {
   default     = "fill value here"
 }
 
-variable "neo4j_database" {
-  description = "Neo4j database name (default: neo4j — AuraDB often uses a custom name like a UUID)"
+variable "openrouter_api_key" {
+  description = "OpenRouter API key for the OCR vision model"
   type        = string
-  default     = "neo4j"
-}
-
-variable "document_ai_processor_id" {
-  description = "Document AI processor ID for PDF OCR (create in GCP Console under Document AI)"
-  type        = string
+  sensitive   = true
   default     = "fill value here"
-}
-
-variable "document_ai_location" {
-  description = "Document AI processor region — must match where the processor was created (e.g. us, eu)"
-  type        = string
-  default     = "us"
 }
