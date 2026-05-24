@@ -1,22 +1,25 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 
-import { YStack } from 'tamagui';
-import { useQueryClient } from '@tanstack/react-query';
+import { CButton, CText } from '@/components/atoms';
+import { XStack, YStack } from 'tamagui';
 import { useCreateDocument } from '@/hooks/useCreateDocument';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
-import { getFileBaseName } from '@/utils/format';
-import { router } from 'expo-router';
-import { UploadActions, UploadFilesPanel, UploadHeader } from '@/components/molecules';
+import { Trash } from '@tamagui/lucide-icons-2';
 
 export default function UploadScreen() {
   const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
-  const queryClient = useQueryClient();
   const { mutateAsync: createDocumentAsync, isPending: isCreating } = useCreateDocument();
   const { mutateAsync: finalizeDocumentAsync, isPending: isFinalizing } = useFinalizeDocument();
   const { uploadDocumentFileAsync, isUploading } = useUploadDocumentFile();
   const isBusy = isCreating || isUploading || isFinalizing;
+
+  const formatSize = (bytes?: number) => {
+    if (!bytes) return '0 MB';
+    const mb = bytes / 1024 / 1024;
+    return `${mb.toFixed(2)} MB`;
+  };
 
   const handlePickFiles = async () => {
     const pickerResult = await DocumentPicker.getDocumentAsync({
@@ -45,11 +48,9 @@ export default function UploadScreen() {
         sizeBytes: file.size ?? 0,
       }));
 
-      const title = getFileBaseName(fileRequests[0]?.fileName);
-
       const createResponse = await createDocumentAsync({
         domain: 'medical',
-        title,
+        title: 'Document upload',
         files: fileRequests.map((file) => ({
           file_name: file.fileName,
           content_type: file.contentType,
@@ -76,7 +77,7 @@ export default function UploadScreen() {
       setSelectedFiles([]);
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       alert('all files have been uploaded successfully');
-      router.back();
+      // router.navigate to documents
     } catch (error) {
       alert('an error occured: ' + String(error));
     }
@@ -84,9 +85,61 @@ export default function UploadScreen() {
 
   return (
     <YStack flex={1} px={20} py={24} gap={20}>
-      <UploadHeader title="Upload documents" subtitle="Select PDFs or images and upload them securely to your workspace." />
-      <UploadFilesPanel files={selectedFiles} isBusy={isBusy} onPickFiles={handlePickFiles} onRemoveFile={handleRemoveFile} />
-      <UploadActions isBusy={isBusy} hasFiles={selectedFiles.length > 0} onStartUpload={handleStartUpload} />
+      <YStack gap={8}>
+        <CText variant="h2">Upload documents</CText>
+        <CText variant="body">Select PDFs or images and upload them securely to your workspace.</CText>
+      </YStack>
+
+      <YStack gap={16} px={16} py={18}>
+        <XStack items="center" justify="space-between">
+          <YStack gap={4}>
+            <CText variant="lead">Files</CText>
+            <CText variant="caption">{selectedFiles.length === 0 ? 'No files selected yet' : `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} ready`}</CText>
+          </YStack>
+
+          <CButton emphasis="high" onPress={handlePickFiles} disabled={isBusy}>
+            Choose files
+          </CButton>
+        </XStack>
+
+        <YStack gap={12}>
+          {selectedFiles.map((file, index) => (
+            <XStack key={`${file.uri}-${index}`} items="center" justify="space-between" bg="#F9F7F2" px={14} py={12} gap={12}>
+              <YStack flex={1} gap={4}>
+                <CText variant="body" numberOfLines={1}>
+                  {file.name}
+                </CText>
+                <CText variant="caption">
+                  {file.mimeType || 'Unknown type'} · {formatSize(file.size)}
+                </CText>
+              </YStack>
+              <XStack items="center" gap={8}>
+                <YStack>
+                  <CText variant="caption">Ready</CText>
+                </YStack>
+                <CButton icon={Trash} onPress={() => handleRemoveFile(file.uri)} disabled={isBusy}></CButton>
+              </XStack>
+            </XStack>
+          ))}
+        </YStack>
+      </YStack>
+
+      <YStack gap={12}>
+        {isBusy && (
+          <XStack items="center" gap={10} px={14} py={12}>
+            <ActivityIndicator size="small" />
+            <CText variant="body" color="#111111">
+              Upload in progress...
+            </CText>
+          </XStack>
+        )}
+
+        {selectedFiles.length > 0 && (
+          <CButton emphasis="high" fullWidth onPress={handleStartUpload} disabled={isBusy}>
+            {isBusy ? `Uploading... ` : 'Start upload'}
+          </CButton>
+        )}
+      </YStack>
     </YStack>
   );
 }

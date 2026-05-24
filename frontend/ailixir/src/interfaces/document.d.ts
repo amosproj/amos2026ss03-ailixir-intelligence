@@ -1,4 +1,4 @@
-export type DocumentExtractionStatus = 'failed' | 'extracting' | 'extracted';
+export type DocumentExtractionStatus = 'failed' | 'processing' | 'extracted';
 export type DocumentDraft = Pick<Document, 'title' | 'size'>;
 
 export interface Document {
