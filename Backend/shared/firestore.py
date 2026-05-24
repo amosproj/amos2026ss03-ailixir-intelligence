@@ -25,7 +25,7 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 _PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "amos26")
 _KEY_RELATIVE_PATH = os.getenv(
     "FIREBASE_KEY_RELATIVE_PATH",
-    "serviceAccountKey.json",
+    "amos26-firebase-adminsdk-fbsvc-c05787eb8f.json",
 )
 _KEY_PATH = BACKEND_ROOT / _KEY_RELATIVE_PATH
 

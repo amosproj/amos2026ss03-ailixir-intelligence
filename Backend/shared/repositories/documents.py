@@ -53,6 +53,8 @@ def create_document(
             "domain": domain,
             "status": DocumentStatus.PENDING_UPLOAD.value,
             "gcs_uri": None,
+            "cypher_gcs_uri": None,      # set by worker when pipeline completes
+            "processing_step": None,     # updated during processing for frontend polling
             "created_at": firestore.SERVER_TIMESTAMP,
             "updated_at": firestore.SERVER_TIMESTAMP,
             "error": None,

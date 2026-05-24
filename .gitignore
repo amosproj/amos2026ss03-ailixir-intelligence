@@ -30,7 +30,9 @@ gcp-credentials.json
 Backend/secrets/
 secrets/
 Backend/shared/keys
-
+*-amos26-firebase-adminsdk-fbsvc-c05787eb8f.json
+Backend/amos26-firebase-adminsdk-fbsvc-c05787eb8f.json
+Backend/amos26-80159dd7b72f.json
 # Firebase emulator artifacts
 .firebase/
 firebase-debug.log
