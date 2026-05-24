@@ -4,14 +4,17 @@ import { ActivityIndicator } from 'react-native';
 
 import { CButton, CText } from '@/components/atoms';
 import { XStack, YStack } from 'tamagui';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateDocument } from '@/hooks/useCreateDocument';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
 import { formatSize, getFileBaseName } from '@/utils/format';
 import { Trash } from '@tamagui/lucide-icons-2';
+import { router } from 'expo-router';
 
 export default function UploadScreen() {
   const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
+  const queryClient = useQueryClient();
   const { mutateAsync: createDocumentAsync, isPending: isCreating } = useCreateDocument();
   const { mutateAsync: finalizeDocumentAsync, isPending: isFinalizing } = useFinalizeDocument();
   const { uploadDocumentFileAsync, isUploading } = useUploadDocumentFile();
@@ -73,8 +76,9 @@ export default function UploadScreen() {
       await finalizeDocumentAsync({ documentId: createResponse.document_id });
 
       setSelectedFiles([]);
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
       alert('all files have been uploaded successfully');
-      // router.navigate to documents
+      router.navigate('/documents');
     } catch (error) {
       alert('an error occured: ' + String(error));
     }
