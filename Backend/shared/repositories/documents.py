@@ -120,48 +120,25 @@ def create_document_with_files(
     now = datetime.now(timezone.utc)
     total_bytes = sum(spec.size_bytes for spec in file_specs)
 
-    from shared.models.document import EXTENSION_BY_CONTENT_TYPE
-
-    files: list[dict] = []
-    for spec in file_specs:
-        file_id = _new_file_id()
-        extension = EXTENSION_BY_CONTENT_TYPE[spec.content_type]
-        object_path = object_path_builder(
-            document_id=document_id,
-            file_id=file_id,
-            extension=extension,
-        )
-        files.append(
-            {
-                "file_id": file_id,
-                "file_name": spec.file_name,
-                "content_type": spec.content_type,
-                "size_bytes": spec.size_bytes,
-                "gcs_object_path": object_path,
-                "upload_completed_at": None,
-            }
-        )
-
-    payload = {
-        "id": document_id,
-        "uid": uid,
-        "domain": domain,
-        "title": title,
-        "status": DocumentStatus.PENDING_UPLOAD.value,
-        "files": files,
-        "file_count": len(files),
-        "total_bytes": total_bytes,
-        "idempotency_key": idempotency_key,
-        "cypher_gcs_uri": None,      # set by worker when pipeline completes
-        "processing_step": None,     # updated during processing for frontend polling
-        "created_at": firebase_firestore.SERVER_TIMESTAMP,
-        "updated_at": firebase_firestore.SERVER_TIMESTAMP,
-        "finalized_at": None,
-        "deleted_at": None,
-        "error": None,
-    }
-
-    db.collection(_COLLECTION).document(document_id).set(payload)
+    # SERVER_TIMESTAMP is atomic with the write and ordered by server clock.
+    # Client wall clocks drift; we don't trust them for ordering.
+    db.collection(_COLLECTION).document(doc_id).set(
+        {
+            "id": doc_id,
+            "uid": uid,
+            "file_name": file_name,
+            "content_type": content_type,
+            "size_bytes": size_bytes,
+            "domain": domain,
+            "status": DocumentStatus.PENDING_UPLOAD.value,
+            "gcs_uri": None,
+            "cypher_gcs_uri": None,      # set by worker when pipeline completes
+            "processing_step": None,     # updated during processing for frontend polling
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+            "error": None,
+        }
+    )
 
     _log.info(
         "document_created document_id=%s uid=%s domain=%s file_count=%d total_bytes=%d",
