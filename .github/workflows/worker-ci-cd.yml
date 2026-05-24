@@ -7,6 +7,12 @@ on:
   pull_request:
     paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
 
+# One run per ref at a time. If a new push arrives while a run is in progress
+# for the same branch, cancel the older run (prevents terraform state lock races).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -40,8 +46,9 @@ jobs:
             uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
 
   deploy:
-    #     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    if: success()
+    # Only deploy on direct pushes to main (not on PRs — prevents duplicate
+    # deploys and terraform lock conflicts when a PR is opened then merged).
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
     runs-on: ubuntu-latest
 
