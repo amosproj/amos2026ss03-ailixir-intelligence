@@ -8,12 +8,23 @@ by a dedicated service account.
 
 Run from the `Backend/` directory:
     uvicorn workers.main:app --reload --port 8080
+
+Pub/Sub message payload (base64-encoded JSON):
+    {
+        "event_type": "document_uploaded",
+        "doc_id":     "doc_abc123",
+        "uid":        "firebase_uid",
+        "gcs_uri":    "gs://bucket/documents/doc_abc123.jpg",
+        "file_name":  "prescription.jpg"
+    }
 """
 
+import asyncio
 import base64
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from typing import Any
 
 from dotenv import load_dotenv
@@ -44,7 +55,27 @@ _OIDC_TRUSTED_EMAIL = os.getenv("PUBSUB_PUSH_SERVICE_ACCOUNT", "")
 # Local dev / emulator escape hatch. Set to "1" to skip OIDC verification.
 # Never set this in production — terraform must inject `_OIDC_AUDIENCE` and
 # `_OIDC_TRUSTED_EMAIL` so the prod path is taken.
-_SKIP_OIDC_VERIFICATION = os.getenv("PUBSUB_SKIP_OIDC_VERIFICATION", "").lower() in {"1", "true"}
+_SKIP_OIDC_VERIFICATION = os.getenv("PUBSUB_SKIP_OIDC_VERIFICATION", "").lower() in {
+    "1",
+    "true",
+}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Warm up singleton connections once on startup; close cleanly on shutdown."""
+    from workers.connections.graphiti_client import close_graphiti, get_graphiti
+    from workers.connections.neo4j import close_driver
+
+    logger.info("worker_startup: initialising connections")
+    await get_graphiti()  # creates Neo4j driver + Graphiti client + builds indices
+    logger.info("worker_startup: ready")
+
+    yield
+
+    logger.info("worker_shutdown: closing connections")
+    await close_graphiti()
+    close_driver()
 
 
 app = FastAPI(
@@ -59,15 +90,16 @@ Authenticated by Pub/Sub-signed OIDC tokens. Not a public API.
         "name": "Hasnat Ahmed",
         "email": "hasnatahmed331@gmail.com",
     },
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json",
 )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Pub/Sub envelope models
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class PubSubMessage(BaseModel):
     """The inner message envelope sent by Cloud Pub/Sub."""
@@ -93,6 +125,7 @@ class PubSubEnvelope(BaseModel):
 # OIDC verification
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _verify_oidc_token(authorization_header: str | None) -> None:
     """Validate the OIDC token Pub/Sub attached to the push request.
 
@@ -105,8 +138,12 @@ def _verify_oidc_token(authorization_header: str | None) -> None:
     if _SKIP_OIDC_VERIFICATION:
         return
 
-    if not authorization_header or not authorization_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token.")
+    if not authorization_header or not authorization_header.lower().startswith(
+        "bearer "
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token."
+        )
 
     token = authorization_header.split(" ", 1)[1].strip()
 
@@ -138,16 +175,24 @@ def _verify_oidc_token(authorization_header: str | None) -> None:
 # Event dispatch
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _handle_document_uploaded(payload: dict[str, Any]) -> None:
-    """Stub for the ingestion pipeline. Real OCR / extraction lands in a
-    later ticket — for now we log the event so the round-trip is visible."""
+
+async def _handle_document_uploaded(payload: dict[str, Any]) -> None:
+    document_id = payload.get("document_id")
+    uid = payload.get("uid")
+    if not document_id or not uid:
+        logger.error(
+            "document_uploaded_missing_fields payload=%s", payload
+        )
+        return
     logger.info(
         "document_uploaded_event document_id=%s uid=%s domain=%s file_count=%s",
-        payload.get("document_id"),
-        payload.get("uid"),
+        document_id,
+        uid,
         payload.get("domain"),
         payload.get("file_count"),
     )
+    from workers.pipeline.document_pipeline import run as run_pipeline
+    asyncio.create_task(run_pipeline(document_id=document_id, uid=uid))
 
 
 _EVENT_HANDLERS = {
@@ -158,6 +203,7 @@ _EVENT_HANDLERS = {
 # ──────────────────────────────────────────────────────────────────────────────
 # Routes
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @app.get(
     "/health",
@@ -187,7 +233,7 @@ async def pubsub_push(
 
     raw = envelope.message.data
     try:
-        payload: Any = json.loads(base64.b64decode(raw).decode("utf-8"))
+        payload: Any = json.loads(base64.b64decode(envelope.message.data).decode())
     except Exception as exc:
         logger.error("Failed to decode Pub/Sub message data: %s", exc)
         # 422 lets Pub/Sub mark the message as a permanent failure — DLQ
@@ -210,8 +256,11 @@ async def pubsub_push(
     if handler is None:
         # Unknown event type — ack so Pub/Sub doesn't loop. Worker version
         # may simply not know about this event yet; logging is enough.
-        logger.warning("unknown_event_type event_type=%s message_id=%s",
-                       event_type, envelope.message.messageId)
+        logger.warning(
+            "unknown_event_type event_type=%s message_id=%s",
+            event_type,
+            envelope.message.messageId,
+        )
         return
 
-    handler(payload)
+    await handler(payload)

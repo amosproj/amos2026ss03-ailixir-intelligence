@@ -1,0 +1,7 @@
+graphiti-core>=0.3.17
+openai>=1.57.0
+neo4j>=5.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+networkx>=3.0
+matplotlib>=3.7.0
