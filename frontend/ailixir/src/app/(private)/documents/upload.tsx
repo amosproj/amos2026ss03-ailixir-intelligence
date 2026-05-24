@@ -7,7 +7,7 @@ import { XStack, YStack } from 'tamagui';
 import { useCreateDocument } from '@/hooks/useCreateDocument';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
-import { formatSize } from '@/utils/format';
+import { formatSize, getFileBaseName } from '@/utils/format';
 import { Trash } from '@tamagui/lucide-icons-2';
 
 export default function UploadScreen() {
@@ -44,9 +44,11 @@ export default function UploadScreen() {
         sizeBytes: file.size ?? 0,
       }));
 
+      const title = getFileBaseName(fileRequests[0]?.fileName);
+
       const createResponse = await createDocumentAsync({
         domain: 'medical',
-        title: 'Document upload',
+        title,
         files: fileRequests.map((file) => ({
           file_name: file.fileName,
           content_type: file.contentType,
