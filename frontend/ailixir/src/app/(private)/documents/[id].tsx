@@ -53,7 +53,7 @@ export default function DocumentScreen() {
     queryKey: ['documentExtraction', document?.id],
     queryFn: () => {
       if (!document) {
-        return new Promise(() => ({status: "failed"}));
+        return new Promise(() => ({ status: 'failed' }));
       }
 
       return apiClient.get(`/documents/${document.id}`);
@@ -67,7 +67,6 @@ export default function DocumentScreen() {
       return 3_000;
     },
   });
-
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
@@ -134,7 +133,7 @@ export default function DocumentScreen() {
     );
   }
 
-  const extractionStatus = data ? 'Loading...' : (data as any).status.replace("failed", "Extraction failed");
+  const extractionStatus = data ? 'Loading...' : (data as any).status.replace('failed', 'xtraction failed');
 
   return (
     <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
