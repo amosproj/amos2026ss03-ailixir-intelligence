@@ -7,16 +7,14 @@ import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
-import { Alert, OpaqueColorValue } from 'react-native';
-import { GetThemeValueForKey, ScrollView, XStack, YStack } from 'tamagui';
-
-type ExtractionColor = GetThemeValueForKey<'color'> | OpaqueColorValue;
+import { Alert } from 'react-native';
+import { ScrollView, XStack, YStack } from 'tamagui';
+import { useSetAtom } from 'jotai';
 
 const statusLabels = {
   pending_upload: 'Pending upload',
   uploaded: 'Uploaded',
   processing: 'Processing',
-  extracting: 'Processing',
   extracted: 'Extracted',
   failed: 'Failed',
 } as const;
@@ -25,7 +23,6 @@ const statusStyles = {
   pending_upload: { backgroundColor: '$yellow2', color: '$yellow11' },
   uploaded: { backgroundColor: '$blue2', color: '$blue11' },
   processing: { backgroundColor: '$orange2', color: '$orange11' },
-  extracting: { backgroundColor: '$orange2', color: '$orange11' },
   extracted: { backgroundColor: '$green2', color: '$green11' },
   failed: { backgroundColor: '$red2', color: '$red11' },
 } as const;
@@ -50,7 +47,11 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { data: document, isLoading, isError } = useDocument(params.id, true);
+  const { data: document, isLoading, isError } = useDocument(params.id);
+  //const documents = useAtomValue(documentsAtom);
+  // const updateDocumentStatus = useSetAtom(updateDocumentStatusAtom);
+
+  //const document = documents.find((entry) => entry.id === params.id);
 
   // useExtractionStateUpdate(document?.id ?? '');
 
@@ -102,6 +103,14 @@ export default function DocumentScreen() {
   //   updateDocumentStatus({ documentId: document.id, status: 'extracted' });
   // }
   // }, [document, updateDocumentStatus]);
+
+  if (isLoading) {
+    return (
+      <YStack flex={1} justify="center" items="center" px={24} bg="$background">
+        <CText variant="caption">Loading document...</CText>
+      </YStack>
+    );
+  }
 
   if (isError || !document) {
     return (
