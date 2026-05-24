@@ -25,7 +25,7 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 _PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "amos26")
 _KEY_RELATIVE_PATH = os.getenv(
     "FIREBASE_KEY_RELATIVE_PATH",
-    "secrets/serviceAccountKey.json",
+    "serviceAccountKey.json",
 )
 _KEY_PATH = BACKEND_ROOT / _KEY_RELATIVE_PATH
 
@@ -35,8 +35,7 @@ _db: Client | None = None
 
 def _emulator_mode() -> bool:
     return bool(
-        os.getenv("FIRESTORE_EMULATOR_HOST")
-        or os.getenv("FIREBASE_AUTH_EMULATOR_HOST")
+        os.getenv("FIRESTORE_EMULATOR_HOST") or os.getenv("FIREBASE_AUTH_EMULATOR_HOST")
     )
 
 
