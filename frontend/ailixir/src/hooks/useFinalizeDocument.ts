@@ -12,7 +12,7 @@ export interface FinalizeDocumentResponse {
   title: string;
   file_count: number;
   total_bytes: number;
-  files: Array<{
+  files: {
     file_id: string;
     file_name: string;
     content_type: string;
@@ -20,7 +20,7 @@ export interface FinalizeDocumentResponse {
     upload_completed_at: string;
     download_url: string;
     download_expires_at: string;
-  }>;
+  }[];
   created_at: string;
   updated_at: string;
   finalized_at: string;

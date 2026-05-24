@@ -1,7 +1,7 @@
-import axios from 'axios';
+import { create } from 'axios';
 import { getAuth } from 'firebase/auth';
 
-const apiClient = axios.create({
+const apiClient = create({
   baseURL: 'https://ailixir-backend-5mg2ellzaa-ue.a.run.app',
 });
 
