@@ -22,6 +22,7 @@ locals {
     "identitytoolkit.googleapis.com",   # Firebase Auth (signup/signin)
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",    # v4 signed URLs without a private key
+    "aiplatform.googleapis.com",        # Vertex AI — Gemini LLM + embeddings in workers
   ]
 }
 

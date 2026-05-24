@@ -19,7 +19,6 @@ Pub/Sub message payload (base64-encoded JSON):
     }
 """
 
-import asyncio
 import base64
 import json
 import logging
@@ -68,7 +67,8 @@ async def lifespan(app: FastAPI):
     from workers.connections.neo4j import close_driver
 
     logger.info("worker_startup: initialising connections")
-    await get_graphiti()  # creates Neo4j driver + Graphiti client + builds indices
+    if not os.getenv("SKIP_STARTUP_CONNECTIONS"):
+        await get_graphiti()  # creates Neo4j driver + Graphiti client + builds indices
     logger.info("worker_startup: ready")
 
     yield
@@ -192,7 +192,7 @@ async def _handle_document_uploaded(payload: dict[str, Any]) -> None:
         payload.get("file_count"),
     )
     from workers.pipeline.document_pipeline import run as run_pipeline
-    asyncio.create_task(run_pipeline(document_id=document_id, uid=uid))
+    await run_pipeline(document_id=document_id, uid=uid)
 
 
 _EVENT_HANDLERS = {
