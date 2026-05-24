@@ -3,24 +3,26 @@ import { DocumentsAction } from '@/components/molecules/documents-action';
 
 import { DocumentsList } from '@/components/organisms/documents-list';
 import { useDocuments } from '@/hooks/useDocuments';
+import { Document } from '@/interfaces/document';
 import { formatDate, formatSize } from '@/utils/format';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { YStack } from 'tamagui';
 
 export default function DocumentsScreen() {
-  const [activeFilter, setActiveFilter] = useState('ALL');
+  useExtractionStateUpdate();
 
-  const { data } = useDocuments({}, true);
+  const { data } = useDocuments({ status: 'uploaded' });
   const overviewItems = ['6 Documents', '2 Uploads pending', 'Another information'];
 
-  const documents = (data?.documents ?? []).map((doc) => ({
+  const documents: Document[] = (data?.documents ?? []).map((doc) => ({
     id: doc.document_id,
     title: doc.title,
     timestamp: formatDate(doc.created_at),
     size: formatSize(doc.total_bytes),
-    status: doc.status,
+    type: 'pdf',
     tags: [],
+    status: doc.status
   }));
 
   const onScanDocument = () => {

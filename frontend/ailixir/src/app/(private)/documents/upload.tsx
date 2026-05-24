@@ -6,6 +6,7 @@ import { XStack, YStack } from 'tamagui';
 import { useCreateDocument } from '@/hooks/useCreateDocument';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
+import { formatSize } from '@/utils/format';
 import { Trash } from '@tamagui/lucide-icons-2';
 
 export default function UploadScreen() {
@@ -14,12 +15,6 @@ export default function UploadScreen() {
   const { mutateAsync: finalizeDocumentAsync, isPending: isFinalizing } = useFinalizeDocument();
   const { uploadDocumentFileAsync, isUploading } = useUploadDocumentFile();
   const isBusy = isCreating || isUploading || isFinalizing;
-
-  const formatSize = (bytes?: number) => {
-    if (!bytes) return '0 MB';
-    const mb = bytes / 1024 / 1024;
-    return `${mb.toFixed(2)} MB`;
-  };
 
   const handlePickFiles = async () => {
     const pickerResult = await DocumentPicker.getDocumentAsync({

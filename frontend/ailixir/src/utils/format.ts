@@ -10,11 +10,3 @@ export const formatDate = (value?: string | null) => {
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('de-DE');
 };
-
-export const getFileBaseName = (fileName?: string | null) => {
-  if (!fileName) return 'Document';
-  const normalized = fileName.split(/[\\/]/).pop() ?? fileName;
-  const lastDot = normalized.lastIndexOf('.');
-  if (lastDot <= 0) return normalized;
-  return normalized.slice(0, lastDot);
-};
