@@ -34,7 +34,10 @@ jobs:
       - name: Verify application starts
         run: |
           cd Backend
-          timeout 10s uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
+          # SKIP_STARTUP_CONNECTIONS prevents the lifespan from attempting real
+          # Neo4j / Vertex AI connections (which aren't available in CI).
+          SKIP_STARTUP_CONNECTIONS=1 timeout 10s \
+            uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
 
   deploy:
     #     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -100,6 +103,10 @@ jobs:
           terraform plan -no-color \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
             -var="image_tag=${{ github.sha }}" \
+            -var="neo4j_uri=${{ secrets.NEO4J_URI }}" \
+            -var="neo4j_user=${{ secrets.NEO4J_USER }}" \
+            -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
+            -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY }}" \
             -out=tfplan
 
       - name: Terraform Apply

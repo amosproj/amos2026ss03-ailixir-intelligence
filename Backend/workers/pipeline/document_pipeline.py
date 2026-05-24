@@ -57,14 +57,24 @@ async def run(*, document_id: str, uid: str) -> None:
     downloads from GCS → OCR → saves extraction → builds graph → exports Cypher.
     """
     _log.info("pipeline_start document_id=%s uid=%s", document_id, uid)
+
+    # ── 0. Dedup: skip if a prior delivery already claimed this document ───────
+    # Pub/Sub is at-least-once; a duplicate delivery would re-run all LLM calls.
+    document = find_document_for_user(document_id, uid)
+    if document is None:
+        _log.warning("pipeline_skip_not_found document_id=%s uid=%s", document_id, uid)
+        return
+    if document.status in (DocumentStatus.PROCESSING, DocumentStatus.EXTRACTED):
+        _log.warning(
+            "pipeline_skip_duplicate document_id=%s status=%s",
+            document_id, document.status.value,
+        )
+        return
+
     update_status(document_id, DocumentStatus.PROCESSING)
 
     try:
-        # ── 1. Look up document ───────────────────────────────────────────────
-        document = find_document_for_user(document_id, uid)
-        if document is None:
-            raise LookupError(f"Document {document_id} not found for uid {uid}")
-
+        # ── 1. Validate uploaded files (document already fetched above) ────────
         uploaded_files = [f for f in document.files if f.upload_completed_at is not None]
         if not uploaded_files:
             raise ValueError(f"Document {document_id} has no uploaded files to process")
