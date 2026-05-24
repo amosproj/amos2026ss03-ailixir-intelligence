@@ -1,6 +1,5 @@
 import { CButton, CText } from '@/components/atoms';
 import { DocumentPageThumbnail } from '@/components/molecules';
-import { updateDocumentStatusAtom } from '@/lib/documentAtoms';
 import { useDocument } from '@/hooks/useDocument';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,7 +9,6 @@ import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
-import { useSetAtom } from 'jotai';
 
 const statusLabels = {
   pending_upload: 'Pending upload',
@@ -49,10 +47,6 @@ export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { data: document, isLoading, isError } = useDocument(params.id);
-  //const documents = useAtomValue(documentsAtom);
-  const updateDocumentStatus = useSetAtom(updateDocumentStatusAtom);
-
-  //const document = documents.find((entry) => entry.id === params.id);
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
@@ -77,9 +71,7 @@ export default function DocumentScreen() {
     if (!document || document.status !== 'pending_upload') {
       return;
     }
-
-    updateDocumentStatus({ documentId: document.document_id, status: 'extracting' });
-  }, [document, updateDocumentStatus]);
+  }, [document]);
 
   if (isLoading) {
     return (
