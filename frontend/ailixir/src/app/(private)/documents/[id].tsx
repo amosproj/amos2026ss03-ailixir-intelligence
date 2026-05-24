@@ -9,6 +9,7 @@ import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
 import { useAtomValue, useSetAtom } from 'jotai';
+import apiClient from '@/lib/axios';
 
 const statusLabels = {
   not_extracted: 'Not extracted',
@@ -66,12 +67,34 @@ export default function DocumentScreen() {
     });
   }, []);
 
-  const handleStartExtraction = useCallback(() => {
+  const handleStartExtraction = useCallback(async () => {
     if (!document || document.status !== 'not_extracted') {
       return;
     }
 
     updateDocumentStatus({ documentId: document.id, status: 'extracting' });
+
+    // TODO: replace with proper endpoint when one is implemented
+    await apiClient.post(`/documents/${document.id}/extract`);
+
+    const resp = await apiClient.get(`/documents/${document.id}`);
+    let lastStatus = resp.data.status;
+
+    while (lastStatus === 'processing') {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const updatedResp = await apiClient.get(`/documents/${document.id}`);
+      lastStatus = updatedResp.data.status;
+    }
+
+    if (lastStatus === 'failed') {
+      Alert.alert('Extraction failed', 'An error occurred during knowledge extraction.');
+      updateDocumentStatus({ documentId: document.id, status: 'not_extracted' });
+      return;
+    }
+
+    if (lastStatus === 'extracted') {
+      updateDocumentStatus({ documentId: document.id, status: 'extracted' });
+    }
   }, [document, updateDocumentStatus]);
 
   if (!document) {
