@@ -10,6 +10,7 @@ import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
 import { useAtomValue, useSetAtom } from 'jotai';
 import apiClient from '@/lib/axios';
+import { useQuery } from '@tanstack/react-query';
 
 const statusLabels = {
   not_extracted: 'Not extracted',
@@ -48,6 +49,26 @@ export default function DocumentScreen() {
 
   const document = documents.find((entry) => entry.id === params.id);
 
+  const { data, error } = useQuery({
+    queryKey: ['documentExtraction', document?.id],
+    queryFn: () => {
+      if (!document) {
+        return new Promise(() => ({status: "failed"}));
+      }
+
+      return apiClient.get(`/documents/${document.id}`);
+    },
+    refetchInterval: (query) => {
+      // Stop polling once the job finishes
+      const extractionSuccessful = (query.state.data as any)?.status === 'extracted';
+      const extractionFailed = (query.state.data as any)?.status === 'failed';
+
+      if (extractionSuccessful || extractionFailed) return false;
+      return 3_000;
+    },
+  });
+
+
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
 
@@ -74,27 +95,27 @@ export default function DocumentScreen() {
 
     updateDocumentStatus({ documentId: document.id, status: 'extracting' });
 
-    // TODO: replace with proper endpoint when one is implemented
-    await apiClient.post(`/documents/${document.id}/extract`);
+    // // TODO: replace with proper endpoint when one is implemented
+    // await apiClient.post(`/documents/${document.id}/extract`);
 
-    const resp = await apiClient.get(`/documents/${document.id}`);
-    let lastStatus = resp.data.status;
+    // const resp = await apiClient.get(`/documents/${document.id}`);
+    // let lastStatus = resp.data.status;
 
-    while (lastStatus === 'processing') {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const updatedResp = await apiClient.get(`/documents/${document.id}`);
-      lastStatus = updatedResp.data.status;
-    }
+    // while (lastStatus === 'processing') {
+    //   await new Promise((resolve) => setTimeout(resolve, 1000));
+    //   const updatedResp = await apiClient.get(`/documents/${document.id}`);
+    //   lastStatus = updatedResp.data.status;
+    // }
 
-    if (lastStatus === 'failed') {
-      Alert.alert('Extraction failed', 'An error occurred during knowledge extraction.');
-      updateDocumentStatus({ documentId: document.id, status: 'not_extracted' });
-      return;
-    }
+    // if (lastStatus === 'failed') {
+    //   Alert.alert('Extraction failed', 'An error occurred during knowledge extraction.');
+    //   updateDocumentStatus({ documentId: document.id, status: 'not_extracted' });
+    //   return;
+    // }
 
-    if (lastStatus === 'extracted') {
-      updateDocumentStatus({ documentId: document.id, status: 'extracted' });
-    }
+    // if (lastStatus === 'extracted') {
+    //   updateDocumentStatus({ documentId: document.id, status: 'extracted' });
+    // }
   }, [document, updateDocumentStatus]);
 
   if (!document) {
@@ -112,6 +133,8 @@ export default function DocumentScreen() {
       </YStack>
     );
   }
+
+  const extractionStatus = data ? 'Loading...' : (data as any).status.replace("failed", "Extraction failed");
 
   return (
     <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
@@ -134,7 +157,7 @@ export default function DocumentScreen() {
               </CText>
               <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
                 <CText variant="caption" color={statusStyles[document.status].color}>
-                  {statusLabels[document.status]}
+                  {error ? 'Could not load status' : extractionStatus}
                 </CText>
               </XStack>
             </YStack>
@@ -164,7 +187,7 @@ export default function DocumentScreen() {
           </YStack>
         </YStack>
 
-        {document.status === 'not_extracted' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
+        {/* {document.status === 'not_extracted' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>} */}
 
         <CButton onPress={handleDownloadGraph}>Download graph</CButton>
 
