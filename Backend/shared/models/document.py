@@ -35,6 +35,8 @@ class Document(BaseModel):
     domain: str
     status: DocumentStatus
     gcs_uri: str | None = None
+    cypher_gcs_uri: str | None = None   # set when pipeline completes; frontend reads this
+    processing_step: str | None = None  # fine-grained progress for frontend polling
     created_at: datetime
     updated_at: datetime
     error: str | None = None

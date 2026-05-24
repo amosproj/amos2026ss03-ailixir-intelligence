@@ -1,3 +1,17 @@
 fastapi==0.136.1
 uvicorn==0.46.0
 python-dotenv==1.0.1
+
+# AI pipeline
+graphiti-core>=0.3.17
+openai>=1.57.0
+requests>=2.31.0
+
+# Neo4j
+neo4j>=5.0.0
+
+# GCS
+google-cloud-storage>=2.19.0
+
+# Firebase (shared layer)
+firebase-admin==7.4.0

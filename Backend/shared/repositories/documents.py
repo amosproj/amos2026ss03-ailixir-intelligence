@@ -103,5 +103,22 @@ def update_status(
     if error is not None:
         patch["error"] = error
     db.collection(_COLLECTION).document(doc_id).update(patch)
-
     _log.info("document_status_updated id=%s status=%s", doc_id, status.value)
+
+
+def update_processing_step(doc_id: str, step: str) -> None:
+    """Write a human-readable progress step for frontend polling (e.g. 'ocr', 'graph')."""
+    db = get_firestore()
+    db.collection(_COLLECTION).document(doc_id).update(
+        {"processing_step": step, "updated_at": firestore.SERVER_TIMESTAMP}
+    )
+    _log.info("document_step_updated id=%s step=%s", doc_id, step)
+
+
+def update_cypher_uri(doc_id: str, cypher_gcs_uri: str) -> None:
+    """Attach the GCS URI of the exported Cypher file once the pipeline finishes."""
+    db = get_firestore()
+    db.collection(_COLLECTION).document(doc_id).update(
+        {"cypher_gcs_uri": cypher_gcs_uri, "updated_at": firestore.SERVER_TIMESTAMP}
+    )
+    _log.info("document_cypher_uri_set id=%s uri=%s", doc_id, cypher_gcs_uri)
