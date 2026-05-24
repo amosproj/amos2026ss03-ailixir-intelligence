@@ -7,6 +7,11 @@ on:
   pull_request:
     paths: ["Backend/api/**", ".github/workflows/backend-ci-cd.yml"]
 
+# One run per ref at a time. Cancels stale runs to avoid terraform lock races.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -37,9 +42,7 @@ jobs:
           timeout 10s uvicorn api.main:app --host 0.0.0.0 --port 8000 || [ $? -eq 124 ]
 
   deploy:
-    #     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    if: success()
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
     runs-on: ubuntu-latest
 

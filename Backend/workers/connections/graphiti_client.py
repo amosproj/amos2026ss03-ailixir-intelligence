@@ -28,6 +28,7 @@ import os
 
 from google import genai
 from graphiti_core import Graphiti
+from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
 from graphiti_core.llm_client.config import LLMConfig
 from graphiti_core.llm_client.gemini_client import GeminiClient
@@ -75,6 +76,14 @@ async def get_graphiti() -> Graphiti:
                 ),
                 embedder=GeminiEmbedder(
                     config=GeminiEmbedderConfig(embedding_model=embedding_model),
+                    client=vertex_client,
+                ),
+                cross_encoder=GeminiRerankerClient(
+                    config=LLMConfig(
+                        api_key="vertex-ai-adc",
+                        model=llm_model,
+                        small_model=llm_model,
+                    ),
                     client=vertex_client,
                 ),
             )
