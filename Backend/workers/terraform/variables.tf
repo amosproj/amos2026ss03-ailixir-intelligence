@@ -37,13 +37,6 @@ variable "neo4j_password" {
   default     = "fill value here"
 }
 
-variable "openrouter_api_key" {
-  description = "OpenRouter API key for the OCR vision model"
-  type        = string
-  sensitive   = true
-  default     = "fill value here"
-}
-
 variable "document_ai_processor_id" {
   description = "Document AI processor ID for PDF OCR (create in GCP Console under Document AI)"
   type        = string

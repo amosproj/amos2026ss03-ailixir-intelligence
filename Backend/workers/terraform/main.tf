@@ -183,12 +183,6 @@ resource "google_cloud_run_v2_service" "worker" {
         value = var.neo4j_password
       }
 
-      # ── OpenRouter OCR (images) ──────────────────────────────────────────────
-      env {
-        name  = "OPENROUTER_API_KEY"
-        value = var.openrouter_api_key
-      }
-
       # ── Google Cloud Document AI OCR (PDFs) ──────────────────────────────────
       env {
         name  = "DOCUMENT_AI_PROCESSOR_ID"

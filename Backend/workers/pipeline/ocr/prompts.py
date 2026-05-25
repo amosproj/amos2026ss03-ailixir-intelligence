@@ -12,7 +12,7 @@ Model and inference settings are read from env:
 """
 
 SYSTEM_PROMPT = """You are an expert document analysis AI. Extract ALL meaningful
-information from document images — regardless of domain (medical, financial, legal,
+information from documents — regardless of domain (medical, financial, legal,
 technical, academic, etc.) — and return clean structured JSON.
 
 Rules:
@@ -42,5 +42,5 @@ Output schema (adapt fields to the actual document):
 def user_message() -> str:
     """Per-image user instruction sent alongside the image."""
     return (
-        "Extract all information from this document image and return structured JSON only."
+        "Extract all information from this document and return structured JSON only."
     )
