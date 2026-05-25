@@ -94,15 +94,15 @@ async def run(*, document_id: str, uid: str) -> None:
         for file in uploaded_files:
             # Download
             update_processing_step(document_id, "downloading")
-            image_bytes, mime_type = download_document(file.gcs_object_path)
+            file_bytes, mime_type = download_document(file.gcs_object_path)
             _log.info(
-                "pipeline_downloaded document_id=%s file=%s bytes=%d",
-                document_id, file.file_name, len(image_bytes),
+                "pipeline_downloaded document_id=%s file=%s mime=%s bytes=%d",
+                document_id, file.file_name, mime_type, len(file_bytes),
             )
 
-            # OCR
+            # OCR — routed by mime_type: PDF → Document AI, image → OpenRouter
             update_processing_step(document_id, "ocr")
-            ocr_data = ocr_extract(image_bytes, mime_type)
+            ocr_data = ocr_extract(file_bytes, mime_type)
             doc_type = ocr_data.get("document_type", doc_type)
             confidence = ocr_data.get("confidence_score", confidence)
             last_file_name = file.file_name
