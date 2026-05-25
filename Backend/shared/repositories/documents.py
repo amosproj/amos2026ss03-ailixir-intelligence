@@ -39,6 +39,7 @@ _COLLECTION = "documents"
 # ID generation & cursor encoding
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _new_document_id() -> str:
     return f"doc_{uuid.uuid4().hex}"
 
@@ -70,6 +71,7 @@ def decode_cursor(cursor: str) -> tuple[datetime, str]:
 # Firestore <-> Pydantic mapping
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _snapshot_to_document(snapshot) -> Document:
     """Convert a Firestore document snapshot into a Document.
 
@@ -83,6 +85,7 @@ def _snapshot_to_document(snapshot) -> Document:
 # ──────────────────────────────────────────────────────────────────────────────
 # Creates
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class FileCreationSpec:
     """Input for one file at document creation time. Mirrors `DocumentFile`
@@ -118,6 +121,7 @@ def create_document_with_files(
     total_bytes = sum(spec.size_bytes for spec in file_specs)
 
     from shared.models.document import EXTENSION_BY_CONTENT_TYPE
+
     files: list[dict] = []
     for spec in file_specs:
         file_id = _new_file_id()
@@ -148,6 +152,8 @@ def create_document_with_files(
         "file_count": len(files),
         "total_bytes": total_bytes,
         "idempotency_key": idempotency_key,
+        "cypher_gcs_uri": None,      # set by worker when pipeline completes
+        "processing_step": None,     # updated during processing for frontend polling
         "created_at": firebase_firestore.SERVER_TIMESTAMP,
         "updated_at": firebase_firestore.SERVER_TIMESTAMP,
         "finalized_at": None,
@@ -159,7 +165,11 @@ def create_document_with_files(
 
     _log.info(
         "document_created document_id=%s uid=%s domain=%s file_count=%d total_bytes=%d",
-        document_id, uid, domain, len(files), total_bytes,
+        document_id,
+        uid,
+        domain,
+        len(files),
+        total_bytes,
     )
 
     # The returned object uses client-side timestamps as a best-effort
@@ -186,6 +196,7 @@ def create_document_with_files(
 # ──────────────────────────────────────────────────────────────────────────────
 # Reads
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def find_document_for_user(document_id: str, uid: str) -> Document | None:
     """Read a document if and only if it belongs to `uid` and is not deleted."""
@@ -270,6 +281,7 @@ def list_documents_for_user(
 # State transitions
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class DocumentStateError(Exception):
     """Raised when a transition is attempted from an incompatible state."""
 
@@ -345,7 +357,10 @@ def mark_uploaded(
 
     _log.info(
         "document_finalized document_id=%s uid=%s uploaded_count=%d declared_count=%d",
-        document_id, uid, len(uploaded_ids), document.file_count,
+        document_id,
+        uid,
+        len(uploaded_ids),
+        document.file_count,
     )
     return document
 
@@ -389,3 +404,58 @@ def soft_delete(document_id: str, uid: str) -> None:
 def pending_files(document: Document) -> list[DocumentFile]:
     """Return files in a document that have not yet completed upload."""
     return [f for f in document.files if f.upload_completed_at is None]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Worker pipeline updates
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def update_status(
+    document_id: str,
+    new_status: DocumentStatus,
+    *,
+    error: str | None = None,
+) -> None:
+    """Transition a document to a new pipeline status.
+
+    Called by the worker at each stage (PROCESSING → EXTRACTED / FAILED).
+    Optionally records an error message on failure.
+    """
+    db = get_firestore()
+    patch: dict = {
+        "status": new_status.value,
+        "updated_at": firebase_firestore.SERVER_TIMESTAMP,
+    }
+    if error is not None:
+        patch["error"] = error
+    db.collection(_COLLECTION).document(document_id).update(patch)
+    _log.info("document_status_updated id=%s status=%s", document_id, new_status.value)
+
+
+def update_processing_step(document_id: str, step: str) -> None:
+    """Write a human-readable progress label for frontend polling.
+
+    Example values: 'downloading', 'ocr', 'saving_extraction',
+    'building_graph', 'exporting_cypher'.
+    """
+    db = get_firestore()
+    db.collection(_COLLECTION).document(document_id).update(
+        {"processing_step": step, "updated_at": firebase_firestore.SERVER_TIMESTAMP}
+    )
+    _log.info("document_step_updated id=%s step=%s", document_id, step)
+
+
+def update_cypher_uri(document_id: str, cypher_gcs_uri: str) -> None:
+    """Attach the GCS URI of the exported Cypher file once the pipeline finishes.
+
+    The frontend reads this field to know the graph is ready and where to fetch it.
+    """
+    db = get_firestore()
+    db.collection(_COLLECTION).document(document_id).update(
+        {
+            "cypher_gcs_uri": cypher_gcs_uri,
+            "updated_at": firebase_firestore.SERVER_TIMESTAMP,
+        }
+    )
+    _log.info("document_cypher_uri_set id=%s uri=%s", document_id, cypher_gcs_uri)

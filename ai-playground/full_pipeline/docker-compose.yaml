@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # ── Neo4j ───────────────────────────────────────────────────────────────────
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: neo4j-graphiti
+    ports:
+      - "7474:7474"   # Browser UI  → http://localhost:7474
+      - "7687:7687"   # Bolt driver → bolt://localhost:7687
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    environment:
+      - NEO4J_AUTH=neo4j/your_secure_password
+      - NEO4J_PLUGINS=["apoc"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Graphiti pipeline (one-shot runner) ────────────────────────────────────
+  # Starts after Neo4j is healthy, processes all images in ./Images/, then exits.
+  # Run with:  docker compose run --rm pipeline
+  pipeline:
+    build:
+      context: ..               # ai-playground/ is the build context
+      dockerfile: full_pipeline/Dockerfile
+    container_name: graphiti-pipeline
+    restart: "no"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=your_secure_password
+    volumes:
+      # Mount Images so you can add/swap images without rebuilding
+      - ../Images:/app/Images:ro
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

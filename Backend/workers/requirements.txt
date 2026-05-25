@@ -1,7 +1,19 @@
 fastapi==0.136.1
 uvicorn==0.46.0
 python-dotenv==1.0.1
-pydantic==2.13.3
+
+# AI pipeline
+graphiti-core[google-genai]>=0.3.17
+google-genai>=1.0.0
+
+# Document OCR
+google-cloud-documentai>=2.20.0
+
+# Neo4j
+neo4j>=5.0.0
+
+# GCS
+google-cloud-storage>=2.19.0
+
+# Firebase (shared layer)
 firebase-admin==7.4.0
-google-cloud-storage==3.10.1
-google-auth==2.50.0

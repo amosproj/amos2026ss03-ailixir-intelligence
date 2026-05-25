@@ -89,10 +89,14 @@ class Document(BaseModel):
     file_count: int
     total_bytes: int
 
-    # Per-uid idempotency key (SHA-256 hash of the client header). Used to
-    # short-circuit retried POST /documents calls into returning the original
-    # document rather than creating a duplicate.
+    # Per-uid idempotency key (SHA-256 hash of the client header).
     idempotency_key: str | None = None
+
+    # Set by the worker when the knowledge-graph pipeline completes.
+    # Frontend polls status and reads this once it's non-null.
+    cypher_gcs_uri: str | None = None
+    # Fine-grained progress written during processing for frontend polling.
+    processing_step: str | None = None
 
     created_at: datetime
     updated_at: datetime

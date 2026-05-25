@@ -13,7 +13,7 @@ export default function SettingsScreen() {
         try {
           const idToken = await user.getIdToken();
           setToken(idToken);
-          console.log('Token:', idToken);
+          console.log('Token:', token);
         } catch (error) {
           console.error('Error accessing the Token:', error);
         }
@@ -21,10 +21,10 @@ export default function SettingsScreen() {
     };
 
     fetchToken();
-  }, [user]); // Triggert neu, wenn sich der User-Status ändert
+  }, [user, token]); // Triggert neu, wenn sich der User-Status ändert
   return (
     <>
-      <CButton bg="lightcoral" onPress={() => signOut(auth)}>
+      <CButton emphasis="high" fullWidth onPress={() => signOut(auth)}>
         Log Out
       </CButton>
     </>

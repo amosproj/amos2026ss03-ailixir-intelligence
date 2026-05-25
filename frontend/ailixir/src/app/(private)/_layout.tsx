@@ -18,13 +18,16 @@ export default function PrivateLayout() {
               <ChevronLeft size={20} color="#111111" />
             </TouchableOpacity>
           ) : null,
+        contentStyleontentStyle: {
+          backgroundColor: 'green',
+        },
         headerTitle: (props: any) => <CText variant="h1">{props?.children ?? props?.title ?? ''}</CText>,
       })}>
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       <Stack.Screen name="chats/index" options={{ title: 'Chats' }} />
       <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />
       <Stack.Screen name="documents/index" options={{ title: 'Documents' }} />
-      <Stack.Screen name="documents/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="documents/[id]" options={{ title: 'Document' }} />
       <Stack.Screen name="documents/capture" options={{ title: 'Capture' }} />
       <Stack.Screen name="documents/upload" options={{ title: 'Upload' }} />
     </Stack>

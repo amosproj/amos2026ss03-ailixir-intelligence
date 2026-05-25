@@ -9,14 +9,28 @@ locals {
   topic_document_uploaded     = "document-uploaded"
   topic_document_uploaded_dlq = "document-uploaded-dlq"
   subscription_name           = "document-uploaded-ingestion"
+  documents_bucket_name       = "ailixir-documents-${var.project_id}"
+  cypher_bucket_name          = "ailixir-cypher-${var.project_id}"
+}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Enable Vertex AI API (needed for Gemini LLM + embeddings via ADC).
+# ──────────────────────────────────────────────────────────────────────────────
+
+resource "google_project_service" "vertex_ai" {
+  service            = "aiplatform.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "document_ai" {
+  service            = "documentai.googleapis.com"
+  disable_on_destroy = false
 }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Service account the worker Cloud Run service runs as.
-# Needs Firestore access (to update document status) and GCS read access (to
-# read uploaded files for OCR). Permissions added incrementally as the worker
-# grows beyond a stub.
 # ──────────────────────────────────────────────────────────────────────────────
 
 resource "google_service_account" "worker" {
@@ -31,10 +45,61 @@ resource "google_project_iam_member" "worker_firestore_user" {
   member  = "serviceAccount:${google_service_account.worker.email}"
 }
 
-resource "google_project_iam_member" "worker_storage_object_viewer" {
-  project = var.project_id
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${google_service_account.worker.email}"
+# Scoped read access to the documents bucket only (not all buckets in project).
+resource "google_storage_bucket_iam_member" "worker_documents_viewer" {
+  bucket = local.documents_bucket_name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.worker.email}"
+}
+
+# Write access to the cypher bucket (fix #4 — was objectViewer project-wide).
+resource "google_storage_bucket_iam_member" "worker_cypher_admin" {
+  bucket     = google_storage_bucket.cypher.name
+  role       = "roles/storage.objectAdmin"
+  member     = "serviceAccount:${google_service_account.worker.email}"
+  depends_on = [google_storage_bucket.cypher]
+}
+
+# Vertex AI — required for Gemini LLM and embedding calls via graphiti-core.
+resource "google_project_iam_member" "worker_vertex_ai_user" {
+  project    = var.project_id
+  role       = "roles/aiplatform.user"
+  member     = "serviceAccount:${google_service_account.worker.email}"
+  depends_on = [google_project_service.vertex_ai]
+}
+
+# Document AI — required for PDF OCR via google-cloud-documentai.
+resource "google_project_iam_member" "worker_document_ai_user" {
+  project    = var.project_id
+  role       = "roles/documentai.apiUser"
+  member     = "serviceAccount:${google_service_account.worker.email}"
+  depends_on = [google_project_service.document_ai]
+}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GCS bucket for exported Cypher graph files (fix #3 — bucket was missing).
+# Workers write here; frontend reads the signed URL from Firestore.
+# ──────────────────────────────────────────────────────────────────────────────
+
+resource "google_storage_bucket" "cypher" {
+  name                        = local.cypher_bucket_name
+  location                    = var.region
+  uniform_bucket_level_access = true
+  force_destroy               = false
+
+  versioning {
+    enabled = false
+  }
+
+  lifecycle_rule {
+    condition {
+      age = 90
+    }
+    action {
+      type = "Delete"
+    }
+  }
 }
 
 
@@ -56,6 +121,7 @@ resource "google_cloud_run_v2_service" "worker" {
         container_port = 8080
       }
 
+      # ── GCP / Firebase ──────────────────────────────────────────────────────
       env {
         name  = "GCP_PROJECT_ID"
         value = var.project_id
@@ -65,11 +131,12 @@ resource "google_cloud_run_v2_service" "worker" {
         value = var.project_id
       }
       env {
-        # Empty audience disables the OIDC `aud` check; the worker still
-        # verifies the token's `email` claim against PUBSUB_PUSH_SERVICE_ACCOUNT,
-        # which is the actual identity gate. We leave audience empty because
-        # passing the Cloud Run URL here would require a terraform two-pass
-        # (the URL is a self-reference that doesn't exist until after create).
+        name  = "FIREBASE_KEY_RELATIVE_PATH"
+        value = ""
+      }
+
+      # ── Pub/Sub OIDC ────────────────────────────────────────────────────────
+      env {
         name  = "PUBSUB_PUSH_AUDIENCE"
         value = ""
       }
@@ -81,19 +148,79 @@ resource "google_cloud_run_v2_service" "worker" {
         name  = "PUBSUB_SKIP_OIDC_VERIFICATION"
         value = "0"
       }
+
+      # ── GCS buckets (fix #2 and #3) ─────────────────────────────────────────
       env {
-        name  = "FIREBASE_KEY_RELATIVE_PATH"
-        value = ""
+        name  = "GCS_DOCUMENTS_BUCKET"
+        value = local.documents_bucket_name
+      }
+      env {
+        name  = "GCS_CYPHER_BUCKET"
+        value = google_storage_bucket.cypher.name
+      }
+
+      # ── Vertex AI / Gemini ──────────────────────────────────────────────────
+      # VERTEX_LOCATION is independent of the Cloud Run region (var.region).
+      # Gemini models require us-central1; us-east1 does not have them.
+      env {
+        name  = "VERTEX_PROJECT"
+        value = var.project_id
+      }
+      env {
+        name  = "VERTEX_LOCATION"
+        value = "us-central1"
+      }
+      env {
+        name  = "VERTEX_LLM_MODEL"
+        value = "gemini-2.5-flash-lite"
+      }
+      env {
+        name  = "EMBEDDING_DIM"
+        value = "768"
+      }
+
+      # ── Neo4j (fix #5 — was completely missing) ──────────────────────────────
+      env {
+        name  = "NEO4J_URI"
+        value = var.neo4j_uri
+      }
+      env {
+        name  = "NEO4J_USER"
+        value = var.neo4j_user
+      }
+      env {
+        name  = "NEO4J_PASSWORD"
+        value = var.neo4j_password
+      }
+      env {
+        name  = "NEO4J_DATABASE"
+        value = var.neo4j_database
+      }
+
+      # ── Google Cloud Document AI OCR (PDFs) ──────────────────────────────────
+      env {
+        name  = "DOCUMENT_AI_PROCESSOR_ID"
+        value = var.document_ai_processor_id
+      }
+      env {
+        name  = "DOCUMENT_AI_LOCATION"
+        value = var.document_ai_location
       }
     }
   }
+
+  depends_on = [
+    google_project_iam_member.worker_firestore_user,
+    google_storage_bucket_iam_member.worker_documents_viewer,
+    google_storage_bucket_iam_member.worker_cypher_admin,
+    google_project_iam_member.worker_vertex_ai_user,
+    google_project_iam_member.worker_document_ai_user,
+  ]
 }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Service account Pub/Sub uses to sign OIDC tokens when pushing to the worker.
-# A dedicated SA (separate from the worker's own SA) lets the worker positively
-# identify push requests via the `email` claim.
 # ──────────────────────────────────────────────────────────────────────────────
 
 resource "google_service_account" "pubsub_pusher" {
@@ -102,7 +229,6 @@ resource "google_service_account" "pubsub_pusher" {
   description  = "Mints OIDC tokens that Pub/Sub attaches to push requests."
 }
 
-# Allow the push SA to invoke the worker Cloud Run service.
 resource "google_cloud_run_v2_service_iam_member" "pusher_invoker" {
   name     = google_cloud_run_v2_service.worker.name
   location = google_cloud_run_v2_service.worker.location
@@ -113,10 +239,6 @@ resource "google_cloud_run_v2_service_iam_member" "pusher_invoker" {
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Subscription that delivers DocumentUploaded events to the worker.
-#
-# The topic itself is declared in api/terraform/. Referencing by name keeps the
-# two states independent — order of apply doesn't matter as long as both have
-# been applied at least once.
 # ──────────────────────────────────────────────────────────────────────────────
 
 resource "google_pubsub_subscription" "ingestion" {
@@ -133,13 +255,11 @@ resource "google_pubsub_subscription" "ingestion" {
 
     oidc_token {
       service_account_email = google_service_account.pubsub_pusher.email
-      # `audience` defaults to the push_endpoint URL; explicit for clarity.
-      audience = google_cloud_run_v2_service.worker.uri
+      audience              = google_cloud_run_v2_service.worker.uri
     }
   }
 
   expiration_policy {
-    # Never auto-expire; the subscription lives as long as the topic does.
     ttl = ""
   }
 
@@ -173,4 +293,8 @@ output "worker_service_account_email" {
 
 output "pubsub_pusher_service_account_email" {
   value = google_service_account.pubsub_pusher.email
+}
+
+output "cypher_bucket" {
+  value = google_storage_bucket.cypher.name
 }

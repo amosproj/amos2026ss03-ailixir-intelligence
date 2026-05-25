@@ -7,6 +7,12 @@ on:
   pull_request:
     paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
 
+# One run per ref at a time. If a new push arrives while a run is in progress
+# for the same branch, cancel the older run (prevents terraform state lock races).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -34,11 +40,15 @@ jobs:
       - name: Verify application starts
         run: |
           cd Backend
-          timeout 10s uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
+          # SKIP_STARTUP_CONNECTIONS prevents the lifespan from attempting real
+          # Neo4j / Vertex AI connections (which aren't available in CI).
+          SKIP_STARTUP_CONNECTIONS=1 timeout 10s \
+            uvicorn workers.main:app --host 0.0.0.0 --port 8080 || [ $? -eq 124 ]
 
   deploy:
-    #     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    if: success()
+    # Only deploy on direct pushes to main (not on PRs — prevents duplicate
+    # deploys and terraform lock conflicts when a PR is opened then merged).
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
     runs-on: ubuntu-latest
 
@@ -100,6 +110,10 @@ jobs:
           terraform plan -no-color \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
             -var="image_tag=${{ github.sha }}" \
+            -var="neo4j_uri=${{ secrets.NEO4J_URI }}" \
+            -var="neo4j_user=${{ secrets.NEO4J_USER }}" \
+            -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
+            -var="document_ai_processor_id=${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}" \
             -out=tfplan
 
       - name: Terraform Apply
