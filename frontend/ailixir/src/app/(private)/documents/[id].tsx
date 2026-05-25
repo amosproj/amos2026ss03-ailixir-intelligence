@@ -7,8 +7,8 @@ import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
-import { Alert } from 'react-native';
-import { ScrollView, XStack, YStack } from 'tamagui';
+import { Alert, OpaqueColorValue } from 'react-native';
+import { GetThemeValueForKey, ScrollView, XStack, YStack } from 'tamagui';
 
 const statusLabels = {
   pending_upload: 'Pending upload',
@@ -46,7 +46,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { data: document, isLoading, isError } = useDocument(params.id);
+  const { data: document, isLoading, isError } = useDocument(params.id, true);
 
   // useExtractionStateUpdate(document?.id ?? '');
 
