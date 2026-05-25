@@ -9,7 +9,7 @@ export default function HomeScreen() {
   const auth = getAuth();
   const user = auth.currentUser;
   return (
-    <YStack width="100%" height="100%" background="$background" justify="center" items="center" gap={10}>
+    <YStack width="100%" height="100%" justify="center" items="center" gap={10}>
       <CText variant="h1">Hello {user?.email}</CText>
       <CText variant="h2">Welcome to Ailixir!</CText>
 

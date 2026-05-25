@@ -104,13 +104,6 @@ export default function DocumentScreen() {
   return (
     <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
       <YStack gap={20} px={16} pt={16} pb={32}>
-        <XStack items="center" gap={12}>
-          <CButton icon={ChevronLeft} onPress={() => router.back()} />
-          <CText variant="h1" color="$color11" flex={1}>
-            {document.title}
-          </CText>
-        </XStack>
-
         <YStack gap={16} bg="$color0" p={16} borderWidth={1} borderColor="$color3" style={{ borderRadius: 20 }}>
           <XStack items="center" gap={12}>
             <XStack width={48} height={48} bg="$color2" items="center" justify="center" style={{ borderRadius: 14 }}>

@@ -6,3 +6,6 @@ export * from './document-list-item';
 export * from './document-page-thumbnail';
 export * from './documents-action';
 export * from './list-filters';
+export * from './upload-actions';
+export * from './upload-files-panel';
+export * from './upload-header';
