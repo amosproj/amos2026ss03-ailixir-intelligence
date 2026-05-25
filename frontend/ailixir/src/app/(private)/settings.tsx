@@ -24,7 +24,7 @@ export default function SettingsScreen() {
   }, [user, token]); // Triggert neu, wenn sich der User-Status ändert
   return (
     <>
-      <CButton bg="lightcoral" onPress={() => signOut(auth)}>
+      <CButton emphasis="high" fullWidth onPress={() => signOut(auth)}>
         Log Out
       </CButton>
     </>
