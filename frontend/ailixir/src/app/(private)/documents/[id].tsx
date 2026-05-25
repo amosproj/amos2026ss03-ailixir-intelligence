@@ -20,7 +20,7 @@ const statusLabels = {
   extracted: 'Knowledge extracted',
 } as const;
 
-type ExtractionColor = GetThemeValueForKey<"color"> | OpaqueColorValue;
+type ExtractionColor = GetThemeValueForKey<'color'> | OpaqueColorValue;
 
 const statusStyles: Record<DocumentExtractionStatus, { backgroundColor: ExtractionColor; color: ExtractionColor }> = {
   extracting: { backgroundColor: '$blue2', color: '$blue11' },
@@ -81,27 +81,27 @@ export default function DocumentScreen() {
 
   //   updateDocumentStatus({ documentId: document.id, status: 'extracting' });
 
-    // // TODO: replace with proper endpoint when one is implemented
-    // await apiClient.post(`/documents/${document.id}/extract`);
+  // // TODO: replace with proper endpoint when one is implemented
+  // await apiClient.post(`/documents/${document.id}/extract`);
 
-    // const resp = await apiClient.get(`/documents/${document.id}`);
-    // let lastStatus = resp.data.status;
+  // const resp = await apiClient.get(`/documents/${document.id}`);
+  // let lastStatus = resp.data.status;
 
-    // while (lastStatus === 'processing') {
-    //   await new Promise((resolve) => setTimeout(resolve, 1000));
-    //   const updatedResp = await apiClient.get(`/documents/${document.id}`);
-    //   lastStatus = updatedResp.data.status;
-    // }
+  // while (lastStatus === 'processing') {
+  //   await new Promise((resolve) => setTimeout(resolve, 1000));
+  //   const updatedResp = await apiClient.get(`/documents/${document.id}`);
+  //   lastStatus = updatedResp.data.status;
+  // }
 
-    // if (lastStatus === 'failed') {
-    //   Alert.alert('Extraction failed', 'An error occurred during knowledge extraction.');
-    //   updateDocumentStatus({ documentId: document.id, status: 'not_extracted' });
-    //   return;
-    // }
+  // if (lastStatus === 'failed') {
+  //   Alert.alert('Extraction failed', 'An error occurred during knowledge extraction.');
+  //   updateDocumentStatus({ documentId: document.id, status: 'not_extracted' });
+  //   return;
+  // }
 
-    // if (lastStatus === 'extracted') {
-    //   updateDocumentStatus({ documentId: document.id, status: 'extracted' });
-    // }
+  // if (lastStatus === 'extracted') {
+  //   updateDocumentStatus({ documentId: document.id, status: 'extracted' });
+  // }
   // }, [document, updateDocumentStatus]);
 
   if (!document) {

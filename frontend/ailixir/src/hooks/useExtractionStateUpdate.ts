@@ -1,61 +1,60 @@
-import apiClient from "@/lib/axios";
-import { documentsAtom, updateDocumentStatusAtom } from "@/lib/documentAtoms";
-import { useQuery } from "@tanstack/react-query";
-import { useAtomValue, useSetAtom } from "jotai";
+import { Document, DocumentExtractionStatus } from '@/interfaces/document';
+import apiClient from '@/lib/axios';
+import { documentsAtom, updateDocumentStatusAtom } from '@/lib/documentAtoms';
+import { useQuery } from '@tanstack/react-query';
+import { useAtomValue, useSetAtom } from 'jotai';
 
 const RELOAD_TIMEOUT = 3_000;
 
-export const useExtractionStateUpdate = (documentId: string) => {
-  const documents = useAtomValue(documentsAtom);
-  const document = documents.find((entry) => entry.id === documentId);
-  
+const singleQueryFn = async (document: Document): Promise<{ status: DocumentExtractionStatus }> => {
+  if (document.status !== 'extracting') {
+    return { status: document.status };
+  }
+
+  try {
+    const resp = await apiClient.get(`/documents/${document.id}`);
+    return resp.data as { status: DocumentExtractionStatus };
+  } catch (error) {
+    console.log('Error fetching document data: ', error);
+    return { status: 'extracting' };
+  }
+};
+
+export const useExtractionStateUpdate = (documentId?: string) => {
+  const docsSrc = useAtomValue(documentsAtom);
+
+  const documents = !documentId ? docsSrc : ([docsSrc.find((entry) => entry.id === documentId)].filter(Boolean) as unknown as Document[]);
+
   const updateDocumentStatus = useSetAtom(updateDocumentStatusAtom);
 
-  // const { data, error } = 
-  useQuery({
-    queryKey: ['documentExtraction', documentId],
-    queryFn: async () => {
-      if (!document) {
-        return { status: 'failed' };
-      }
-
-      if (document.status !== 'extracting') {
-        return { status: document.status };
-      }
-
-      try {
-        const resp = await apiClient.get(`/documents/${documentId}`);
-        // console.log("got data: ", resp.data)
-        return resp;
-      } catch (error) {
-        console.log("Error fetching document data: ", error);
-        return { status: 'extracting' };
-      }
+  useQuery<{ status: string }[]>({
+    queryKey: ['documentExtraction', ...documents.map((doc) => doc.id)],
+    queryFn: () => {
+      // Placeholder for query function
+      return Promise.all(documents.map(singleQueryFn));
     },
     refetchInterval: (query) => {
-      if (!document) return RELOAD_TIMEOUT;
-      const docRespData = (query.state?.data as any)?.data as { status: string } | undefined;
+      let shouldRefetch = false;
 
-      if (!docRespData) return RELOAD_TIMEOUT;
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        const docRespData = query.state?.data?.[i]?.status;
 
-      // console.log(query.state.data);
-      // Stop polling once the job finishes
-      if (document?.status !== "extracting") return false;
+        if (!docRespData) continue;
 
-      const extractionSuccessful = docRespData.status === 'extracted';
-      const extractionFailed = docRespData.status === 'failed';
+        const extractionSuccessful = docRespData === 'extracted';
+        const extractionFailed = docRespData === 'failed';
 
-      if (document && extractionSuccessful) 
-        updateDocumentStatus({ documentId: document.id, status: 'extracted' });
+        if (extractionSuccessful) updateDocumentStatus({ documentId: document.id, status: 'extracted' });
 
-      if (document && extractionFailed) 
-        updateDocumentStatus({ documentId: document.id, status: 'failed' });
+        if (extractionFailed) updateDocumentStatus({ documentId: document.id, status: 'failed' });
 
-      if (extractionSuccessful || extractionFailed) return false;
-      
-      // if (query.state.error) return false;
-      
-      return RELOAD_TIMEOUT;
+        if (extractionSuccessful || extractionFailed) continue;
+
+        shouldRefetch = true;
+      }
+
+      return shouldRefetch ? RELOAD_TIMEOUT : false;
     },
   });
-}
+};
