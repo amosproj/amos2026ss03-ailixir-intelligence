@@ -1,5 +1,6 @@
 import { CButton, CText } from '@/components/atoms';
 import { DocumentPageThumbnail } from '@/components/molecules';
+import { documentExtractionStatusLabels, documentExtractionStatusStyles } from '@/constants/document-extraction-status';
 import { documentsAtom, updateDocumentStatusAtom } from '@/lib/documentAtoms';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -9,18 +10,6 @@ import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
 import { useAtomValue, useSetAtom } from 'jotai';
-
-const statusLabels = {
-  not_extracted: 'Not extracted',
-  extracting: 'Extraction in progress',
-  extracted: 'Knowledge extracted',
-} as const;
-
-const statusStyles = {
-  not_extracted: { backgroundColor: '$yellow2', color: '$yellow11' },
-  extracting: { backgroundColor: '$blue2', color: '$blue11' },
-  extracted: { backgroundColor: '$green2', color: '$green11' },
-} as const;
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
   if (!value) {
@@ -109,9 +98,9 @@ export default function DocumentScreen() {
               <CText variant="caption" color="$color9">
                 Status
               </CText>
-              <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
-                <CText variant="caption" color={statusStyles[document.status].color}>
-                  {statusLabels[document.status]}
+              <XStack px={10} py={4} bg={documentExtractionStatusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
+                <CText variant="caption" color={documentExtractionStatusStyles[document.status].color}>
+                  {documentExtractionStatusLabels[document.status]}
                 </CText>
               </XStack>
             </YStack>
