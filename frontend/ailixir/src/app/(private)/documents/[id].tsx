@@ -46,7 +46,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { data: document, isLoading, isError } = useDocument(params.id);
+  const { data: document, isLoading, isError } = useDocument(params.id, true);
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
