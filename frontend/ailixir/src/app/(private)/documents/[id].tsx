@@ -6,21 +6,25 @@ import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
-import { Alert } from 'react-native';
-import { ScrollView, XStack, YStack } from 'tamagui';
+import { Alert, OpaqueColorValue } from 'react-native';
+import { GetThemeValueForKey, ScrollView, XStack, YStack } from 'tamagui';
 import { useAtomValue, useSetAtom } from 'jotai';
 import apiClient from '@/lib/axios';
 import { useQuery } from '@tanstack/react-query';
+import { DocumentExtractionStatus } from '@/interfaces/document';
+import { useExtractionStateUpdate } from '@/hooks/useExtractionStateUpdate';
 
 const statusLabels = {
-  not_extracted: 'Not extracted',
+  failed: 'Extraction failed',
   extracting: 'Extraction in progress',
   extracted: 'Knowledge extracted',
 } as const;
 
-const statusStyles = {
-  not_extracted: { backgroundColor: '$yellow2', color: '$yellow11' },
+type ExtractionColor = GetThemeValueForKey<"color"> | OpaqueColorValue;
+
+const statusStyles: Record<DocumentExtractionStatus, { backgroundColor: ExtractionColor; color: ExtractionColor }> = {
   extracting: { backgroundColor: '$blue2', color: '$blue11' },
+  failed: { backgroundColor: '$red2', color: '$red11' },
   extracted: { backgroundColor: '$green2', color: '$green11' },
 } as const;
 
@@ -49,24 +53,7 @@ export default function DocumentScreen() {
 
   const document = documents.find((entry) => entry.id === params.id);
 
-  const { data, error } = useQuery({
-    queryKey: ['documentExtraction', document?.id],
-    queryFn: () => {
-      if (!document) {
-        return new Promise(() => ({ status: 'failed' }));
-      }
-
-      return apiClient.get(`/documents/${document.id}`);
-    },
-    refetchInterval: (query) => {
-      // Stop polling once the job finishes
-      const extractionSuccessful = (query.state.data as any)?.status === 'extracted';
-      const extractionFailed = (query.state.data as any)?.status === 'failed';
-
-      if (extractionSuccessful || extractionFailed) return false;
-      return 3_000;
-    },
-  });
+  useExtractionStateUpdate(document?.id ?? '');
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
@@ -87,12 +74,12 @@ export default function DocumentScreen() {
     });
   }, []);
 
-  const handleStartExtraction = useCallback(async () => {
-    if (!document || document.status !== 'not_extracted') {
-      return;
-    }
+  // const handleStartExtraction = useCallback(async () => {
+  //   if (!document || document.status !== '') {
+  //     return;
+  //   }
 
-    updateDocumentStatus({ documentId: document.id, status: 'extracting' });
+  //   updateDocumentStatus({ documentId: document.id, status: 'extracting' });
 
     // // TODO: replace with proper endpoint when one is implemented
     // await apiClient.post(`/documents/${document.id}/extract`);
@@ -115,7 +102,7 @@ export default function DocumentScreen() {
     // if (lastStatus === 'extracted') {
     //   updateDocumentStatus({ documentId: document.id, status: 'extracted' });
     // }
-  }, [document, updateDocumentStatus]);
+  // }, [document, updateDocumentStatus]);
 
   if (!document) {
     return (
@@ -132,8 +119,6 @@ export default function DocumentScreen() {
       </YStack>
     );
   }
-
-  const extractionStatus = data ? 'Loading...' : (data as any).status.replace('failed', 'xtraction failed');
 
   return (
     <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
@@ -156,7 +141,8 @@ export default function DocumentScreen() {
               </CText>
               <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
                 <CText variant="caption" color={statusStyles[document.status].color}>
-                  {error ? 'Could not load status' : extractionStatus}
+                  {statusLabels[document.status]}
+                  {/* {error ? 'Could not load status' : statusLabels[document.status]} */}
                 </CText>
               </XStack>
             </YStack>

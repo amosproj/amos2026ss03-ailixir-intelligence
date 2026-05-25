@@ -1,4 +1,4 @@
-export type DocumentExtractionStatus = 'not_extracted' | 'extracting' | 'extracted';
+export type DocumentExtractionStatus = 'failed' | 'extracting' | 'extracted';
 
 export interface Document {
   id: string;

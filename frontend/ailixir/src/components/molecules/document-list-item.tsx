@@ -5,13 +5,13 @@ import { ChevronRight, File } from '@tamagui/lucide-icons-2';
 import { XStack, YStack } from 'tamagui';
 
 const statusLabels: Record<Document['status'], string> = {
-  not_extracted: 'Not extracted',
+  failed: 'Extraction failed',
   extracting: 'Extracting',
-  extracted: 'Extracted',
+  extracted: 'Extraction successful',
 };
 
-const statusStyles: Record<Document['status'], { backgroundColor: '$yellow2' | '$blue2' | '$green2'; color: '$yellow11' | '$blue11' | '$green11' }> = {
-  not_extracted: { backgroundColor: '$yellow2', color: '$yellow11' },
+const statusStyles: Record<Document['status'], { backgroundColor: '$red2' | '$blue2' | '$green2'; color: '$red11' | '$blue11' | '$green11' }> = {
+  failed: { backgroundColor: '$red2', color: '$red11' },
   extracting: { backgroundColor: '$blue2', color: '$blue11' },
   extracted: { backgroundColor: '$green2', color: '$green11' },
 };

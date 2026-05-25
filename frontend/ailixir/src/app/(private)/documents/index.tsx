@@ -7,10 +7,15 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { YStack } from 'tamagui';
+import { useExtractionStateUpdate } from '@/hooks/useExtractionStateUpdate';
 
 export default function DocumentsScreen() {
   const [activeFilter, setActiveFilter] = useState('ALL');
   const documents = useAtomValue(documentsAtom);
+
+  for (let i = 0; i < documents.length; i++) {
+    useExtractionStateUpdate(documents[i].id);
+  }
 
   const overviewItems = ['6 Documents', '2 Uploads pending', 'Another information'];
 
