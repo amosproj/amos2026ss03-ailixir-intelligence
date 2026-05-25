@@ -350,14 +350,17 @@ Returned `files` only includes those still pending. Already-uploaded files are i
 ```json
 {
   "document_id": "doc_a1b2c3d4e5f6g7h8i9j0",
-  "status": "uploaded",
+  "status": "extracted",
   "domain": "medical",
   "title": "Blood report — May 2026",
   "file_count": 2,
   "total_bytes": 222642,
   "created_at": "2026-05-20T14:30:00.000Z",
-  "updated_at": "2026-05-20T14:32:14.000Z",
+  "updated_at": "2026-05-20T14:32:30.000Z",
   "finalized_at": "2026-05-20T14:32:14.000Z",
+  "processing_step": "exporting_cypher",
+  "cypher_gcs_uri": "gs://ailixir-cypher-amos26/graphs/doc_a1b2c3d4e5f6g7h8i9j0_graph.cypher",
+  "error": null,
   "files": [
     {
       "file_id": "f_4f2649386da045e3b358ead543122a87",
@@ -373,9 +376,16 @@ Returned `files` only includes those still pending. Already-uploaded files are i
 }
 ```
 
-`download_url` is a signed GET URL — open it directly (Image component, PDF viewer, browser, etc.). It expires after **15 minutes**; re-fetch the document to get a new one. Don't cache a download URL beyond that.
+**File-level fields:**
 
-Files that haven't completed upload have `download_url: null` and `upload_completed_at: null`.
+- `download_url` is a signed GET URL — open it directly (Image component, PDF viewer, browser, etc.). It expires after **15 minutes**; re-fetch the document to get a new one. Don't cache a download URL beyond that.
+- Files that haven't completed upload have `download_url: null` and `upload_completed_at: null`.
+
+**Document-level worker fields** (populated by the AI pipeline after finalize):
+
+- `processing_step` — fine-grained progress within the worker pipeline while `status == processing`. One of: `downloading`, `ocr`, `saving_extraction`, `building_graph`, `exporting_cypher`. Useful for a progress UI. Stays at the final step (`exporting_cypher`) once `status == extracted`. See §3.11 for the polling pattern and the friendly-label mapping.
+- `cypher_gcs_uri` — set once `status == extracted`. A `gs://` URI to the Cypher script the worker generated for this document's knowledge graph. **Note:** raw GCS URI, not an HTTPS URL. The frontend currently cannot fetch this directly over plain HTTP; a follow-up will replace this with a short-lived signed HTTPS URL alongside the field.
+- `error` — set when `status == failed`. May contain raw worker error text (database names, exception traces). **Do not display verbatim to end users.** Show a generic failure UI; surface this to support along with the response's `X-Request-ID` header.
 
 **Errors:**
 
@@ -423,6 +433,8 @@ Newest documents first. Returns a thumbnail URL (signed GET URL for the first co
 
 `next_cursor: null` means you reached the end. When paginating, **always pass back the cursor unchanged** — it's opaque; don't try to parse it.
 
+**Note:** the list response intentionally **does not** include `processing_step`, `cypher_gcs_uri`, or `error` — these only appear on `GET /documents/{id}` (§3.8). The list view is optimised to render quickly; if you need extraction details for an individual document, call the single-doc endpoint when the user taps it.
+
 **Errors:**
 
 | HTTP | `code`                       | When                          |
@@ -446,6 +458,84 @@ Marks the document deleted. It disappears from `/documents` listings immediately
 |------|-------------------------|------------------------------------------------------------|
 | 404  | `DOCUMENT_NOT_FOUND`    | Wrong id                                                   |
 | 409  | `DOCUMENT_IN_PROCESSING` | Worker is mid-extraction; poll & retry in a few seconds   |
+
+---
+
+### 3.11 Polling for extraction status
+
+After `POST /finalize` returns `200`, the worker pipeline runs **automatically and asynchronously** — there's no second API call to trigger it. Typical end-to-end extraction time is **~15-25 seconds** for a small PDF; can be longer for large/multi-file documents.
+
+The frontend should poll `GET /documents/{id}` and watch two fields:
+
+- **`status`** — terminal when it reaches `extracted` or `failed`.
+- **`processing_step`** — fine-grained progress while `status == processing`, useful for a progress UI.
+
+#### Recommended polling loop
+
+```ts
+// Status values returned by the API. Use this as a switch in the UI.
+type DocumentStatus =
+  | "pending_upload"  // before finalize
+  | "uploaded"        // finalize succeeded, worker hasn't picked up yet (usually < 1s)
+  | "processing"      // worker is running the pipeline
+  | "extracted"       // ✅ terminal: cypher_gcs_uri is populated
+  | "failed";         // ❌ terminal: error is populated
+
+type ProcessingStep =
+  | "downloading"          // fetching files from GCS
+  | "ocr"                  // running Document AI on each file
+  | "saving_extraction"    // writing OCR results to Firestore
+  | "building_graph"       // calling Gemini to build the knowledge graph
+  | "exporting_cypher";    // serialising the graph as a Cypher script
+
+const TERMINAL = new Set<DocumentStatus>(["extracted", "failed"]);
+const POLL_INTERVAL_MS = 2_000;     // 2 seconds is a good balance
+const POLL_TIMEOUT_MS = 5 * 60_000; // give up after 5 minutes
+
+async function pollUntilDone(documentId: string): Promise<Document> {
+  const start = Date.now();
+  while (Date.now() - start < POLL_TIMEOUT_MS) {
+    const doc = await getDocument(documentId);   // your existing GET /documents/{id} caller
+    updateProgressUI(doc.status, doc.processing_step);
+    if (TERMINAL.has(doc.status)) return doc;
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+  }
+  throw new Error(`Extraction did not finish within ${POLL_TIMEOUT_MS / 1000}s`);
+}
+```
+
+#### Friendly labels for `processing_step`
+
+Use this mapping so the UI is consistent across screens:
+
+| `processing_step`     | UI label                          |
+|-----------------------|-----------------------------------|
+| (null, before worker) | "Queued for processing…"          |
+| `downloading`         | "Preparing your document…"        |
+| `ocr`                 | "Reading the document…"           |
+| `saving_extraction`   | "Saving extracted data…"          |
+| `building_graph`      | "Building the knowledge graph…"   |
+| `exporting_cypher`    | "Finalising…"                     |
+
+
+### Exact UI flow to wire up
+
+```typescript
+User taps upload                  →  show upload progress bar
+Upload completes                  →  call /finalize
+Finalize returns 200              →  start polling, show "Processing your document…"
+Status = processing               →  show processing_step in UI ("Reading text…", "Building graph…")
+Status = extracted                →  show result, link to cypher_gcs_uri
+Status = failed                   →  show error UI
+```
+
+#### Things to know
+
+- **Don't start polling before `/finalize` returns.** Until then, the worker has no event to act on.
+- **The `uploaded` state is real but usually invisible** — the worker picks up the Pub/Sub event in well under 1 second. Your loop may never observe it. That's fine; treat it the same as `processing`.
+- **`processing_step` is fine-grained, not strictly ordered.** Always trust `status` first; only show step-level UI while `status == processing`.
+- **The `extracted` status keeps `processing_step == "exporting_cypher"`** because that was the last step the worker wrote. Don't treat the step's value as authoritative once status is terminal — switch to `status`-driven UI.
+- **Idempotency-Key applies only to `POST /documents`** — calling `GET /documents/{id}` in a loop is naturally safe (no side effects).
 
 ---
 
@@ -497,37 +587,48 @@ Every non-2xx response (except `204` and rare GCS-direct calls) returns the same
 ## 5. Document status state machine
 
 ```
-pending_upload  ─────────►  uploaded  ────────►  processing  ─────►  extracted
-      │                         │                     │
-      └─── delete ──►  (gone)   └─── delete ──►       └─── any failure ──►  failed
+                  create               PUT files       finalize         worker picks up
+   (nothing) ─────────────► pending_upload ──────► (same) ────────► uploaded ──────► processing
+                                 │                                      │                │
+                                 │ DELETE                               │ DELETE   success │  error
+                                 ▼                                      ▼                ▼ │  ▼
+                            soft-deleted                          soft-deleted     extracted  failed
+                                                                                   (terminal) (terminal)
 ```
 
-| Status            | Meaning                                                                 |
-|-------------------|-------------------------------------------------------------------------|
-| `pending_upload`  | Document row exists, files not yet (or not all) PUT to GCS              |
-| `uploaded`        | Finalize succeeded; worker has a Pub/Sub event queued                   |
-| `processing`      | Worker is doing OCR / extraction *(future PRs — currently not entered)* |
-| `extracted`       | Worker finished; results available *(future)*                           |
-| `failed`          | Terminal; check the `error` field for reason                            |
+| Status            | Triggered by         | Meaning                                                                                |
+|-------------------|----------------------|----------------------------------------------------------------------------------------|
+| `pending_upload`  | `POST /documents`    | Document row exists; client is uploading files to GCS                                  |
+| `uploaded`        | `POST /finalize`     | Finalize succeeded; Pub/Sub event published. Usually visible for < 1 second.           |
+| `processing`      | worker picks up event| Worker is running the pipeline. Watch `processing_step` for sub-stage progress.        |
+| `extracted`       | worker completes     | ✅ Terminal: `cypher_gcs_uri` is populated, knowledge graph is in Neo4j and exported.  |
+| `failed`          | worker raises        | ❌ Terminal: `error` field carries the raw worker error message (support-only).        |
 
-For PR 1 the worker only logs events — documents will settle at `uploaded` until the extraction worker lands.
+Typical end-to-end time from `POST /documents` to `status == extracted` is **~15-25 seconds** for a small PDF on a warm worker. Cold-start (first request after scale-to-zero) can add another ~10 seconds.
+
+**Allowed transitions for `DELETE`:**
+
+- `pending_upload`, `uploaded`, `extracted`, `failed` → ✅ soft-deletes immediately (returns `204`).
+- `processing` → ❌ refused with `409 DOCUMENT_IN_PROCESSING`. Wait and retry; should clear within seconds.
+
+See §3.11 for the recommended polling loop and friendly UI labels for each stage.
 
 ---
 
 
 ## 6. Quick reference — endpoint table
 
-| Method | Path                                              | Purpose                          | Auth |
-|--------|---------------------------------------------------|----------------------------------|------|
-| GET    | `/health`                                         | Liveness probe                   | no   |
-| POST   | `/auth/signup`                                    | Create account                   | no   |
-| GET    | `/me`                                             | Current user's profile           | yes  |
-| POST   | `/documents`                                      | Create document + get upload URLs | yes  |
-| POST   | `/documents/{id}/upload-urls/refresh`             | Reissue URLs for pending files   | yes  |
-| POST   | `/documents/{id}/finalize`                        | Mark uploaded, trigger worker    | yes  |
-| GET    | `/documents`                                      | List user's documents            | yes  |
-| GET    | `/documents/{id}`                                 | Read one document + download URLs | yes  |
-| DELETE | `/documents/{id}`                                 | Soft-delete document             | yes  |
+| Method | Path                                              | Purpose                                      | Auth |
+|--------|---------------------------------------------------|----------------------------------------------|------|
+| GET    | `/health`                                         | Liveness probe                               | no   |
+| POST   | `/auth/signup`                                    | Create account                               | no   |
+| GET    | `/me`                                             | Current user's profile                       | yes  |
+| POST   | `/documents`                                      | Create document + get upload URLs            | yes  |
+| POST   | `/documents/{id}/upload-urls/refresh`             | Reissue URLs for pending files               | yes  |
+| POST   | `/documents/{id}/finalize`                        | Mark uploaded, trigger worker                | yes  |
+| GET    | `/documents`                                      | List user's documents                        | yes  |
+| GET    | `/documents/{id}`                                 | Read one document + download URLs + extraction state (poll this — see §3.11) | yes |
+| DELETE | `/documents/{id}`                                 | Soft-delete document                         | yes  |
 
 ---
 
@@ -556,15 +657,22 @@ Either way: go to `<base>/docs`, click **Authorize** at the top right, paste the
 
 ## 8. Where things live
 
-| Concern                        | File                                                      |
-|--------------------------------|-----------------------------------------------------------|
-| Endpoint definitions + schemas | `Backend/api/main.py`                                     |
-| Auth (token verification)      | `Backend/api/auth.py`                                     |
-| Limits, allowed types, domains | `Backend/shared/models/document.py`                       |
-| Error code enum                | `Backend/shared/models/errors.py`                         |
-| Signed URL generation          | `Backend/shared/gcs.py`                                   |
-| Firestore repository           | `Backend/shared/repositories/documents.py`                |
-| Pub/Sub publishing             | `Backend/shared/pubsub.py`                                |
-| Infrastructure (IAM, bucket)   | `Backend/api/terraform/main.tf`                           |
+| Concern                            | File                                                  |
+|------------------------------------|-------------------------------------------------------|
+| Endpoint definitions + schemas     | `Backend/api/main.py`                                 |
+| Auth (token verification)          | `Backend/api/auth.py`                                 |
+| Request-ID middleware              | `Backend/api/middleware.py`                           |
+| Error envelope handlers            | `Backend/api/errors.py`                               |
+| Limits, allowed types, domains     | `Backend/shared/models/document.py`                   |
+| Error code enum                    | `Backend/shared/models/errors.py`                     |
+| Signed URL generation              | `Backend/shared/gcs.py`                               |
+| Firestore repository (documents)   | `Backend/shared/repositories/documents.py`            |
+| Pub/Sub publishing                 | `Backend/shared/pubsub.py`                            |
+| Worker entry (Pub/Sub push)        | `Backend/workers/main.py`                             |
+| Worker pipeline orchestrator       | `Backend/workers/pipeline/document_pipeline.py`       |
+| OCR adapter (Document AI)          | `Backend/workers/pipeline/ocr/document_ai.py`         |
+| Knowledge graph builder + exporter | `Backend/workers/pipeline/graph/`                     |
+| Infrastructure — API               | `Backend/api/terraform/main.tf`                       |
+| Infrastructure — worker            | `Backend/workers/terraform/main.tf`                   |
 
 For bugs, please include the `X-Request-ID` from the failing response - that's the fastest path to a server-side answer.
