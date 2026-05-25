@@ -9,9 +9,10 @@ Call close_graphiti() on app shutdown.
 
 Configure via:
   NEO4J_URI / NEO4J_USER / NEO4J_PASSWORD
+  NEO4J_DATABASE         — Neo4j database name           (default: neo4j)
   VERTEX_PROJECT         — GCP project ID
   VERTEX_LOCATION        — region, e.g. "us-central1"   (default: us-central1)
-  VERTEX_LLM_MODEL       — Gemini model for extraction   (default: gemini-2.0-flash-001)
+  VERTEX_LLM_MODEL       — Gemini model for extraction   (default: gemini-2.5-flash-lite)
   VERTEX_EMBEDDING_MODEL — embedding model               (default: text-embedding-005)
 
 Authentication uses Application Default Credentials (ADC):
@@ -29,6 +30,7 @@ import os
 from google import genai
 from graphiti_core import Graphiti
 from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
+from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
 from graphiti_core.llm_client.config import LLMConfig
 from graphiti_core.llm_client.gemini_client import GeminiClient
@@ -39,7 +41,7 @@ _graphiti: Graphiti | None = None
 _indices_built: bool = False
 _init_lock = asyncio.Lock()
 
-_DEFAULT_LLM_MODEL = "gemini-2.0-flash-001"
+_DEFAULT_LLM_MODEL = "gemini-2.5-flash-lite"
 _DEFAULT_EMBEDDING_MODEL = "text-embedding-005"
 _DEFAULT_LOCATION = "us-central1"
 
@@ -52,7 +54,10 @@ async def get_graphiti() -> Graphiti:
             project = os.environ["VERTEX_PROJECT"]
             location = os.environ.get("VERTEX_LOCATION", _DEFAULT_LOCATION)
             llm_model = os.environ.get("VERTEX_LLM_MODEL", _DEFAULT_LLM_MODEL)
-            embedding_model = os.environ.get("VERTEX_EMBEDDING_MODEL", _DEFAULT_EMBEDDING_MODEL)
+            embedding_model = os.environ.get(
+                "VERTEX_EMBEDDING_MODEL", _DEFAULT_EMBEDDING_MODEL
+            )
+            neo4j_database = os.environ.get("NEO4J_DATABASE", "neo4j")
 
             # Uses ADC — no API key needed. Locally: gcloud auth application-default login.
             # On GCP: the Cloud Run service account is picked up automatically.
@@ -63,9 +68,12 @@ async def get_graphiti() -> Graphiti:
             )
 
             _graphiti = Graphiti(
-                os.environ["NEO4J_URI"],
-                os.environ["NEO4J_USER"],
-                os.environ["NEO4J_PASSWORD"],
+                graph_driver=Neo4jDriver(
+                    os.environ["NEO4J_URI"],
+                    os.environ["NEO4J_USER"],
+                    os.environ["NEO4J_PASSWORD"],
+                    database=neo4j_database,
+                ),
                 llm_client=GeminiClient(
                     config=LLMConfig(
                         api_key="vertex-ai-adc",  # placeholder; auth via ADC, not API key
@@ -75,7 +83,7 @@ async def get_graphiti() -> Graphiti:
                     client=vertex_client,
                 ),
                 embedder=GeminiEmbedder(
-                    config=GeminiEmbedderConfig(embedding_model=embedding_model),
+                    config=GeminiEmbedderConfig(embedding_model=embedding_model, embedding_dim=768),
                     client=vertex_client,
                 ),
                 cross_encoder=GeminiRerankerClient(
