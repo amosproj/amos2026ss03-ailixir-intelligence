@@ -1,13 +1,13 @@
 """
-Google Cloud Document AI — universal document OCR extractor.
+Google Cloud Document AI — PDF OCR extractor.
 
-Supports PDFs and images (JPEG, PNG, TIFF, BMP, WebP) through the same
-processor. Returns a consistent extraction schema for the rest of the pipeline.
+Converts raw PDF bytes to the same extraction schema returned by the OpenRouter
+vision extractor so the rest of the pipeline is agnostic to file type.
 
 Configure via:
   GCP_PROJECT_ID           — already set by terraform in Cloud Run
   DOCUMENT_AI_LOCATION     — processor region, e.g. "us" or "eu"  (default: us)
-  DOCUMENT_AI_PROCESSOR_ID — processor ID from GCP Console
+  DOCUMENT_AI_PROCESSOR_ID — processor ID from GCP Console (required for PDFs)
 
 The processor type determines what ends up in extracted_fields:
   - Document OCR processor  → only raw_text_blocks populated, extracted_fields empty
@@ -25,26 +25,12 @@ from google.cloud import documentai
 
 _log = logging.getLogger(__name__)
 
-# MIME types accepted by Document AI processors.
-# GCS may return application/octet-stream; we detect the real type from magic bytes.
-_SUPPORTED_MIMES = frozenset({
-    "application/pdf",
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/tiff",
-    "image/tif",
-    "image/bmp",
-    "image/webp",
-    "image/gif",
-})
 
-
-def extract_document(file_bytes: bytes, mime_type: str) -> dict:
+def extract_pdf(pdf_bytes: bytes) -> dict:
     """
-    Run OCR on a PDF or image using Google Cloud Document AI.
+    Run OCR on a PDF using Google Cloud Document AI.
 
-    Returns:
+    Returns a dict in the same schema as the OpenRouter image extractor:
       document_type, confidence_score, metadata, extracted_fields, tables,
       raw_text_blocks.
 
@@ -54,8 +40,6 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
     location = os.getenv("DOCUMENT_AI_LOCATION", "us")
     processor_id = os.environ["DOCUMENT_AI_PROCESSOR_ID"]
 
-    effective_mime = _resolve_mime(file_bytes, mime_type)
-
     opts = ClientOptions(api_endpoint=f"{location}-documentai.googleapis.com")
     client = documentai.DocumentProcessorServiceClient(client_options=opts)
     name = client.processor_path(project_id, location, processor_id)
@@ -64,13 +48,14 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
         request=documentai.ProcessRequest(
             name=name,
             raw_document=documentai.RawDocument(
-                content=file_bytes,
-                mime_type=effective_mime,
+                content=pdf_bytes,
+                mime_type="application/pdf",
             ),
         )
     )
     doc = result.document
 
+    # Collect per-page text and running confidence average
     pages_text: list[str] = []
     confidence_sum = 0.0
     confidence_count = 0
@@ -89,7 +74,8 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
 
     confidence = (confidence_sum / confidence_count) if confidence_count else None
 
-    # Entities populated by Form Parser / specialized processors only.
+    # Entities are only populated by Form Parser / specialized processors.
+    # Plain Document OCR processor leaves this empty — that's expected.
     extracted_fields: dict = {}
     for entity in doc.entities:
         key = entity.type_.replace("/", "_").replace("-", "_").lower()
@@ -104,15 +90,14 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
             extracted_fields[key] = value
 
     _log.info(
-        "document_ai_complete mime=%s pages=%d entities=%d confidence=%.3f",
-        effective_mime,
+        "document_ai_complete pages=%d entities=%d confidence=%.3f",
         len(doc.pages),
         len(doc.entities),
         confidence or 0.0,
     )
 
     return {
-        "document_type": "document",
+        "document_type": "pdf_document",
         "confidence_score": round(confidence, 3) if confidence else None,
         "metadata": {
             "language": None,
@@ -123,29 +108,6 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
         "tables": _extract_tables(doc),
         "raw_text_blocks": pages_text,
     }
-
-
-def _resolve_mime(file_bytes: bytes, declared: str) -> str:
-    """Return the best-guess MIME type, correcting GCS metadata gaps via magic bytes."""
-    if declared and declared in _SUPPORTED_MIMES:
-        return declared
-    # PDF: %PDF
-    if file_bytes[:4] == b"%PDF":
-        return "application/pdf"
-    # PNG: \x89PNG\r\n\x1a\n
-    if file_bytes[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-    # JPEG: \xff\xd8
-    if file_bytes[:2] == b"\xff\xd8":
-        return "image/jpeg"
-    # TIFF: II* or MM
-    if file_bytes[:4] in (b"II\x2a\x00", b"MM\x00\x2a"):
-        return "image/tiff"
-    # BMP: BM
-    if file_bytes[:2] == b"BM":
-        return "image/bmp"
-    # Default — let Document AI decide; it will error if truly unsupported
-    return declared or "application/pdf"
 
 
 def _segment_text(layout: documentai.Document.Page.Layout, full_text: str) -> str:

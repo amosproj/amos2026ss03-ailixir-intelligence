@@ -114,6 +114,7 @@ jobs:
             -var="neo4j_user=${{ secrets.NEO4J_USER }}" \
             -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
             -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY }}" \
+            -var="document_ai_processor_id=${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}" \
             -out=tfplan
 
       - name: Terraform Apply

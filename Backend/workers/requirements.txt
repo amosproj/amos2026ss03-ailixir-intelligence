@@ -7,6 +7,9 @@ graphiti-core>=0.3.17
 openai>=1.57.0
 requests>=2.31.0
 
+# Document OCR
+google-cloud-documentai>=2.20.0
+
 # Neo4j
 neo4j>=5.0.0
 

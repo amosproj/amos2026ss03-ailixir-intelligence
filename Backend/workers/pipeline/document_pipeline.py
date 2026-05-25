@@ -76,8 +76,45 @@ async def run(*, doc_id: str, uid: str, gcs_uri: str, file_name: str) -> None:
         if not uploaded_files:
             raise ValueError(f"Document {document_id} has no uploaded files to process")
 
-        # ── 3. Save extraction to Firestore (private, clean) ──────────────────
-        update_processing_step(doc_id, "saving_extraction")
+        _log.info(
+            "pipeline_files document_id=%s file_count=%d",
+            document_id, len(uploaded_files),
+        )
+
+        # ── 2. Process each file ──────────────────────────────────────────────
+        # Collect OCR results across all files then build one unified graph
+        combined_fields: dict = {}
+        doc_type = "unknown"
+        confidence: float | None = None
+        last_file_name = uploaded_files[0].file_name
+
+        for file in uploaded_files:
+            # Download
+            update_processing_step(document_id, "downloading")
+            file_bytes, mime_type = download_document(file.gcs_object_path)
+            _log.info(
+                "pipeline_downloaded document_id=%s file=%s mime=%s bytes=%d",
+                document_id, file.file_name, mime_type, len(file_bytes),
+            )
+
+            # OCR — routed by mime_type: PDF → Document AI, image → OpenRouter
+            update_processing_step(document_id, "ocr")
+            ocr_data = ocr_extract(file_bytes, mime_type)
+            doc_type = ocr_data.get("document_type", doc_type)
+            confidence = ocr_data.get("confidence_score", confidence)
+            last_file_name = file.file_name
+
+            # Merge extracted fields from multiple files under their file name key
+            file_fields = ocr_data.get("extracted_fields", {})
+            if len(uploaded_files) == 1:
+                combined_fields = file_fields
+            else:
+                combined_fields[file.file_name] = file_fields
+
+        _log.info("pipeline_ocr_done document_id=%s doc_type=%s", document_id, doc_type)
+
+        # ── 3. Save extraction to Firestore ───────────────────────────────────
+        update_processing_step(document_id, "saving_extraction")
         save_extraction(
             Extraction(
                 doc_id=doc_id,

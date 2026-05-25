@@ -23,6 +23,11 @@ resource "google_project_service" "vertex_ai" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "document_ai" {
+  service            = "documentai.googleapis.com"
+  disable_on_destroy = false
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Service account the worker Cloud Run service runs as.
@@ -61,6 +66,14 @@ resource "google_project_iam_member" "worker_vertex_ai_user" {
   role       = "roles/aiplatform.user"
   member     = "serviceAccount:${google_service_account.worker.email}"
   depends_on = [google_project_service.vertex_ai]
+}
+
+# Document AI — required for PDF OCR via google-cloud-documentai.
+resource "google_project_iam_member" "worker_document_ai_user" {
+  project    = var.project_id
+  role       = "roles/documentai.apiUser"
+  member     = "serviceAccount:${google_service_account.worker.email}"
+  depends_on = [google_project_service.document_ai]
 }
 
 
@@ -170,10 +183,20 @@ resource "google_cloud_run_v2_service" "worker" {
         value = var.neo4j_password
       }
 
-      # ── OpenRouter OCR (fix #7 — was not provisioned) ────────────────────────
+      # ── OpenRouter OCR (images) ──────────────────────────────────────────────
       env {
         name  = "OPENROUTER_API_KEY"
         value = var.openrouter_api_key
+      }
+
+      # ── Google Cloud Document AI OCR (PDFs) ──────────────────────────────────
+      env {
+        name  = "DOCUMENT_AI_PROCESSOR_ID"
+        value = var.document_ai_processor_id
+      }
+      env {
+        name  = "DOCUMENT_AI_LOCATION"
+        value = var.document_ai_location
       }
     }
   }
@@ -183,6 +206,7 @@ resource "google_cloud_run_v2_service" "worker" {
     google_storage_bucket_iam_member.worker_documents_viewer,
     google_storage_bucket_iam_member.worker_cypher_admin,
     google_project_iam_member.worker_vertex_ai_user,
+    google_project_iam_member.worker_document_ai_user,
   ]
 }
 

@@ -1,14 +1,24 @@
 """
-OpenRouter vision-based document OCR.
+Document OCR dispatcher.
 
-Sends raw image bytes to a vision LLM and returns the structured dict
-defined by the schema in prompts.py.
+Routes file bytes to the correct backend based on MIME type:
+  application/pdf  → Google Cloud Document AI  (document_ai.py)
+  image/*          → OpenRouter vision LLM     (OpenRouter API)
+
+Both backends return the same schema:
+  {
+    "document_type": str,
+    "confidence_score": float | None,
+    "metadata": {"language": ..., "date_detected": ..., ...},
+    "extracted_fields": {...},
+    "tables": [...],
+    "raw_text_blocks": [...]
+  }
 
 Usage:
     from workers.pipeline.ocr.extractor import extract
-    result = extract(image_bytes, mime_type="image/jpeg")
-    # result["extracted_fields"] → clean key/value dict
-    # result["document_type"]   → detected type string
+    result = extract(file_bytes, mime_type="application/pdf")
+    result = extract(file_bytes, mime_type="image/jpeg")
 """
 
 from __future__ import annotations
@@ -28,11 +38,23 @@ _API_URL = "https://openrouter.ai/api/v1/chat/completions"
 _DEFAULT_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 
 
-def extract(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
+def extract(file_bytes: bytes, mime_type: str) -> dict:
     """
-    Run OCR on raw image bytes via OpenRouter.
+    Run OCR on file bytes, routing by MIME type.
 
-    Returns the full structured dict from the model.
+    PDFs go to Google Cloud Document AI; images go to the OpenRouter vision LLM.
+    Both return the same extraction schema.
+    """
+    if mime_type == "application/pdf":
+        from workers.pipeline.ocr.document_ai import extract_pdf
+        return extract_pdf(file_bytes)
+    return _extract_image(file_bytes, mime_type)
+
+
+def _extract_image(image_bytes: bytes, mime_type: str) -> dict:
+    """
+    Run OCR on raw image bytes via OpenRouter vision LLM.
+
     Raises requests.HTTPError on API failure.
     Raises json.JSONDecodeError if the model returns malformed JSON.
     """
@@ -72,7 +94,7 @@ def extract(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
 
     raw_text: str = response.json()["choices"][0]["message"]["content"]
     tokens = response.json().get("usage", {})
-    _log.info("ocr_complete model=%s tokens=%s", model, tokens)
+    _log.info("ocr_image_complete model=%s tokens=%s", model, tokens)
 
     return _parse_json(raw_text)
 
