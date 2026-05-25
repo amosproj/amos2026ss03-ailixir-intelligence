@@ -275,6 +275,23 @@ class DocumentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     finalized_at: datetime | None
+    # Worker-written pipeline state. All optional — populated only after the
+    # extraction worker has touched the document. Older client builds that
+    # don't know about these fields will ignore them.
+    #
+    # `cypher_gcs_uri` is currently a raw `gs://` URI; the frontend cannot
+    # fetch it directly. A follow-up will replace this with a short-lived
+    # signed download URL mirroring how file downloads work.
+    cypher_gcs_uri: str | None = None
+    # Fine-grained pipeline progress for clients polling during extraction
+    # (e.g. "downloading", "ocr", "building_graph"). Free-form today; will
+    # be tightened to an enum in a follow-up.
+    processing_step: str | None = None
+    # Worker error message when `status == failed`. May contain implementation
+    # detail (backend names, stack frames). Clients should treat as opaque
+    # diagnostic — display a generic failure UI and surface this only to
+    # support, alongside the response's `X-Request-ID` header.
+    error: str | None = None
 
 
 class DocumentListItem(BaseModel):
@@ -473,6 +490,9 @@ def _to_document_response(document: Document) -> DocumentResponse:
         created_at=document.created_at,
         updated_at=document.updated_at,
         finalized_at=document.finalized_at,
+        cypher_gcs_uri=document.cypher_gcs_uri,
+        processing_step=document.processing_step,
+        error=document.error,
     )
 
 
