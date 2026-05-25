@@ -43,3 +43,15 @@ variable "openrouter_api_key" {
   sensitive   = true
   default     = "fill value here"
 }
+
+variable "document_ai_processor_id" {
+  description = "Document AI processor ID for PDF OCR (create in GCP Console under Document AI)"
+  type        = string
+  default     = "fill value here"
+}
+
+variable "document_ai_location" {
+  description = "Document AI processor region — must match where the processor was created (e.g. us, eu)"
+  type        = string
+  default     = "us"
+}
