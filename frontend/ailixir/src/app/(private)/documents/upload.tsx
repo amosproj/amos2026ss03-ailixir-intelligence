@@ -8,12 +8,15 @@ import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
 import { formatSize } from '@/utils/format';
 import { Trash } from '@tamagui/lucide-icons-2';
+import { useQueryClient } from '@tanstack/react-query';
+import { ActivityIndicator } from 'react-native';
 
 export default function UploadScreen() {
   const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
   const { mutateAsync: createDocumentAsync, isPending: isCreating } = useCreateDocument();
   const { mutateAsync: finalizeDocumentAsync, isPending: isFinalizing } = useFinalizeDocument();
   const { uploadDocumentFileAsync, isUploading } = useUploadDocumentFile();
+  const queryClient = useQueryClient();
   const isBusy = isCreating || isUploading || isFinalizing;
 
   const handlePickFiles = async () => {

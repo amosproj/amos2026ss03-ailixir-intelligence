@@ -21,7 +21,6 @@ export default function DocumentsScreen() {
     size: formatSize(doc.total_bytes),
     status: doc.status,
     tags: [],
-    status: doc.status
   }));
 
   const onScanDocument = () => {
