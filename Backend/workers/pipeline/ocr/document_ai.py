@@ -144,8 +144,9 @@ def _resolve_mime(file_bytes: bytes, declared: str) -> str:
     # BMP: BM
     if file_bytes[:2] == b"BM":
         return "image/bmp"
-    # Default — let Document AI decide; it will error if truly unsupported
-    return declared or "application/pdf"
+    # Magic bytes didn't match anything — fall back to pdf rather than passing
+    # application/octet-stream (which Document AI always rejects).
+    return "application/pdf"
 
 
 def _segment_text(layout: documentai.Document.Page.Layout, full_text: str) -> str:
