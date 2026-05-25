@@ -92,13 +92,21 @@ async def run(*, document_id: str, uid: str) -> None:
         last_file_name = uploaded_files[0].file_name
 
         for file in uploaded_files:
-            # Download
+            # Download — use the content_type declared at upload time (validated by the
+            # API), not the GCS blob metadata (often application/octet-stream when the
+            # client omits the Content-Type header during the presigned PUT).
             update_processing_step(document_id, "downloading")
-            file_bytes, mime_type = download_document(file.gcs_object_path)
+            file_bytes, _ = download_document(file.gcs_object_path)
+            mime_type = file.content_type
             _log.info(
                 "pipeline_downloaded document_id=%s file=%s mime=%s bytes=%d",
                 document_id, file.file_name, mime_type, len(file_bytes),
             )
+            if len(file_bytes) < 100:
+                raise ValueError(
+                    f"File {file.file_name!r} is only {len(file_bytes)} bytes — "
+                    "the upload likely sent a URL or metadata instead of the actual file."
+                )
 
             # OCR — routed by mime_type: PDF → Document AI, image → OpenRouter
             update_processing_step(document_id, "ocr")
