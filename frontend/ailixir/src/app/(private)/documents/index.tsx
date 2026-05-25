@@ -9,9 +9,7 @@ import React from 'react';
 import { YStack } from 'tamagui';
 
 export default function DocumentsScreen() {
-  useExtractionStateUpdate();
-
-  const { data } = useDocuments({ status: 'uploaded' });
+  const { data } = useDocuments();
   const overviewItems = ['6 Documents', '2 Uploads pending', 'Another information'];
 
   const documents = (data?.documents ?? []).map((doc) => ({
