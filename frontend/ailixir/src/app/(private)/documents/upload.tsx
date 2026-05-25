@@ -78,7 +78,7 @@ export default function UploadScreen() {
       setSelectedFiles([]);
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       alert('all files have been uploaded successfully');
-      router.navigate('/documents');
+      router.back();
     } catch (error) {
       alert('an error occured: ' + String(error));
     }
