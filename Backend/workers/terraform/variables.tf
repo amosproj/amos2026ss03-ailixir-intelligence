@@ -37,6 +37,12 @@ variable "neo4j_password" {
   default     = "fill value here"
 }
 
+variable "neo4j_database" {
+  description = "Neo4j database name (default: neo4j — AuraDB often uses a custom name like a UUID)"
+  type        = string
+  default     = "neo4j"
+}
+
 variable "document_ai_processor_id" {
   description = "Document AI processor ID for PDF OCR (create in GCP Console under Document AI)"
   type        = string

@@ -159,14 +159,24 @@ resource "google_cloud_run_v2_service" "worker" {
         value = google_storage_bucket.cypher.name
       }
 
-      # ── Vertex AI / Gemini (replaces OpenAI) ────────────────────────────────
+      # ── Vertex AI / Gemini ──────────────────────────────────────────────────
+      # VERTEX_LOCATION is independent of the Cloud Run region (var.region).
+      # Gemini models require us-central1; us-east1 does not have them.
       env {
         name  = "VERTEX_PROJECT"
         value = var.project_id
       }
       env {
         name  = "VERTEX_LOCATION"
-        value = var.region
+        value = "us-central1"
+      }
+      env {
+        name  = "VERTEX_LLM_MODEL"
+        value = "gemini-2.5-flash-lite"
+      }
+      env {
+        name  = "EMBEDDING_DIM"
+        value = "768"
       }
 
       # ── Neo4j (fix #5 — was completely missing) ──────────────────────────────
@@ -181,6 +191,10 @@ resource "google_cloud_run_v2_service" "worker" {
       env {
         name  = "NEO4J_PASSWORD"
         value = var.neo4j_password
+      }
+      env {
+        name  = "NEO4J_DATABASE"
+        value = var.neo4j_database
       }
 
       # ── Google Cloud Document AI OCR (PDFs) ──────────────────────────────────
