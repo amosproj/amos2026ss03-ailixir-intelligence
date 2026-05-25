@@ -17,7 +17,6 @@ const statusLabels: Record<DocumentStatus, string> = {
   pending_upload: 'Pending upload',
   uploaded: 'Uploaded',
   processing: 'Processing',
-  extracting: 'Processing',
   extracted: 'Extracted',
   failed: 'Failed',
 };
@@ -32,7 +31,6 @@ const statusStyles: Record<
   pending_upload: { backgroundColor: '$yellow2', color: '$yellow11' },
   uploaded: { backgroundColor: '$blue2', color: '$blue11' },
   processing: { backgroundColor: '$orange2', color: '$orange11' },
-  extracting: { backgroundColor: '$orange2', color: '$orange11' },
   extracted: { backgroundColor: '$green2', color: '$green11' },
   failed: { backgroundColor: '$red2', color: '$red11' },
 };

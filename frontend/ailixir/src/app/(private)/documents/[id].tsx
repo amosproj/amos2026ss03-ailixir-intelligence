@@ -9,12 +9,6 @@ import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
 import { Alert, OpaqueColorValue } from 'react-native';
 import { GetThemeValueForKey, ScrollView, XStack, YStack } from 'tamagui';
-import { useAtomValue, useSetAtom } from 'jotai';
-import apiClient from '@/lib/axios';
-import { useQuery } from '@tanstack/react-query';
-import { DocumentExtractionStatus } from '@/interfaces/document';
-import { useExtractionStateUpdate } from '@/hooks/useExtractionStateUpdate';
-import { Alert } from 'react-native';
 
 type ExtractionColor = GetThemeValueForKey<'color'> | OpaqueColorValue;
 
@@ -56,9 +50,9 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { data: document, isLoading, isError } = useDocument(params.id);
+  const { data: document, isLoading, isError } = useDocument(params.id, true);
 
-  useExtractionStateUpdate(document?.id ?? '');
+  // useExtractionStateUpdate(document?.id ?? '');
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();

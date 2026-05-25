@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/axios';
 import { DocumentStatus } from '@/hooks/useDocuments';
 
@@ -42,10 +42,26 @@ const fetchDocument = async (documentId: string): Promise<DocumentResponse> => {
   return response.data;
 };
 
-export function useDocument(documentId?: string) {
+export function useDocument(documentId?: string, reloadTillExtracted = false) {
   return useQuery({
-    queryKey: ['document', documentId],
+    queryKey: ['document', documentId, reloadTillExtracted],
     queryFn: () => fetchDocument(documentId ?? ''),
     enabled: Boolean(documentId),
+    refetchInterval: (query) => {
+      if (!reloadTillExtracted) {
+        return false;
+      }
+
+      if (!documentId) {
+        return false; // Disable refetching
+      }
+
+      const extractedStatus = query.state.data?.status;
+      if (extractedStatus === 'extracted' || extractedStatus === 'failed') {
+        return false; // Stop refetching once extracted or failed
+      }
+
+      return 3000; // Refetch every second until extracted
+    },
   });
 }

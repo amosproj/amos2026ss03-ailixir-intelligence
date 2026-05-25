@@ -46,9 +46,22 @@ const fetchDocuments = async (params: DocumentsQueryParams): Promise<DocumentsRe
   return response.data;
 };
 
-export function useDocuments(params: DocumentsQueryParams = {}) {
+export function useDocuments(params: DocumentsQueryParams = {}, reloadTillExtracted = false) {
   return useQuery({
-    queryKey: ['documents', params],
+    queryKey: ['documents', params, reloadTillExtracted],
     queryFn: () => fetchDocuments(params),
+    refetchInterval: (query) => {
+      if (!reloadTillExtracted) {
+        return false;
+      }
+
+      const shouldNotReload = query.state.data?.documents?.every((doc) => doc.status === 'extracted' || doc.status === 'failed');
+
+      if (shouldNotReload) {
+        return false; // Stop refetching once extracted or failed
+      }
+
+      return 3000; // Refetch every 3 seconds until extracted
+    },
   });
 }
