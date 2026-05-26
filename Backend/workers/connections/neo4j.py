@@ -16,22 +16,29 @@ from __future__ import annotations
 import logging
 import os
 
-from neo4j import Driver, GraphDatabase
+from neo4j import Driver, GraphDatabase, Session
 
 _log = logging.getLogger(__name__)
 _driver: Driver | None = None
+_database: str = "neo4j"
 
 
 def get_driver() -> Driver:
-    global _driver
+    global _driver, _database
     if _driver is None:
         uri = os.environ["NEO4J_URI"]
+        _database = os.environ.get("NEO4J_DATABASE", "neo4j")
         _driver = GraphDatabase.driver(
             uri,
             auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"]),
         )
-        _log.info("neo4j_driver_created uri=%s", uri)
+        _log.info("neo4j_driver_created uri=%s database=%s", uri, _database)
     return _driver
+
+
+def get_session() -> Session:
+    """Open a session against the configured database."""
+    return get_driver().session(database=_database)
 
 
 def close_driver() -> None:

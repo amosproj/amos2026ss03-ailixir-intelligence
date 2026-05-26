@@ -14,7 +14,7 @@ import logging
 from datetime import datetime, timezone
 
 from workers.connections.gcs import upload_text
-from workers.connections.neo4j import get_driver
+from workers.connections.neo4j import get_session
 
 _log = logging.getLogger(__name__)
 
@@ -50,13 +50,12 @@ def generate_and_upload(
 
 def _query_episode_graph(episode_name: str) -> tuple[list[dict], list[dict]]:
     """Walk 2 hops from the Episodic node to collect the document subgraph."""
-    driver = get_driver()
     nodes: list[dict] = []
     edges: list[dict] = []
     seen_nodes: set[str] = set()
     seen_edges: set[tuple] = set()
 
-    with driver.session() as session:
+    with get_session() as session:
         node_rows = session.run(
             """
             MATCH (ep:Episodic {name: $name})-[*0..2]-(n)
@@ -132,30 +131,12 @@ def _render_cypher(
         f"// Episode       : {episode_name}",
         f"// Generated     : {datetime.now(timezone.utc).isoformat()}",
         "//",
-        "// Run in Neo4j Browser or:  cypher-shell < this_file.cypher",
+        "// Paste into Neo4j Browser to visualise the graph for this document.",
         "",
-        "// ── Nodes ──────────────────────────────────────────────────────",
+        f"MATCH path = (ep:Episodic {{name: {_q(episode_name)}}})-[*0..2]-(n)",
+        "WHERE NOT n:Episodic",
+        "RETURN path",
     ]
-
-    for n in nodes:
-        lbl = ":".join(n["labels"]) or "Entity"
-        var = _var(n["uuid"])
-        lines.append(
-            f'MERGE ({var}:{lbl} {{uuid: {_q(n["uuid"])}}}) '
-            f'SET {var} += {_props(n["props"])}, {var}.name = {_q(n["name"])};'
-        )
-
-    lines += ["", "// ── Relationships ───────────────────────────────────────────────"]
-
-    for e in edges:
-        rel = e["type"].upper().replace(" ", "_")
-        src, tgt = _var(e["source"]), _var(e["target"])
-        rp = _props(e["props"]) if e["props"] else "{}"
-        lines.append(
-            f'MATCH ({src} {{uuid: {_q(e["source"])}}}), '
-            f'({tgt} {{uuid: {_q(e["target"])}}}) '
-            f'MERGE ({src})-[:{rel} {rp}]->({tgt});'
-        )
 
     return "\n".join(lines) + "\n"
 

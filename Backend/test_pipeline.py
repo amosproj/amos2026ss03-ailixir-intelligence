@@ -81,7 +81,7 @@ def run_ocr(file_path: Path) -> dict:
 
 # ── step 2: Graphiti ──────────────────────────────────────────────────────────
 
-async def run_graphiti(ocr_result: dict, file_name: str) -> None:
+async def run_graphiti(ocr_result: dict, file_name: str) -> str:
     _header("STEP 2 — Graphiti knowledge-graph extraction")
 
     from workers.connections.graphiti_client import close_graphiti, get_graphiti
@@ -104,6 +104,94 @@ async def run_graphiti(ocr_result: dict, file_name: str) -> None:
 
     print(f"✓ episode ingested: {episode_name}")
     await close_graphiti()
+    return episode_name
+
+
+# ── step 3: Cypher export ────────────────────────────────────────────────────
+
+def run_cypher(episode_name: str, file_name: str) -> None:
+    _header("STEP 3 — Cypher export (paste into Neo4j Browser)")
+
+    from workers.pipeline.graph.exporter import _query_episode_graph, _render_cypher  # noqa: PLC2701
+
+    # The exporter's get_driver() uses a default session; override the database
+    # via NEO4J_DATABASE so it works on AuraDB instances with non-default names.
+    import os
+    from neo4j import GraphDatabase
+
+    uri = os.environ["NEO4J_URI"]
+    driver = GraphDatabase.driver(
+        uri, auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"])
+    )
+    database = os.environ.get("NEO4J_DATABASE", "neo4j")
+
+    nodes: list = []
+    edges: list = []
+
+    from workers.pipeline.graph.exporter import _clean, _render_cypher  # noqa: PLC2701
+
+    with driver.session(database=database) as session:
+        node_rows = session.run(
+            """
+            MATCH (ep:Episodic {name: $name})-[*0..2]-(n)
+            WHERE NOT n:Episodic
+            RETURN DISTINCT elementId(n) AS eid, labels(n) AS lbls, properties(n) AS props
+            LIMIT 300
+            """,
+            name=episode_name,
+        )
+        seen_nodes: set = set()
+        for row in node_rows:
+            eid = row["eid"]
+            if eid in seen_nodes:
+                continue
+            seen_nodes.add(eid)
+            raw = dict(row["props"])
+            uuid = raw.get("uuid", eid)
+            nodes.append({"uuid": uuid, "eid": eid, "labels": list(row["lbls"]),
+                          "name": str(raw.get("name") or uuid), "props": _clean(raw)})
+
+        if seen_nodes:
+            eid_to_uuid = {n["eid"]: n["uuid"] for n in nodes}
+            seen_edges: set = set()
+            rel_rows = session.run(
+                """
+                MATCH (a)-[r]->(b)
+                WHERE NOT a:Episodic AND NOT b:Episodic
+                  AND elementId(a) IN $ids AND elementId(b) IN $ids
+                RETURN DISTINCT elementId(a) AS src, elementId(b) AS tgt,
+                       type(r) AS rtype, properties(r) AS props
+                LIMIT 500
+                """,
+                ids=list(seen_nodes),
+            )
+            for row in rel_rows:
+                key = (row["src"], row["tgt"], row["rtype"])
+                if key in seen_edges:
+                    continue
+                seen_edges.add(key)
+                edges.append({"source": eid_to_uuid.get(row["src"], row["src"]),
+                              "target": eid_to_uuid.get(row["tgt"], row["tgt"]),
+                              "type": row["rtype"],
+                              "props": _clean(dict(row["props"]))})
+
+    driver.close()
+
+    cypher = _render_cypher(episode_name, file_name, "document", nodes, edges)
+    print(f"\nNodes : {len(nodes)}")
+    print(f"Edges : {len(edges)}")
+
+    # ── Visualisation query (paste into Neo4j Browser to SEE the graph) ──────
+    print("\n── VISUALISE in Neo4j Browser (copy & paste) ───────────────────")
+    print(f"MATCH path = (ep:Episodic {{name: '{episode_name}'}})-[*0..2]-(n)")
+    print("RETURN path")
+    print("── end ─────────────────────────────────────────────────────────")
+
+    # ── Export Cypher (MERGE statements — what the frontend receives) ────────
+    print("\n── EXPORT Cypher (frontend / reconstruct graph elsewhere) ──────")
+    print(cypher)
+    print("── end ─────────────────────────────────────────────────────────")
+    print("\n✓ Done")
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -125,7 +213,8 @@ async def main() -> None:
 
     # Run steps
     ocr_result = run_ocr(file_path)
-    await run_graphiti(ocr_result, file_path.name)
+    episode_name = await run_graphiti(ocr_result, file_path.name)
+    run_cypher(episode_name, file_path.name)
 
     _header("ALL STEPS PASSED")
 
