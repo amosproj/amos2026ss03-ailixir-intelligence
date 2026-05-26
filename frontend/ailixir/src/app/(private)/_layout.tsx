@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-import { ChevronLeft } from '@tamagui/lucide-icons-2';
+import { ChevronLeft, Settings } from '@tamagui/lucide-icons-2';
 import { CText } from '@/components/atoms';
 
 export default function PrivateLayout() {
@@ -23,6 +23,17 @@ export default function PrivateLayout() {
         },
         headerTitle: (props: any) => <CText variant="h1">{props?.children ?? props?.title ?? ''}</CText>,
       })}>
+      <Stack.Screen
+        name="index"
+        options={{
+          title: 'AiLixir',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => router.navigate('/settings')} style={{ marginRight: 4 }}>
+              <Settings size={20} color="#111111" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       <Stack.Screen name="chats/index" options={{ title: 'Chats' }} />
       <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />

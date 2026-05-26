@@ -24,7 +24,7 @@ export const typography = {
   lead: {
     fontFamily: '$body',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 22,
   },
   caption: {
