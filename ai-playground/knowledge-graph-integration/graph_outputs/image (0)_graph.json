@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "source_image": "image (0).jpg",
+    "episode_name": "mrn10042_image (0)_20250416_000000",
+    "doc_type": "lab_report",
+    "exported_at": "2026-05-27T02:53:13.802758+00:00",
+    "node_count": 6,
+    "edge_count": 4,
+    "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27mrn10042_image%20%280%29_20250416_000000%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
+  },
+  "nodes": [
+    {
+      "id": "abf8698d-2c2b-40d8-a9c5-ad350c1db4e0",
+      "name": "Hans Schmidt",
+      "type": "Entity",
+      "summary": "Hans Schmidt has a CRP QUANTITATIVE test result of 0.23 mg/dL on serum specimen dated 2025-04-15T23:05:00Z\nHans Schmidt has an IONIC CALCIUM test result of 4.96 mg/dL on serum specimen dated 2025-04-15T23:05:00Z\nINDERPREET KAUR, Assistant Professor, verified the test report for Hans Schmidt on 2025-04-16T07:47:00Z\nHans Schmidt's lab tests were conducted at MAHARISHI MARKANDESHWAR COLLEGE OF MEDICAL SCIENCES AND RESEARCH in SADOPUR - AMBALA"
+    },
+    {
+      "id": "67fff63b-a657-4196-b893-9220ca7e56c7",
+      "name": "CRP QUANTITATIVE",
+      "type": "Entity",
+      "summary": "Hans Schmidt has a CRP QUANTITATIVE test result of 0.23 mg/dL on serum specimen dated 2025-04-15T23:05:00Z"
+    },
+    {
+      "id": "a68516f5-163e-4748-9c96-9ac6e5579c33",
+      "name": "IONIC CALCIUM",
+      "type": "Entity",
+      "summary": "Hans Schmidt has an IONIC CALCIUM test result of 4.96 mg/dL on serum specimen dated 2025-04-15T23:05:00Z"
+    },
+    {
+      "id": "cd1594a8-eebd-4c8e-b7a9-2703896b89a1",
+      "name": "INDERPREET KAUR",
+      "type": "Entity",
+      "summary": "INDERPREET KAUR, Assistant Professor, verified the test report for Hans Schmidt on 2025-04-16T07:47:00Z"
+    },
+    {
+      "id": "fb1c5251-6f51-41cb-945d-217a9da11529",
+      "name": "MAHARISHI MARKANDESHWAR COLLEGE OF MEDICAL SCIENCES AND RESEARCH",
+      "type": "Entity",
+      "summary": "Hans Schmidt's lab tests were conducted at MAHARISHI MARKANDESHWAR COLLEGE OF MEDICAL SCIENCES AND RESEARCH in SADOPUR - AMBALA"
+    },
+    {
+      "id": "f2f2b8b1-98e6-4b4a-991d-3565889fe0a0",
+      "name": "SADOPUR - AMBALA",
+      "type": "Entity",
+      "summary": "SADOPUR - AMBALA hosts the MAHARISHI MARKANDESHWAR COLLEGE OF MEDICAL SCIENCES AND RESEARCH, specifically the DEPARTMENT OF BIOCHEMISTRY. The college's laboratory conducts biochemical tests, such as CRP quantitative and ionic calcium measurements, as exemplified by a report for patient Hans Schmidt on 16-Apr-2025. The laboratory is located in Sadopur, Ambala, and is involved in pediatric diagnostics."
+    }
+  ],
+  "edges": [
+    {
+      "source": "cd1594a8-eebd-4c8e-b7a9-2703896b89a1",
+      "target": "abf8698d-2c2b-40d8-a9c5-ad350c1db4e0",
+      "type": "RELATES_TO",
+      "label": "relates to"
+    },
+    {
+      "source": "abf8698d-2c2b-40d8-a9c5-ad350c1db4e0",
+      "target": "67fff63b-a657-4196-b893-9220ca7e56c7",
+      "type": "RELATES_TO",
+      "label": "relates to"
+    },
+    {
+      "source": "abf8698d-2c2b-40d8-a9c5-ad350c1db4e0",
+      "target": "a68516f5-163e-4748-9c96-9ac6e5579c33",
+      "type": "RELATES_TO",
+      "label": "relates to"
+    },
+    {
+      "source": "abf8698d-2c2b-40d8-a9c5-ad350c1db4e0",
+      "target": "fb1c5251-6f51-41cb-945d-217a9da11529",
+      "type": "RELATES_TO",
+      "label": "relates to"
+    }
+  ]
+}

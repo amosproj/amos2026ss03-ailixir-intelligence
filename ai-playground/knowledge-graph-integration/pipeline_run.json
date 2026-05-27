@@ -1,0 +1,69 @@
+{
+  "run_at": "2026-05-27T02:56:01.397395+00:00",
+  "neo4j_uri": "bolt://localhost:7687",
+  "patient": {
+    "mrn": "10042",
+    "name": "Hans Schmidt",
+    "dob": "1979-03-12"
+  },
+  "images_processed": 4,
+  "success_count": 4,
+  "results": [
+    {
+      "file": "image (0).jpg",
+      "status": "ok",
+      "episode": "mrn10042_image (0)_20250416_000000",
+      "doc_type": "lab_report",
+      "doc_date": "2025-04-16T00:00:00+00:00",
+      "group_id": "10042",
+      "outputs": {
+        "png": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (0)_graph.png",
+        "cypher": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (0)_graph.cypher",
+        "json": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (0)_graph.json"
+      },
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27mrn10042_image%20%280%29_20250416_000000%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
+    },
+    {
+      "file": "image (1).jpg",
+      "status": "ok",
+      "episode": "mrn10042_image (1)_20250427_000000",
+      "doc_type": "lab_report",
+      "doc_date": "2025-04-27T00:00:00+00:00",
+      "group_id": "10042",
+      "outputs": {
+        "png": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (1)_graph.png",
+        "cypher": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (1)_graph.cypher",
+        "json": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (1)_graph.json"
+      },
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27mrn10042_image%20%281%29_20250427_000000%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
+    },
+    {
+      "file": "image (2).jpg",
+      "status": "ok",
+      "episode": "mrn10042_image (2)_20241216_000000",
+      "doc_type": "prescription",
+      "doc_date": "2024-12-16T00:00:00+00:00",
+      "group_id": "10042",
+      "outputs": {
+        "png": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (2)_graph.png",
+        "cypher": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (2)_graph.cypher",
+        "json": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (2)_graph.json"
+      },
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27mrn10042_image%20%282%29_20241216_000000%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
+    },
+    {
+      "file": "image (3).jpg",
+      "status": "ok",
+      "episode": "mrn10042_image (3)_20241216_000000",
+      "doc_type": "prescription",
+      "doc_date": "2024-12-16T00:00:00+00:00",
+      "group_id": "10042",
+      "outputs": {
+        "png": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (3)_graph.png",
+        "cypher": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (3)_graph.cypher",
+        "json": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\image (3)_graph.json"
+      },
+      "browser_link": "http://localhost:7474/browser/?cmd=edit&arg=MATCH%20%28ep%3AEpisodic%20%7Bname%3A%27mrn10042_image%20%283%29_20241216_000000%27%7D%29-%5Br%2A1..2%5D-%28n%29%20RETURN%20ep%2C%20r%2C%20n"
+    }
+  ]
+}
