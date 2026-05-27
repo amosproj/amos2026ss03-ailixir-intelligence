@@ -28,9 +28,7 @@ export default function UploadScreen() {
 
     if (pickerResult.canceled) return;
 
-    const acceptedFiles = pickerResult.assets.filter((file) =>
-      Boolean(resolveDocumentContentType(file.name ?? '', file.mimeType)),
-    );
+    const acceptedFiles = pickerResult.assets.filter((file) => Boolean(resolveDocumentContentType(file.name ?? '', file.mimeType)));
     const rejectedCount = pickerResult.assets.length - acceptedFiles.length;
 
     setSelectedFiles(acceptedFiles);

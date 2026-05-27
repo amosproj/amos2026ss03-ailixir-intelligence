@@ -1,7 +1,6 @@
 import { CText } from '@/components/atoms';
 import { ListItemContainer } from '@/components/molecules/list-item-container';
 import type { DocumentStatus } from '@/hooks/useDocuments';
-import { Link } from 'expo-router';
 import { ArrowRight, File } from '@tamagui/lucide-icons-2';
 import { XStack, YStack } from 'tamagui';
 

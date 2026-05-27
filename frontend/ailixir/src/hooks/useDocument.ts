@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/lib/axios';
 import { DocumentStatus } from '@/hooks/useDocuments';
 
