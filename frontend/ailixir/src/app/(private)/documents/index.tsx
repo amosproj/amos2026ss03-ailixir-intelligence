@@ -10,7 +10,8 @@ import { YStack } from 'tamagui';
 
 export default function DocumentsScreen() {
   const { data } = useDocuments({}, true);
-  const overviewItems = ['6 Documents', '2 Uploads pending', 'Another information'];
+  const documentCount = data?.documents?.length ?? 0;
+  const overviewItems = [`${documentCount} Documents`];
 
   const documents = (data?.documents ?? []).map((doc) => ({
     id: doc.document_id,
