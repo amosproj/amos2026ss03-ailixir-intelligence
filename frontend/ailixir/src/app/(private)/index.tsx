@@ -39,9 +39,10 @@ const quickActions: QuickAction[] = [
 ];
 
 const recentChats = [
-  { id: 'q1-report', title: 'Q1 Financial Report Analysis', timeAgo: '2d ago' },
-  { id: 'proposal', title: 'Project Proposal Overview', timeAgo: '3d ago' },
-  { id: 'marketing-2026', title: 'Marketing Strategy 2026', timeAgo: '5d ago' },
+  { id: 'lab-reports', title: 'Lab Reports Summary', timeAgo: '2d ago' },
+  { id: 'blood-results', title: 'Blood Results Review', timeAgo: '3d ago' },
+  { id: 'invoices', title: 'Invoice Reconciliation', timeAgo: '5d ago' },
+  { id: 'timesheets-expenses', title: 'Timesheets and Expenses', timeAgo: '1w ago' },
 ];
 
 export default function HomeScreen() {
@@ -53,7 +54,7 @@ export default function HomeScreen() {
       <YStack gap={14} px={16} py={16}>
         <YStack px={6} pb={4}>
           <CText variant="h2" color="$black">
-            Welcome back, {displayName || 'Tim'}
+            Welcome back {displayName || ''}
           </CText>
           <CText variant="lead" color="$gray" mt={4}>
             What do you want to explore today?
