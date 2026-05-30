@@ -1,11 +1,11 @@
 import { CButton, CText } from '@/components/atoms';
-import { DocumentPageThumbnail } from '@/components/molecules';
+import { DeleteButton, DocumentPageThumbnail } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
-import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
+import { ChevronLeft, FileText, Trash2 } from '@tamagui/lucide-icons-2';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
@@ -119,6 +119,9 @@ export default function DocumentScreen() {
                 </CText>
               </XStack>
             </YStack>
+            <DeleteButton documentId={document.document_id} disabled={document.status === 'processing'} onSuccess={() => router.back()} circular>
+              <Trash2 size={20} color="#ef4444" />
+            </DeleteButton>
           </XStack>
 
           <XStack flexWrap="wrap" justify="space-between" gap={16}>
