@@ -1,7 +1,7 @@
 import { CText } from '@/components/atoms';
-import { ListItemContainer } from '@/components/molecules/list-item-container';
+import { DeleteButton, ListItemContainer } from '@/components/molecules';
 import type { DocumentStatus } from '@/hooks/useDocuments';
-import { ArrowRight, File } from '@tamagui/lucide-icons-2';
+import { ArrowRight, File, Trash2 } from '@tamagui/lucide-icons-2';
 import { XStack, YStack } from 'tamagui';
 
 export type DocumentListItemData = {
@@ -62,6 +62,11 @@ export function DocumentListItem({ document }: { document: DocumentListItemData 
             )}
           </XStack>
         </YStack>
+        {document.status !== 'processing' && (
+          <DeleteButton documentId={document.id} circular>
+            <Trash2 size={20} color="#ef4444" />
+          </DeleteButton>
+        )}
       </XStack>
 
       <ArrowRight size={22} color="#847EF3" />

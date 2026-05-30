@@ -2,6 +2,7 @@
 export * from './camera-button';
 
 export * from './auxiliary-overview';
+export * from './delete-button';
 export * from './document-list-item';
 export * from './document-page-thumbnail';
 export * from './documents-action';
