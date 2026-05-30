@@ -119,11 +119,9 @@ export default function DocumentScreen() {
                 </CText>
               </XStack>
             </YStack>
-            {document.status !== 'processing' && (
-              <DeleteButton documentId={document.document_id} onSuccess={() => router.back()} circular>
-                <Trash2 size={20} color="#ef4444" />
-              </DeleteButton>
-            )}
+            <DeleteButton documentId={document.document_id} onSuccess={() => router.back()} circular disabled={document.status !== 'processing'}>
+              <Trash2 size={20} color="#ef4444" />
+            </DeleteButton>
           </XStack>
 
           <XStack flexWrap="wrap" justify="space-between" gap={16}>
