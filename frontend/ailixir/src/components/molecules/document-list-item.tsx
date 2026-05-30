@@ -62,9 +62,11 @@ export function DocumentListItem({ document }: { document: DocumentListItemData 
             )}
           </XStack>
         </YStack>
-        <DeleteButton documentId={document.id} circular disabled={document.status !== 'processing'}>
-          <Trash2 size={20} color="#ef4444" />
-        </DeleteButton>
+        {document.status !== 'processing' && (
+          <DeleteButton documentId={document.id} circular>
+            <Trash2 size={20} color="#ef4444" />
+          </DeleteButton>
+        )}
       </XStack>
 
       <ArrowRight size={22} color="#847EF3" />
