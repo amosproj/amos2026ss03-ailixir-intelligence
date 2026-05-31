@@ -35,7 +35,7 @@ export function DeleteButton({ documentId, onSuccess, ...buttonProps }: DeleteBu
         style: 'destructive',
       },
     ]);
-  }, [documentId, onSuccess]);
+  }, [documentId, onSuccess, queryClient]);
 
   return <CButton onPress={handleDelete} {...buttonProps} />;
 }
