@@ -50,6 +50,7 @@ export default function ChatScreen() {
 
   const handleReloadMessage = (messageId: string) => {
     // TODO: Implement reload logic (e.g., call API to regenerate response)
+    alert('Reload not available');
     console.log('Reload message:', messageId);
   };
 

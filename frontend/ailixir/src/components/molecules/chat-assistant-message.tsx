@@ -6,7 +6,7 @@ import * as Clipboard from 'expo-clipboard';
 
 interface ChatAssistantMessageProps {
   text: string;
-  onReload?: () => void;
+  onReload: () => void;
 }
 
 export const ChatAssistantMessage: React.FC<ChatAssistantMessageProps> = ({ text, onReload }) => {
