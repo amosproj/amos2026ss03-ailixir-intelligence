@@ -1,19 +1,19 @@
 import { useMutation } from '@tanstack/react-query';
 import apiClient from '@/lib/axios';
 
-export interface SignUpInput {
+export interface UserData {
   email: string;
-  password: string;
   first_name: string;
   last_name: string;
 }
 
-export interface SignUpResponse {
+export type SignUpInput = UserData & {
+  password: string;
+};
+
+export type SignUpResponse = UserData & {
   uid: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-}
+};
 
 export interface SignUpValidationErrorDetail {
   loc: (string | number)[];
