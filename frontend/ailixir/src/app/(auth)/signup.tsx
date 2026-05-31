@@ -1,12 +1,11 @@
 import { CButton, CInput, CText } from '@/components/atoms';
 import { ChevronRight } from '@tamagui/lucide-icons-2';
 import { useRouter } from 'expo-router';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ScrollView } from 'react-native';
 import { YStack } from 'tamagui';
-import { auth } from '@/lib/firebase';
+import { useSignUp } from '@/hooks/useSignUp';
 
 const PASSWORD_MIN_LENGTH = 8;
 
@@ -20,6 +19,7 @@ type SignUpFormValues = {
 export default function SignUpScreen() {
   const router = useRouter();
   const [error, setError] = useState('');
+  const { mutateAsync: signUpAsync, isPending } = useSignUp();
 
   const {
     control,
@@ -37,7 +37,13 @@ export default function SignUpScreen() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       setError('');
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      console.log('before signup');
+      await signUpAsync({
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+      });
       router.push('./login');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'An unexpected error occurred';
@@ -142,8 +148,8 @@ export default function SignUpScreen() {
             </CText>
           ) : null}
 
-          <CButton theme="blue" iconButton icon={ChevronRight} onPress={onSubmit} width="100%">
-            continue
+          <CButton theme="blue" iconButton icon={ChevronRight} onPress={onSubmit} width="100%" disabled={isPending} opacity={isPending ? 0.6 : 1}>
+            {isPending ? 'creating account...' : 'continue'}
           </CButton>
         </YStack>
 
