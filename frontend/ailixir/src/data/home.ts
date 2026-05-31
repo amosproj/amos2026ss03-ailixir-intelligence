@@ -12,7 +12,7 @@ export type QuickAction = {
   icon: IconComponent;
   iconSize: number;
   iconStrokeWidth: number;
-  iconBackground: '$blue' | '$darkblue';
+  iconBackground: any;
 };
 
 export type RecentChat = {
@@ -29,7 +29,7 @@ export const quickActions: QuickAction[] = [
     icon: Plus,
     iconSize: 36,
     iconStrokeWidth: 2.8,
-    iconBackground: '$darkblue',
+    iconBackground: '$accent10',
   },
   {
     title: 'Documents',

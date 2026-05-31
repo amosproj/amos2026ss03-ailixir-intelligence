@@ -11,6 +11,8 @@ export * from './document-page-thumbnail';
 export * from './documents-action';
 export * from './list-item-container';
 export * from './list-filters';
+export * from './quick-action-card';
+export * from './recent-chat-item';
 export * from './upload-actions';
 export * from './upload-files-panel';
 export * from './upload-header';
