@@ -30,6 +30,7 @@ gcp-credentials.json
 Backend/secrets/
 secrets/
 Backend/shared/keys
+ai-playground/Patient-1
 *-amos26-firebase-adminsdk-fbsvc-c05787eb8f.json
 Backend/amos26-firebase-adminsdk-fbsvc-c05787eb8f.json
 Backend/amos26-80159dd7b72f.json
