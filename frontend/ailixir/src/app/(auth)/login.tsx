@@ -1,4 +1,4 @@
-import { CText } from '@/components/atoms';
+import { AuthFooterLink, ScreenHeader } from '@/components/molecules';
 import { LoginForm } from '@/components/organisms';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'expo-router';
@@ -22,19 +22,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <YStack width="100%" height="100%" background="$background" justify="center" items="center" gap={5}>
-      <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} />
-      {error ? (
-        <CText variant="body" color="red">
-          {error}
-        </CText>
-      ) : null}
-      <CText variant="body" color="darkgray">
-        Don{"'"}t have an account?{' '}
-        <CText color="$blue10" onPress={() => router.push('./signup')}>
-          Sign Up
-        </CText>
-      </CText>
+    <YStack flex={1} width="100%" background="$background" justify="space-between" items="stretch" py={24}>
+      <YStack></YStack>
+      <YStack width="100%" gap={20}>
+        <ScreenHeader title="Welcome back" subtitle="Log in to continue" />
+        <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} serverError={error} />
+      </YStack>
+      <AuthFooterLink text="Don't have an account?" linkLabel="Sign Up" onPress={() => router.push('./signup')} />
     </YStack>
   );
 }
