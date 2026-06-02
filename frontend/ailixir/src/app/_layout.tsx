@@ -55,7 +55,7 @@ function RootStackContent() {
           </Stack.Protected>
 
           <Stack.Protected guard={!isLoggedIn}>
-            <Stack.Screen name="(auth)" options={{ title: 'Auth' }} />
+            <Stack.Screen name="(auth)" options={{ title: 'Auth', headerShown: false }} />
           </Stack.Protected>
         </Stack>
       </SafeAreaView>
