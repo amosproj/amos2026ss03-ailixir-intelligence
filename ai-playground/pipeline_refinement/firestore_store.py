@@ -1,9 +1,17 @@
 """
 Firestore persistence for the pipeline refinement playground.
 
-Collections used (under project amos26):
-  test_extractions  — one document per PDF processed (new doc each time)
-  test_summaries    — one document per user_id (created once, updated in place)
+Collections (project amos26):
+  test_extractions — one document per PDF processed (new doc each time)
+  test_summaries   — one document per user_id (created once, updated in place)
+
+Extraction document shape:
+  user_id, doc_name, document_type, document_purpose,
+  episode_body      ← the narrative paragraph Graphiti will receive
+  entity_types      ← LLM-defined schemas (list of {name, description, fields})
+  edge_types        ← LLM-defined relationship classes (list of {name, description})
+  edge_type_map     ← valid source/target/relations constraints (list of {source, target, relations})
+  created_at
 """
 
 from __future__ import annotations
@@ -29,10 +37,10 @@ def save_extraction(user_id: str, doc_name: str, extraction: dict) -> str:
         "doc_name": doc_name,
         "document_type": extraction.get("document_type"),
         "document_purpose": extraction.get("document_purpose"),
-        "entity_types": extraction.get("entity_types", {}),
+        "episode_body": extraction.get("episode_body", ""),
+        "entity_types": extraction.get("entity_types", []),
         "edge_types": extraction.get("edge_types", []),
-        "entities": extraction.get("entities", []),
-        "relationships": extraction.get("relationships", []),
+        "edge_type_map": extraction.get("edge_type_map", []),
         "created_at": datetime.now(timezone.utc),
     }
     ref = db.collection(_EXTRACTIONS_COL).document()
@@ -44,8 +52,7 @@ def get_summary(user_id: str) -> dict | None:
     """
     Return the current summary document for a user, or None if not yet created.
 
-    Returned dict contains at minimum:
-      summary (str), last_updated (datetime), document_count (int)
+    Returned dict contains: summary (str), last_updated, document_count (int).
     """
     db = get_firestore()
     doc = db.collection(_SUMMARIES_COL).document(user_id).get()
@@ -59,20 +66,15 @@ def upsert_summary(
 ) -> None:
     """
     Create or overwrite the summary document for a user.
-
-    document_count is incremented from whatever exists in Firestore,
-    so it always reflects the total number of documents processed.
+    document_count increments each call so it always reflects total docs processed.
     """
     db = get_firestore()
     ref = db.collection(_SUMMARIES_COL).document(user_id)
-
     existing = ref.get().to_dict() or {}
-    prev_count: int = existing.get("document_count") or 0
-
     ref.set({
         "user_id": user_id,
         "summary": summary_text,
         "last_updated": datetime.now(timezone.utc),
-        "document_count": prev_count + 1,
+        "document_count": (existing.get("document_count") or 0) + 1,
         "last_extraction_id": last_extraction_id,
     })

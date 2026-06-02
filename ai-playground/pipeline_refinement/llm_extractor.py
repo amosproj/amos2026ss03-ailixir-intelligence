@@ -1,16 +1,21 @@
 """
 LLM-based document analyzer.
 
-Two public functions:
-  analyze_document()        — PDF bytes → structured extraction JSON
-  update_journey_summary()  — current summary + extraction → updated summary string
+Public functions:
+  analyze_document()      — PDF bytes → extraction dict containing episode_body,
+                            entity_types defs, edge_types defs, edge_type_map defs
+  build_graphiti_types()  — converts LLM output into actual Pydantic classes and
+                            dicts that can be passed directly to graphiti.add_episode()
+  update_journey_summary() — current summary + extraction → updated summary string
 """
 
 from __future__ import annotations
 
 import json
 import re
+from typing import Any
 
+from pydantic import BaseModel, Field, create_model
 from google.genai import types
 
 from pipeline_refinement.config import LLM_MODEL, get_gemini_client
@@ -27,7 +32,7 @@ def _strip_markdown_fences(text: str) -> str:
 
 
 def _extract_json_object(text: str) -> dict:
-    """Find and parse the first complete JSON object in the text."""
+    """Find and parse the first complete JSON object in the LLM response."""
     text = _strip_markdown_fences(text)
     start = text.find("{")
     if start == -1:
@@ -54,12 +59,15 @@ def analyze_document(
     previous_summary: str = "",
 ) -> dict:
     """
-    Send a PDF to Gemini with journey context and extract structured graph data.
+    Send a PDF to Gemini with journey context.
 
     Returns a dict with keys:
-      document_purpose, document_type,
-      entity_types, edge_types,
-      entities, relationships
+      document_type     — e.g. "Laborbericht"
+      document_purpose  — one-sentence description
+      episode_body      — rich narrative paragraph ready for Graphiti
+      entity_types      — list of {name, description, fields[]}
+      edge_types        — list of {name, description}
+      edge_type_map     — list of {source, target, relations[]}
     """
     client = get_gemini_client()
     summary_text = previous_summary.strip() or "No previous documents processed yet."
@@ -84,36 +92,76 @@ def analyze_document(
     return _extract_json_object(raw)
 
 
+def build_graphiti_types(extraction: dict) -> tuple[
+    dict[str, type[BaseModel]],
+    dict[str, type[BaseModel]],
+    dict[tuple[str, str], list[str]],
+]:
+    """
+    Convert the LLM extraction output into Pydantic classes and dicts that
+    can be passed directly to graphiti.add_episode().
+
+    Returns:
+      entity_types  — dict[str, type[BaseModel]]  e.g. {"Diagnosis": DiagnosisModel}
+      edge_types    — dict[str, type[BaseModel]]  e.g. {"HAS_DIAGNOSIS": HasDiagnosisModel}
+      edge_type_map — dict[tuple[str,str], list[str]]
+                      e.g. {("Patient","Diagnosis"): ["HAS_DIAGNOSIS"]}
+    """
+    # ── entity_types ──────────────────────────────────────────────────────────
+    entity_types: dict[str, type[BaseModel]] = {}
+    for et in extraction.get("entity_types", []):
+        name: str = et["name"]
+        description: str = et.get("description", name)
+        field_defs: dict[str, Any] = {}
+        for f in et.get("fields", []):
+            fname = f["name"]
+            fdesc = f.get("description", fname)
+            # All fields are optional strings; Graphiti fills them from the narrative
+            field_defs[fname] = (
+                str | None,
+                Field(default=None, description=fdesc),
+            )
+        model_cls = create_model(name, **field_defs)
+        model_cls.__doc__ = description
+        entity_types[name] = model_cls
+
+    # ── edge_types ────────────────────────────────────────────────────────────
+    edge_types: dict[str, type[BaseModel]] = {}
+    for ed in extraction.get("edge_types", []):
+        name = ed["name"]
+        description = ed.get("description", name)
+        edge_cls = create_model(name)
+        edge_cls.__doc__ = description
+        edge_types[name] = edge_cls
+
+    # ── edge_type_map ─────────────────────────────────────────────────────────
+    edge_type_map: dict[tuple[str, str], list[str]] = {}
+    for entry in extraction.get("edge_type_map", []):
+        key = (entry["source"], entry["target"])
+        edge_type_map[key] = entry.get("relations", [])
+
+    return entity_types, edge_types, edge_type_map
+
+
 def update_journey_summary(
     current_summary: str,
     extraction: dict,
     doc_name: str,
 ) -> str:
     """
-    Produce an updated patient journey summary incorporating the new extraction.
+    Produce an updated patient journey summary from the current summary and
+    the newly extracted episode_body.
 
     Returns the updated summary as a plain string.
     """
     client = get_gemini_client()
-
-    # Build a concise findings bullet list from extracted entities
-    findings_lines: list[str] = []
-    for ent in extraction.get("entities", []):
-        etype = ent.get("type", "Entity")
-        props = ent.get("properties", {})
-        relevant = {k: v for k, v in props.items() if v is not None}
-        if relevant:
-            prop_str = ", ".join(f"{k}: {v}" for k, v in relevant.items())
-            findings_lines.append(f"- {etype}: {prop_str}")
-
-    findings = "\n".join(findings_lines) or "No specific entities extracted."
 
     prompt_text = SUMMARY_UPDATE_PROMPT.format(
         current_summary=current_summary.strip() or "No prior summary — this is the first document.",
         doc_name=doc_name,
         doc_type=extraction.get("document_type", "Unknown"),
         doc_purpose=extraction.get("document_purpose", "Unknown"),
-        findings=findings,
+        episode_body=extraction.get("episode_body", ""),
     )
 
     response = client.models.generate_content(
