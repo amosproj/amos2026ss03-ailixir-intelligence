@@ -2,14 +2,15 @@
 LLM prompt templates for the pipeline refinement.
 
 EXTRACTION_PROMPT
-  Reads the PDF and produces:
-  1. episode_body  — a rich narrative paragraph that Graphiti will extract
-                     entities and relationships from. This is the main text
-                     Graphiti's LLM processes.
-  2. entity_types  — which entity types (+ field schemas) Graphiti should
-                     look for in that paragraph.
-  3. edge_types    — the relationship classes Graphiti can create.
-  4. edge_type_map — which relationships are valid between which entity pairs.
+  The LLM reads the PDF and produces ONLY:
+    1. document_type    — what kind of document this is
+    2. document_purpose — one sentence: its role in the patient journey
+    3. episode_body     — a rich clinical narrative paragraph
+
+  Entity/edge types are NO LONGER part of the LLM output. They come from the
+  fixed schema in medical_schema.py. Graphiti's internal LLM extracts entities
+  from the narrative against that consistent schema — this is what enables
+  entity merging and temporal updates across documents.
 
 SUMMARY_UPDATE_PROMPT
   Updates the running patient journey summary after each document.
@@ -18,8 +19,7 @@ SUMMARY_UPDATE_PROMPT
 # ── Document extraction prompt ────────────────────────────────────────────────
 
 EXTRACTION_PROMPT = """\
-You are a medical knowledge graph assistant preparing documents for a patient \
-journey knowledge graph built with Graphiti (a temporal graph framework).
+You are a medical scribe preparing documents for a patient journey knowledge graph.
 
 CONTEXT
 =======
@@ -27,91 +27,45 @@ Document filename  : {filename}
 Patient journey so far (previous summary):
 {summary}
 
-HOW GRAPHITI WORKS
-==================
-Graphiti takes a plain-text paragraph (called "episode_body") and automatically
-extracts entities and relationships from it. You guide that extraction by also
-providing:
-  - entity_types : which kinds of entities to look for (e.g. Diagnosis, Medication)
-  - edge_types   : which kinds of relationships exist
-  - edge_type_map: which relationships are valid between which entity pairs
+TASK
+====
+Read this medical document and write ONE rich clinical narrative paragraph
+that captures everything medically relevant about this document.
 
-YOUR TASK
-=========
-Read this medical document and produce four things:
+This paragraph is what an AI knowledge graph engine will read to extract
+entities (Patient, Diagnosis, Medication, LabTest, Procedure, Provider,
+PathologyResult, TumorMarker, TreatmentPlan) and their relationships.
 
-1. episode_body
-   A single flowing narrative paragraph (200–400 words) that tells the story of
-   what this document contains from the perspective of the patient's journey.
-   Write it like a clinical case note — include all clinically relevant facts:
-   who the patient is, who the provider is, what was found, measured or done,
-   dates, values, units, diagnosis names, medication names, dosages, stages, etc.
-   Write in English. Keep original medical terms (ICD codes, drug names, lab
-   abbreviations) as-is. Do NOT use bullet points or headings inside this text.
-   This paragraph is what Graphiti will read to build the knowledge graph.
+WHAT TO INCLUDE in the narrative
+  • Patient identifiers: full name as written, date of birth, patient/case ID
+  • All providers: doctor names, clinic names, departments, addresses
+  • All dates: document date, test dates, procedure dates, diagnosis dates
+  • All diagnoses: full name, ICD code if present, staging, status
+  • All lab results: test name, value, unit, reference range, interpretation
+  • All tumor markers: name, value, unit, normal range
+  • All procedures done or planned: name, date, outcome
+  • All medications: name, dosage, route, frequency, start/stop dates
+  • Pathology findings: Gleason score, grade, specimen site, finding
+  • Treatment decisions or recommendations made in this document
+  • Any changes from previous findings (e.g. PSA changed from X to Y)
 
-2. entity_types
-   A list of entity type definitions relevant to THIS document.
-   Each entry has:
-     name        — PascalCase type name (e.g. "Diagnosis", "LabTest")
-     description — one sentence Graphiti uses to classify entities (important!)
-     fields      — list of {{name, description}} for each property
-
-   Only define types that genuinely appear in this document.
-   Use these standard medical types where they fit:
-     Patient, Diagnosis, Medication, LabTest, Procedure,
-     Provider, TumorMarker, Pathology, TreatmentResponse, Symptom
-
-3. edge_types
-   A list of relationship type definitions.
-   Each entry has:
-     name        — UPPER_SNAKE_CASE (e.g. "HAS_DIAGNOSIS", "TREATED_BY")
-     description — one sentence describing when this edge applies
-
-4. edge_type_map
-   A list of {{source, target, relations}} entries constraining which relationships
-   are valid between which entity pairs.
-   "Entity" can be used as a wildcard type for fallback rules.
+STYLE
+  • Single flowing paragraph — no bullet points, no headers, no JSON
+  • Write in English; keep original medical terms (ICD codes, drug names,
+    lab abbreviations, German anatomical terms) exactly as written
+  • Be specific and complete — include all numbers, dates, and values
+  • Reference the patient by the same consistent identifier used in all
+    documents (e.g. "Patient-1" if that is how they appear in the document)
 
 OUTPUT FORMAT
 =============
-Return ONLY valid JSON — no markdown, no explanation, nothing outside the JSON.
+Return ONLY valid JSON with exactly these three keys — no markdown, no extra text.
 
 {{
-  "document_type": "Laborbericht | Arztbrief | Verlaufsbericht | Befundbericht | Tumorkonferenzprotokoll | Überweisungsbrief | Pathologiebericht | etc.",
-  "document_purpose": "One sentence: what this document is and its role in the patient journey.",
-  "episode_body": "Full clinical narrative paragraph here...",
-  "entity_types": [
-    {{
-      "name": "EntityTypeName",
-      "description": "One sentence Graphiti uses to classify this entity type.",
-      "fields": [
-        {{"name": "field_name", "description": "what this field captures"}}
-      ]
-    }}
-  ],
-  "edge_types": [
-    {{
-      "name": "EDGE_TYPE_NAME",
-      "description": "One sentence describing when this relationship applies."
-    }}
-  ],
-  "edge_type_map": [
-    {{
-      "source": "SourceEntityType",
-      "target": "TargetEntityType",
-      "relations": ["EDGE_TYPE_NAME"]
-    }}
-  ]
+  "document_type": "Exact German document type: Laborbericht | Arztbrief | Verlaufsbericht | Befundbericht | Tumorkonferenzprotokoll | Überweisungsbrief | Pathologiebericht | etc.",
+  "document_purpose": "One sentence: what this document is and its role in this patient's journey.",
+  "episode_body": "Full clinical narrative paragraph here..."
 }}
-
-RULES
-  • episode_body must be prose — no JSON, no bullets, no headings inside it
-  • entity_types and edge_types must only include types present in THIS document
-  • Descriptions are read by Graphiti's LLM — make them precise and unambiguous
-  • All field names: snake_case
-  • Edge type names: UPPER_SNAKE_CASE
-  • Entity type names: PascalCase
 """
 
 

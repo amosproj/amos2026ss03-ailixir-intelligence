@@ -4,14 +4,6 @@ Firestore persistence for the pipeline refinement playground.
 Collections (project amos26):
   test_extractions — one document per PDF processed (new doc each time)
   test_summaries   — one document per user_id (created once, updated in place)
-
-Extraction document shape:
-  user_id, doc_name, document_type, document_purpose,
-  episode_body      ← the narrative paragraph Graphiti will receive
-  entity_types      ← LLM-defined schemas (list of {name, description, fields})
-  edge_types        ← LLM-defined relationship classes (list of {name, description})
-  edge_type_map     ← valid source/target/relations constraints (list of {source, target, relations})
-  created_at
 """
 
 from __future__ import annotations
@@ -24,11 +16,17 @@ _EXTRACTIONS_COL = "test_extractions"
 _SUMMARIES_COL = "test_summaries"
 
 
-def save_extraction(user_id: str, doc_name: str, extraction: dict) -> str:
+def save_extraction(
+    user_id: str,
+    doc_name: str,
+    extraction: dict,
+    graphiti_episode_name: str | None = None,
+) -> str:
     """
     Persist one extraction result as a new Firestore document.
     A new document is created on every call — nothing is overwritten.
 
+    graphiti_episode_name links this Firestore doc to its Neo4j episode.
     Returns the auto-generated Firestore document ID.
     """
     db = get_firestore()
@@ -38,9 +36,7 @@ def save_extraction(user_id: str, doc_name: str, extraction: dict) -> str:
         "document_type": extraction.get("document_type"),
         "document_purpose": extraction.get("document_purpose"),
         "episode_body": extraction.get("episode_body", ""),
-        "entity_types": extraction.get("entity_types", []),
-        "edge_types": extraction.get("edge_types", []),
-        "edge_type_map": extraction.get("edge_type_map", []),
+        "graphiti_episode_name": graphiti_episode_name,
         "created_at": datetime.now(timezone.utc),
     }
     ref = db.collection(_EXTRACTIONS_COL).document()
@@ -49,11 +45,7 @@ def save_extraction(user_id: str, doc_name: str, extraction: dict) -> str:
 
 
 def get_summary(user_id: str) -> dict | None:
-    """
-    Return the current summary document for a user, or None if not yet created.
-
-    Returned dict contains: summary (str), last_updated, document_count (int).
-    """
+    """Return the current summary document for a user, or None if not yet created."""
     db = get_firestore()
     doc = db.collection(_SUMMARIES_COL).document(user_id).get()
     return doc.to_dict() if doc.exists else None
@@ -64,10 +56,7 @@ def upsert_summary(
     summary_text: str,
     last_extraction_id: str,
 ) -> None:
-    """
-    Create or overwrite the summary document for a user.
-    document_count increments each call so it always reflects total docs processed.
-    """
+    """Create or overwrite the summary document for a user."""
     db = get_firestore()
     ref = db.collection(_SUMMARIES_COL).document(user_id)
     existing = ref.get().to_dict() or {}
