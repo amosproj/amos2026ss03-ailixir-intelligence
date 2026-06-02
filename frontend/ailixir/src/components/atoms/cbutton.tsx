@@ -31,7 +31,10 @@ export const CButton = styled(Button, {
         pressStyle: {},
       },
       medium: {},
-      low: {},
+      low: {
+        backgroundColor: 'none',
+        color: '$accent10',
+      },
     },
   } as const,
 });

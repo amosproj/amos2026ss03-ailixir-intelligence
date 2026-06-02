@@ -13,9 +13,9 @@ export function QuickActionCard({ action }: QuickActionCardProps) {
 
   return (
     <Link href={action.href} asChild>
-      <YStack flex={1} gap={14} p={20} bg="$white02" items="center" justify="center" style={{ minWidth: 160, minHeight: 180 }}>
+      <YStack flex={1} gap={14} p={20} bg="$accent12" items="center" justify="center" style={{ minWidth: 160, minHeight: 180 }}>
         <YStack width={64} height={64} items="center" justify="center" bg={action.iconBackground}>
-          <Icon size={action.iconSize} color="$white12" strokeWidth={action.iconStrokeWidth} />
+          <Icon size={action.iconSize} color="$accent12" strokeWidth={action.iconStrokeWidth} />
         </YStack>
         <YStack gap={4} items="center">
           <CText variant="h2">{action.title}</CText>

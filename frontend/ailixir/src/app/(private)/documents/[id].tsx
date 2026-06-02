@@ -8,7 +8,7 @@ import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { ChevronLeft, FileText, Trash2 } from '@tamagui/lucide-icons-2';
+import { ChevronLeft, File, Trash2 } from '@tamagui/lucide-icons-2';
 import { useAtomValue } from 'jotai';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
@@ -37,10 +37,10 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
   return (
     <YStack gap={4} width="48%">
-      <CText variant="caption" color="$color9">
+      <CText variant="caption" color="$accent1">
         {label}
       </CText>
-      <CText variant="body" bold color="$color11">
+      <CText variant="body" bold color="$black5">
         {value}
       </CText>
     </YStack>
@@ -207,15 +207,13 @@ export default function DocumentScreen() {
   const fileLabel = document.file_count > 1 ? `${document.file_count} files` : document.files[0]?.file_name;
 
   return (
-    <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
+    <ScrollView flex={1} showsVerticalScrollIndicator={false}>
       <YStack gap={20} px={16} pt={16} pb={32}>
-        <YStack gap={16} bg="$color0" p={16} borderWidth={1} borderColor="$color3" style={{ borderRadius: 20 }}>
+        <YStack gap={16} bg="$accent12" p={16}>
           <XStack items="center" gap={12}>
-            <XStack width={48} height={48} bg="$color2" items="center" justify="center" style={{ borderRadius: 14 }}>
-              <FileText size={24} color="$color11" />
-            </XStack>
+            <File size={24} color="$color11" />
             <YStack gap={4} flex={1}>
-              <CText variant="caption" color="$color9">
+              <CText variant="caption" color="$accent1">
                 Status
               </CText>
               <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
@@ -225,7 +223,7 @@ export default function DocumentScreen() {
               </XStack>
             </YStack>
             <DeleteButton documentId={document.document_id} disabled={document.status === 'processing'} onSuccess={() => router.back()} circular>
-              <Trash2 size={20} color="#ef4444" />
+              <Trash2 size={20} color="$red10" />
             </DeleteButton>
           </XStack>
 

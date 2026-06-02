@@ -21,7 +21,7 @@ type ListItemContentProps = {
 export function ListItemContainer({ href, children }: ListItemContainerProps) {
   return (
     <Link href={href} asChild>
-      <XStack items="center" justify="space-between" bg="$white02" px={18} py={18} gap={10}>
+      <XStack items="center" justify="space-between" bg="$accent12" px={18} py={18} gap={10}>
         {children}
       </XStack>
     </Link>

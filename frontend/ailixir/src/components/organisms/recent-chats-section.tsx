@@ -16,7 +16,7 @@ export function RecentChatsSection({ chats }: RecentChatsSectionProps) {
         <CText variant="h2">Recent Chats</CText>
         <Link href="/chats" asChild>
           <CButton pr={0}>
-            <CText variant="lead" bold>
+            <CText variant="lead" bold color={'$accent10'}>
               View All
             </CText>
           </CButton>

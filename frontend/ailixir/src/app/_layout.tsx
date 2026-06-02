@@ -46,7 +46,6 @@ function RootStackContent() {
         <Stack
           screenOptions={{
             headerShown: true,
-            headerStyle: { backgroundColor: bgColor },
             headerShadowVisible: false,
             headerTitle: () => <CText variant="h1">AiLixir</CText>,
             headerRight: () => <Circle size={40} background="blue" mr={16} />,
@@ -101,7 +100,7 @@ export default function RootStackNavigator() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TamaguiProvider config={config} defaultTheme="dark">
+      <TamaguiProvider config={config} defaultTheme="light">
         <RootStackContent />
       </TamaguiProvider>
     </QueryClientProvider>
