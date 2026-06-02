@@ -1,9 +1,12 @@
 """
 LLM-based document analyzer.
 
-Two public functions:
-  analyze_document()        — PDF bytes → structured extraction JSON
-  update_journey_summary()  — current summary + extraction → updated summary string
+analyze_document()       — PDF bytes → {document_type, document_purpose, episode_body}
+update_journey_summary() — current summary + extraction → updated summary string
+
+Entity and edge type schemas are NOT generated here anymore.
+They are defined once in medical_schema.py so Graphiti can merge entities
+and apply temporal updates consistently across all documents.
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ def _strip_markdown_fences(text: str) -> str:
 
 
 def _extract_json_object(text: str) -> dict:
-    """Find and parse the first complete JSON object in the text."""
+    """Find and parse the first complete JSON object in the LLM response."""
     text = _strip_markdown_fences(text)
     start = text.find("{")
     if start == -1:
@@ -54,12 +57,12 @@ def analyze_document(
     previous_summary: str = "",
 ) -> dict:
     """
-    Send a PDF to Gemini with journey context and extract structured graph data.
+    Send a PDF to Gemini with journey context.
 
-    Returns a dict with keys:
-      document_purpose, document_type,
-      entity_types, edge_types,
-      entities, relationships
+    Returns a dict with exactly three keys:
+      document_type    — e.g. "Laborbericht"
+      document_purpose — one-sentence description
+      episode_body     — rich clinical narrative for Graphiti to extract from
     """
     client = get_gemini_client()
     summary_text = previous_summary.strip() or "No previous documents processed yet."
@@ -91,29 +94,16 @@ def update_journey_summary(
 ) -> str:
     """
     Produce an updated patient journey summary incorporating the new extraction.
-
     Returns the updated summary as a plain string.
     """
     client = get_gemini_client()
-
-    # Build a concise findings bullet list from extracted entities
-    findings_lines: list[str] = []
-    for ent in extraction.get("entities", []):
-        etype = ent.get("type", "Entity")
-        props = ent.get("properties", {})
-        relevant = {k: v for k, v in props.items() if v is not None}
-        if relevant:
-            prop_str = ", ".join(f"{k}: {v}" for k, v in relevant.items())
-            findings_lines.append(f"- {etype}: {prop_str}")
-
-    findings = "\n".join(findings_lines) or "No specific entities extracted."
 
     prompt_text = SUMMARY_UPDATE_PROMPT.format(
         current_summary=current_summary.strip() or "No prior summary — this is the first document.",
         doc_name=doc_name,
         doc_type=extraction.get("document_type", "Unknown"),
         doc_purpose=extraction.get("document_purpose", "Unknown"),
-        findings=findings,
+        episode_body=extraction.get("episode_body", ""),
     )
 
     response = client.models.generate_content(
