@@ -68,7 +68,11 @@ export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data
           control={control}
           rules={{
             required: FORM_MESSAGES.requiredPassword,
-            validate: (value) => value === 'password' || FORM_MESSAGES.invalidPassword,
+            // Client-side password validation removed — the only authority on
+            // whether a password is correct is Firebase Auth itself. A real
+            // wrong-password error surfaces via the catch block in login.tsx
+            // (rendered red, below the form). Any hard-coded validator here
+            // hides genuine sign-in attempts before they ever hit Firebase.
           }}
           render={({ field: { onBlur, onChange, value } }) => (
             <CInput theme="bright" placeholder={FORM_MESSAGES.passwordPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />
