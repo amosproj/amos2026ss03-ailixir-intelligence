@@ -48,6 +48,16 @@ from workers.pipeline.ocr.extractor import extract as ocr_extract
 
 _log = logging.getLogger(__name__)
 
+# Cap on raw OCR text sent into Graphiti's episode body. Graphiti issues one
+# Gemini "resolve_extracted_node" call per candidate entity in the body — a
+# 5k-char German clinical report yields 30+ candidates and bursts past the
+# Vertex AI Gemini rate limit (currently ~200 RPM project-wide). Capping the
+# input keeps the candidate count low enough that the burst stays under
+# quota. The proper fix is configuring Graphiti with an `entity_types`
+# schema (planned migration from ai-playground/pipeline_refinement) which
+# constrains extraction to a defined set rather than free-form candidates.
+_MAX_OCR_CHARS_FOR_GRAPH = 2500
+
 
 async def run(*, document_id: str, uid: str) -> None:
     """
@@ -142,10 +152,19 @@ async def run(*, document_id: str, uid: str) -> None:
             else:
                 combined_fields[file.file_name] = file_fields
 
-            # Raw OCR text — where the actual content is for the Document OCR processor
+            # Raw OCR text — where the actual content is for the Document OCR processor.
+            # Cap accumulation: see _MAX_OCR_CHARS_FOR_GRAPH note. Once the budget
+            # is exhausted we stop appending new blocks (rather than truncating
+            # mid-block, which would split a German word and confuse Gemini).
+            current_chars = sum(len(b) for b in combined_raw_blocks)
             for block in ocr_data.get("raw_text_blocks", []) or []:
-                if block and isinstance(block, str) and block.strip():
-                    combined_raw_blocks.append(block.strip())
+                if not (block and isinstance(block, str) and block.strip()):
+                    continue
+                if current_chars >= _MAX_OCR_CHARS_FOR_GRAPH:
+                    break
+                cleaned = block.strip()
+                combined_raw_blocks.append(cleaned)
+                current_chars += len(cleaned)
 
             # Tables — secondary content source
             for table in ocr_data.get("tables", []) or []:
@@ -154,9 +173,12 @@ async def run(*, document_id: str, uid: str) -> None:
 
         _log.info(
             "pipeline_ocr_done document_id=%s doc_type=%s "
-            "raw_blocks=%d tables=%d structured_keys=%d",
+            "raw_blocks=%d raw_chars=%d tables=%d structured_keys=%d cap=%d",
             document_id, doc_type,
-            len(combined_raw_blocks), len(combined_tables), len(combined_fields),
+            len(combined_raw_blocks),
+            sum(len(b) for b in combined_raw_blocks),
+            len(combined_tables), len(combined_fields),
+            _MAX_OCR_CHARS_FOR_GRAPH,
         )
 
         # ── 3. Save extraction to Firestore ───────────────────────────────────
