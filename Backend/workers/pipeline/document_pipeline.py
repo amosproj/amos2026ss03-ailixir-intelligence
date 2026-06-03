@@ -181,16 +181,33 @@ async def run(*, document_id: str, uid: str) -> None:
         update_processing_step(document_id, "building_graph")
         graphiti = await get_graphiti()
 
-        # The merged_ocr dict goes into build_episode_body() — every key here
-        # is a content source the prompt template knows how to render. Missing
-        # any of them means Gemini gets a thinner prompt and produces a thinner
-        # graph.
+        # The merged_ocr dict goes into build_episode_body(). We intentionally
+        # send only the structured fields (+ doc_type / confidence) and NOT
+        # raw_text_blocks / tables.
+        #
+        # Why: passing the full ~5k chars of German clinical OCR text causes
+        # Graphiti to extract 30-50 candidate entities, then fire one Gemini
+        # resolve_extracted_node call per candidate. That burst overruns the
+        # Vertex AI Gemini per-project RPM quota and surfaces as
+        # RateLimitError → the document FAILS. With filename-only content
+        # Graphiti finds ~1 entity, makes ~2 LLM calls, and the document
+        # reaches status=extracted reliably.
+        #
+        # Trade-off: the graph is sparse (essentially an Episodic node + an
+        # Entity summarising the filename). The OCR text is still saved in
+        # the Extraction record (extracted_fields / persistence elsewhere)
+        # and can be surfaced in the app directly without going through
+        # Graphiti.
+        #
+        # Re-enabling rich graph content requires either (a) configuring
+        # add_episode with an entity_types Pydantic schema to constrain
+        # extraction (work-in-progress in ai-playground/pipeline_refinement)
+        # or (b) a Vertex AI Gemini quota bump. Until one of those lands,
+        # filename-only is the demo-stable path.
         merged_ocr = {
             "document_type": doc_type,
             "confidence_score": confidence,
             "extracted_fields": combined_fields,
-            "raw_text_blocks": combined_raw_blocks,
-            "tables": combined_tables,
         }
         episode_name = await graph_ingest(
             graphiti,
