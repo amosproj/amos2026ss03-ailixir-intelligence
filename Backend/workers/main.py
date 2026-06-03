@@ -30,6 +30,11 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, status
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from neo4j.exceptions import (
+    AuthError as Neo4jAuthError,
+    ServiceUnavailable as Neo4jServiceUnavailable,
+    SessionExpired as Neo4jSessionExpired,
+)
 from pydantic import BaseModel
 
 load_dotenv()
@@ -60,22 +65,55 @@ _SKIP_OIDC_VERIFICATION = os.getenv("PUBSUB_SKIP_OIDC_VERIFICATION", "").lower()
 }
 
 
+# Exceptions from Neo4j/Graphiti that mean "the dependency is transiently unreachable"
+# rather than "this message is permanently bad". Mapped to HTTP 503 in the push
+# handler so Pub/Sub retries per the subscription's backoff policy. Adding new
+# retryable error classes here is the way to extend coverage — keep this tuple
+# narrow so we don't accidentally silence genuine logic errors.
+_RETRYABLE_DEPENDENCY_ERRORS: tuple[type[BaseException], ...] = (
+    Neo4jServiceUnavailable,   # DNS failure, network partition, Aura paused/deleted
+    Neo4jSessionExpired,       # connection pool stale; next call typically succeeds
+    Neo4jAuthError,            # rare but worth retrying — credentials may be mid-rotation
+    ConnectionError,           # generic socket-level error from any client
+    TimeoutError,              # asyncio timeout from any awaited call
+)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Warm up singleton connections once on startup; close cleanly on shutdown."""
-    from workers.connections.graphiti_client import close_graphiti, get_graphiti
-    from workers.connections.neo4j import close_driver
+    """Lifespan that does NOT touch external dependencies at startup.
 
-    logger.info("worker_startup: initialising connections")
-    if not os.getenv("SKIP_STARTUP_CONNECTIONS"):
-        await get_graphiti()  # creates Neo4j driver + Graphiti client + builds indices
-    logger.info("worker_startup: ready")
+    Earlier versions called `get_graphiti()` here to "warm up" the Neo4j
+    connection and build indices. That made the container's readiness probe
+    transitively depend on Neo4j Aura being reachable — a managed-service
+    outage upstream would cause every cold start to fail, taking the worker
+    out of rotation entirely. (We hit exactly this when an Aura Free
+    instance auto-paused; the worker couldn't boot for days even though
+    nothing in our code had changed.)
 
+    The fix: connect lazily on first request. The container boots regardless
+    of Neo4j state, the Cloud Run readiness probe passes, and Pub/Sub's
+    own retry policy handles transient downstream failures cleanly via
+    the 503 response path in `pubsub_push` below.
+    """
+    logger.info("worker_startup: ready (dependencies will be connected lazily)")
     yield
 
-    logger.info("worker_shutdown: closing connections")
-    await close_graphiti()
-    close_driver()
+    logger.info("worker_shutdown: closing connections (best-effort)")
+    # Import lazily so a broken import in a connection module doesn't prevent
+    # the worker from starting in the first place.
+    try:
+        from workers.connections.graphiti_client import close_graphiti
+        await close_graphiti()
+    except Exception as exc:
+        # Shutdown failures must not raise — Cloud Run gives us only ~10s
+        # for SIGTERM cleanup and a raise here would mask the real signal.
+        logger.warning("close_graphiti_failed: %s", exc)
+    try:
+        from workers.connections.neo4j import close_driver
+        close_driver()
+    except Exception as exc:
+        logger.warning("close_driver_failed: %s", exc)
 
 
 app = FastAPI(
@@ -263,4 +301,48 @@ async def pubsub_push(
         )
         return
 
-    await handler(payload)
+    # Dispatch with explicit retryable-vs-permanent error handling.
+    #
+    # The contract with Pub/Sub Push is:
+    #   2xx  → message acked, removed from the subscription
+    #   4xx  → message acked (Pub/Sub treats it as "won't ever succeed"); for
+    #          422 specifically we want the message to fall through to the DLQ
+    #          after the configured max_delivery_attempts
+    #   5xx  → message nacked, retried per the subscription's backoff policy
+    #
+    # For a known-transient downstream failure (Neo4j unreachable, network blip)
+    # we want 5xx so the retry buys time for the dependency to recover.
+    # For a genuinely unexpected exception we still return 5xx — Pub/Sub will
+    # retry, and after max attempts the message goes to the DLQ where an
+    # operator can inspect it (better than silently acking a bug).
+    try:
+        await handler(payload)
+    except _RETRYABLE_DEPENDENCY_ERRORS as exc:
+        # Transient dependency failure. Log at WARNING (not ERROR) because the
+        # retry path is the design — getting a few of these is normal during
+        # an upstream blip. Pages should fire on sustained 503 rate, not on
+        # a single occurrence.
+        logger.warning(
+            "pipeline_transient_failure event_type=%s message_id=%s delivery_attempt=%s err=%s",
+            event_type,
+            envelope.message.messageId,
+            envelope.deliveryAttempt,
+            exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Transient downstream dependency unavailable; Pub/Sub will retry.",
+        ) from exc
+    except Exception as exc:
+        # Unexpected error. ERROR level + full traceback for the on-call
+        # responder. Still 5xx so Pub/Sub will retry then DLQ on giving up.
+        logger.exception(
+            "pipeline_unexpected_failure event_type=%s message_id=%s delivery_attempt=%s",
+            event_type,
+            envelope.message.messageId,
+            envelope.deliveryAttempt,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal pipeline error.",
+        ) from exc
