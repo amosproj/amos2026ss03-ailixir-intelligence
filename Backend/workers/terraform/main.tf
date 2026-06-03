@@ -192,13 +192,39 @@ resource "google_cloud_run_v2_service" "worker" {
         name  = "VERTEX_LOCATION"
         value = "us-central1"
       }
+      # gemini-2.5-flash chosen over the cheaper -flash-lite because flash
+      # carries a much higher per-project Generate-Content RPM quota. With
+      # GRAPHITI_INCLUDE_RAW_OCR=true below, Graphiti can burst 30-50 Gemini
+      # calls per document during entity resolution — flash-lite's quota
+      # was being exhausted by that pattern and surfacing as RateLimitError
+      # → document FAILED. Changes here need a worker redeploy to apply.
       env {
         name  = "VERTEX_LLM_MODEL"
-        value = "gemini-2.5-flash-lite"
+        value = "gemini-2.5-flash"
       }
       env {
         name  = "EMBEDDING_DIM"
         value = "768"
+      }
+
+      # ── Graphiti pipeline ───────────────────────────────────────────────────
+      # When ON, the worker forwards the full OCR raw text (and tables) into
+      # Graphiti's episode body. Gemini then extracts real clinical entities
+      # ("Schmidt, Johannes", "Bandscheibenprolaps L4/L5", etc.) instead of
+      # just the filename. Off would degrade gracefully to a filename-only
+      # graph — useful as an emergency kill-switch if Vertex rate limits
+      # ever break extraction again. See workers/pipeline/document_pipeline.py.
+      env {
+        name  = "GRAPHITI_INCLUDE_RAW_OCR"
+        value = "true"
+      }
+      # Paces Vertex Gemini calls at one per N seconds to stay under the
+      # project's Generate-Content RPM quota. 0.5s = 120 RPM ceiling, safe
+      # under the gemini-2.5-flash default quota even with the rich-payload
+      # burst. See workers/connections/paced_gemini.py.
+      env {
+        name  = "GEMINI_PACER_MIN_INTERVAL_S"
+        value = "0.5"
       }
 
       # ── Neo4j (fix #5 — was completely missing) ──────────────────────────────
@@ -268,7 +294,7 @@ resource "google_pubsub_subscription" "ingestion" {
   topic = "projects/${var.project_id}/topics/${local.topic_document_uploaded}"
 
   ack_deadline_seconds       = 600
-  message_retention_duration = "604800s"  # 7 days
+  message_retention_duration = "604800s" # 7 days
   retain_acked_messages      = false
   enable_message_ordering    = true
 
