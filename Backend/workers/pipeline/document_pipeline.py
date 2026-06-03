@@ -85,8 +85,28 @@ async def run(*, document_id: str, uid: str) -> None:
         )
 
         # ── 2. Process each file ──────────────────────────────────────────────
-        # Collect OCR results across all files then build one unified graph
+        # Collect OCR results across all files then build one unified graph.
+        #
+        # Two distinct payloads accumulate here:
+        #
+        #   combined_fields    — the structured key/value pairs `extracted_fields`
+        #                        emits. Populated only by Form Parser / specialised
+        #                        Document AI processors; empty for the basic
+        #                        Document OCR processor we use today.
+        #
+        #   combined_raw_blocks— the per-page raw text Document OCR returns. THIS
+        #                        is where the actual document content lives for
+        #                        the OCR processor type. Dropping it (as we did
+        #                        before this fix) meant Gemini received only the
+        #                        filename in the episode body — every graph
+        #                        collapsed to a single Entity with summary
+        #                        'This document is from file <name>.pdf'.
+        #
+        # Both flow into the Graphiti episode body via build_episode_body() so
+        # Gemini has actual content to extract entities from.
         combined_fields: dict = {}
+        combined_raw_blocks: list[str] = []
+        combined_tables: list = []
         doc_type = "unknown"
         confidence: float | None = None
         last_file_name = uploaded_files[0].file_name
@@ -115,14 +135,29 @@ async def run(*, document_id: str, uid: str) -> None:
             confidence = ocr_data.get("confidence_score", confidence)
             last_file_name = file.file_name
 
-            # Merge extracted fields from multiple files under their file name key
-            file_fields = ocr_data.get("extracted_fields", {})
+            # Structured fields (Form Parser shape)
+            file_fields = ocr_data.get("extracted_fields", {}) or {}
             if len(uploaded_files) == 1:
                 combined_fields = file_fields
             else:
                 combined_fields[file.file_name] = file_fields
 
-        _log.info("pipeline_ocr_done document_id=%s doc_type=%s", document_id, doc_type)
+            # Raw OCR text — where the actual content is for the Document OCR processor
+            for block in ocr_data.get("raw_text_blocks", []) or []:
+                if block and isinstance(block, str) and block.strip():
+                    combined_raw_blocks.append(block.strip())
+
+            # Tables — secondary content source
+            for table in ocr_data.get("tables", []) or []:
+                if table:
+                    combined_tables.append(table)
+
+        _log.info(
+            "pipeline_ocr_done document_id=%s doc_type=%s "
+            "raw_blocks=%d tables=%d structured_keys=%d",
+            document_id, doc_type,
+            len(combined_raw_blocks), len(combined_tables), len(combined_fields),
+        )
 
         # ── 3. Save extraction to Firestore ───────────────────────────────────
         update_processing_step(document_id, "saving_extraction")
@@ -141,11 +176,16 @@ async def run(*, document_id: str, uid: str) -> None:
         update_processing_step(document_id, "building_graph")
         graphiti = await get_graphiti()
 
-        # Build a merged ocr_data dict for the graph episode
+        # The merged_ocr dict goes into build_episode_body() — every key here
+        # is a content source the prompt template knows how to render. Missing
+        # any of them means Gemini gets a thinner prompt and produces a thinner
+        # graph.
         merged_ocr = {
             "document_type": doc_type,
             "confidence_score": confidence,
             "extracted_fields": combined_fields,
+            "raw_text_blocks": combined_raw_blocks,
+            "tables": combined_tables,
         }
         episode_name = await graph_ingest(
             graphiti,
