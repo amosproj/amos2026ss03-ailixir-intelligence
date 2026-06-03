@@ -1,6 +1,6 @@
 'use client';
 
-import { ChatMessages, ChatMessage } from '@/components/organisms/chat-messages';
+import { ChatMessages, ChatMessage } from '@/components/organisms/';
 import { ChatInput } from '@/components/molecules';
 import { CText } from '@/components/atoms';
 import React, { useState } from 'react';
