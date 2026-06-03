@@ -1,0 +1,30 @@
+{
+  "document_type": "gcp_document_ai_ocr",
+  "confidence_score": null,
+  "metadata": {
+    "source_pdf": "laborbericht_e07_2.pdf",
+    "ocr_engine": "gcp_document_ai",
+    "processor": "projects/599892675013/locations/us/processors/3098c18357d9742d",
+    "page_count": 1,
+    "date_detected": "2027-06-12"
+  },
+  "extracted_fields": {
+    "entities": [],
+    "form_fields": [],
+    "pages": [
+      {
+        "page": 1,
+        "text": "KL\nKlinikum Düsseldorf -\nKlinik-1\nUrologische Klinik\nFriedrichstraße 94 73976 Düsseldorf\nDr. med. Arzt-1 Urologische Klinik\nLaborbefund\nEinsender: Dr. med. Arzt-1, Urologische Klinik\nAuftragsdatum: 12. Juni 2027 Eingangsdatum: 12. Juni 2027\nLABORERGEBNISSE\nPATIENT\nPatient-1\nGEBURTSDATUM 18.01.1960\nFALLNUMMER\nURO-2027-0001\nDIAGNOSE\nC61 Prostatakarzinom\n12. Juni 2027\nParameter\nPSA (gesamt)\nKLINISCHE ANGABEN\nBewertung\nWert\nEinheit\nReferenzbereich\n7,6 ng/ml\nng/ml\n0,00 4,00 ng/ml\n↑ Erhöht\nKlinische Diagnose: C61 Prostatakarzinom. Kontrolle bei Prostatakarzinom (Niedrigrisiko aktive\nÜberwachung).\nBefund freigegeben am 12. Juni 2027 durch Zentrallabor, Klinikum Düsseldorf - Klinik-1. Befund elektronisch validiert, ohne\nUnterschrift gültig.\nKlinikum Düsseldorf - Klinik-1 Urologische Klinik Friedrichstraße 94, 73976 Düsseldorf",
+        "dimension": {
+          "width": 1681.0,
+          "height": 2378.0,
+          "unit": "pixels"
+        }
+      }
+    ]
+  },
+  "tables": [],
+  "raw_text_blocks": [
+    "KL\nKlinikum Düsseldorf -\nKlinik-1\nUrologische Klinik\nFriedrichstraße 94 73976 Düsseldorf\nDr. med. Arzt-1 Urologische Klinik\nLaborbefund\nEinsender: Dr. med. Arzt-1, Urologische Klinik\nAuftragsdatum: 12. Juni 2027 Eingangsdatum: 12. Juni 2027\nLABORERGEBNISSE\nPATIENT\nPatient-1\nGEBURTSDATUM 18.01.1960\nFALLNUMMER\nURO-2027-0001\nDIAGNOSE\nC61 Prostatakarzinom\n12. Juni 2027\nParameter\nPSA (gesamt)\nKLINISCHE ANGABEN\nBewertung\nWert\nEinheit\nReferenzbereich\n7,6 ng/ml\nng/ml\n0,00 4,00 ng/ml\n↑ Erhöht\nKlinische Diagnose: C61 Prostatakarzinom. Kontrolle bei Prostatakarzinom (Niedrigrisiko aktive\nÜberwachung).\nBefund freigegeben am 12. Juni 2027 durch Zentrallabor, Klinikum Düsseldorf - Klinik-1. Befund elektronisch validiert, ohne\nUnterschrift gültig.\nKlinikum Düsseldorf - Klinik-1 Urologische Klinik Friedrichstraße 94, 73976 Düsseldorf\n"
+  ]
+}
