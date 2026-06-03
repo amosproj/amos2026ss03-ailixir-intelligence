@@ -32,13 +32,11 @@ export const ChatAssistantMessage: React.FC<ChatAssistantMessageProps> = ({ text
           flexDirection: 'row',
           justifyContent: 'flex-start',
         }}>
-        {/* @ts-ignore "color" not recognised as prop */}
-        <CButton icon={RotateCcw} onPress={onReload} accessibilityLabel="Reload message" color="#666" size={30}>
+        <CButton icon={RotateCcw} onPress={onReload} accessibilityLabel="Reload message" tone="muted" size={30}>
           <CText variant="caption">Reload</CText>
         </CButton>
 
-        {/* @ts-ignore "color" not recognised as prop */}
-        <CButton disabled={copied} opacity={copied ? 0.5 : 1} icon={Copy} onPress={handleCopy} accessibilityLabel="Copy message" color="#666" size={30}>
+        <CButton disabled={copied} opacity={copied ? 0.5 : 1} icon={Copy} onPress={handleCopy} accessibilityLabel="Copy message" tone="muted" size={30}>
           <CText variant="caption">{copied ? 'Copied' : 'Copy'}</CText>
         </CButton>
       </View>

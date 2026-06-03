@@ -62,8 +62,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onStartVoic
         <CButton circular icon={Send} onPress={handleSend} accessibilityLabel="Send message" />
       ) : (
         <LinearGradient colors={['#8847EF', '#FF1493']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 999 }}>
-          {/* @ts-ignore "color" not recognised as prop */}
-          <CButton onPress={onStartVoiceMode} circular icon={AudioWaveform} color="white" accessibilityLabel="Start voice mode" />
+          <CButton onPress={onStartVoiceMode} circular icon={AudioWaveform} tone="accent" accessibilityLabel="Start voice mode" />
         </LinearGradient>
       )}
     </View>

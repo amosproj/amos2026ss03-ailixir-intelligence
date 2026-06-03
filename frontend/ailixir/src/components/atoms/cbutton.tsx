@@ -18,6 +18,14 @@ export const CButton = styled(Button, {
         gap: 8,
       },
     },
+    tone: {
+      accent: {
+        color: '$accent12',
+      },
+      muted: {
+        color: '$black5',
+      },
+    },
     fullWidth: {
       true: {
         width: '100%',
