@@ -22,6 +22,7 @@ export default function SignUpScreen() {
   const handleSignUp = async (data: { email: string; password: string }) => {
     try {
       setError('');
+<<<<<<< HEAD
       console.log('before signup');
       await signUpAsync({
         email: data.email,
@@ -30,6 +31,10 @@ export default function SignUpScreen() {
         last_name: data.lastName,
       });
       router.push('./login');
+=======
+      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      router.replace('./login');
+>>>>>>> 61c679f (fix: use replace for stack navigation)
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'An unexpected error occurred';
       setError(message);

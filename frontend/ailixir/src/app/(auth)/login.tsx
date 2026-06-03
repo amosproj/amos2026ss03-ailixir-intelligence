@@ -28,7 +28,7 @@ export default function LoginScreen() {
         <ScreenHeader title="Welcome back" subtitle="Log in to continue" />
         <LoginForm onForgotPasswordPress={() => {}} onSubmit={handleLogin} serverError={error} />
       </YStack>
-      <AuthFooterLink text="Don't have an account?" linkLabel="Sign Up" onPress={() => router.push('./signup')} />
+      <AuthFooterLink text="Don't have an account?" linkLabel="Sign Up" onPress={() => router.replace('./signup')} />
     </YStack>
   );
 }
