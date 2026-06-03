@@ -1,0 +1,18 @@
+# API framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# LangChain / LangGraph
+langchain-core>=0.2.0
+langgraph>=0.1.0
+langgraph-checkpoint-postgres>=1.0.0
+
+# Google Vertex AI (Gemini)
+google-cloud-aiplatform>=1.49.0
+vertexai>=1.49.0
+
+# PostgreSQL driver (psycopg v3)
+psycopg[binary]>=3.1.0
+
+# Environment variables
+python-dotenv>=1.0.0
