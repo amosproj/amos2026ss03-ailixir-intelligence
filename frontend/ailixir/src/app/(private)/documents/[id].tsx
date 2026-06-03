@@ -1,11 +1,15 @@
 import { CButton, CText } from '@/components/atoms';
 import { DeleteButton, DocumentPageThumbnail } from '@/components/molecules';
+import { OcrTextCard } from '@/components/organisms';
 import { useDocument } from '@/hooks/useDocument';
+import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
+import { showOcrTextAtom } from '@/state/debug';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import { ChevronLeft, FileText, Trash2 } from '@tamagui/lucide-icons-2';
+import { useAtomValue } from 'jotai';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
@@ -47,6 +51,14 @@ export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { data: document, isLoading, isError } = useDocument(params.id, true);
+
+  // Debug-only OCR text fetch. Gated behind (a) the user's Settings toggle
+  // and (b) status === 'extracted' so we don't hammer the API while the
+  // worker is still mid-pipeline. The hook short-circuits when either gate
+  // is false; no request is sent.
+  const showOcrText = useAtomValue(showOcrTextAtom);
+  const ocrTextEnabled = showOcrText && document?.status === 'extracted';
+  const { data: extraction, isLoading: extractionIsLoading, isError: extractionIsError } = useDocumentExtraction(params.id, ocrTextEnabled);
 
   const handleDownloadGraph = useCallback(async () => {
     const isAvailable = await Sharing.isAvailableAsync();
@@ -134,6 +146,8 @@ export default function DocumentScreen() {
         {document.status === 'uploaded' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
 
         <CButton onPress={handleDownloadGraph}>Download graph</CButton>
+
+        {ocrTextEnabled && <OcrTextCard extraction={extraction} isLoading={extractionIsLoading} isError={extractionIsError} />}
 
         <YStack gap={12}>
           <CText variant="h2" color="$color11">

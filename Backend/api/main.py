@@ -66,6 +66,7 @@ from shared.repositories.documents import (
     pending_files,
     soft_delete,
 )
+from shared.repositories.extractions import get_extraction
 from shared.repositories.users import create_user_profile, get_user_profile
 
 load_dotenv()
@@ -313,6 +314,26 @@ class DocumentListItem(BaseModel):
 class ListDocumentsResponse(BaseModel):
     documents: list[DocumentListItem]
     next_cursor: str | None
+
+
+class ExtractionResponse(BaseModel):
+    """Wire shape for GET /documents/{document_id}/extraction.
+
+    Mirrors the persisted Extraction record minus the internal `uid` field
+    (it's enforced by the auth middleware, not surfaced to clients). Fields
+    that didn't exist on older Extraction records load as None, so this
+    response is forward-compatible with documents extracted before the
+    raw_text feature shipped.
+    """
+
+    doc_id: str
+    document_type: str
+    confidence_score: float | None = None
+    extracted_fields: dict
+    raw_text: str | None = None
+    raw_text_chars: int | None = None
+    raw_text_truncated: bool | None = None
+    extracted_at: datetime
 
 
 class RefreshUploadURLsResponse(BaseModel):
@@ -807,6 +828,73 @@ def get_document(
             message="Document not found.",
         )
     return _to_document_response(document)
+
+
+@app.get(
+    "/documents/{document_id}/extraction",
+    response_model=ExtractionResponse,
+    tags=["Documents"],
+    summary="Read the OCR extraction record (structured fields + raw text)",
+)
+def get_document_extraction(
+    document_id: str,
+    user: dict = Depends(get_current_user),
+) -> ExtractionResponse:
+    """Return the Extraction record for a document.
+
+    Three failure modes, each with a distinct error code so clients can
+    react precisely:
+
+      - 404 DOCUMENT_NOT_FOUND      — document doesn't exist OR isn't owned
+                                      by the caller's uid. Same code as the
+                                      sibling /documents/{id} endpoint so
+                                      enumeration via the extraction route
+                                      reveals nothing extra about doc
+                                      existence.
+      - 409 DOCUMENT_NOT_EXTRACTED  — document exists and is owned by the
+                                      caller, but the worker hasn't reached
+                                      status=extracted yet. Tells the
+                                      client to keep polling /documents/{id}
+                                      until status flips.
+      - 404 EXTRACTION_NOT_FOUND    — document is marked extracted but no
+                                      Extraction record was found. Indicates
+                                      a pipeline bug (worker set status
+                                      without writing the record); should
+                                      page on-call once monitoring exists.
+    """
+    document = find_document_for_user(document_id, user["uid"])
+    if document is None:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            message="Document not found.",
+        )
+    if document.status != DocumentStatus.EXTRACTED:
+        raise APIError(
+            status_code=status.HTTP_409_CONFLICT,
+            code=ErrorCode.DOCUMENT_NOT_EXTRACTED,
+            message=(
+                "Extraction is not yet available for this document. "
+                "Poll /documents/{document_id} until status='extracted'."
+            ),
+        )
+    extraction = get_extraction(document_id)
+    if extraction is None:
+        raise APIError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code=ErrorCode.EXTRACTION_NOT_FOUND,
+            message="No extraction record found for this document.",
+        )
+    return ExtractionResponse(
+        doc_id=extraction.doc_id,
+        document_type=extraction.document_type,
+        confidence_score=extraction.confidence_score,
+        extracted_fields=extraction.extracted_fields,
+        raw_text=extraction.raw_text,
+        raw_text_chars=extraction.raw_text_chars,
+        raw_text_truncated=extraction.raw_text_truncated,
+        extracted_at=extraction.extracted_at,
+    )
 
 
 @app.delete(
