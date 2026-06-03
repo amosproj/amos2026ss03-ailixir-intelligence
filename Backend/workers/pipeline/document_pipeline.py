@@ -181,7 +181,17 @@ async def run(*, document_id: str, uid: str) -> None:
         )
 
         # ── 3. Save extraction to Firestore ───────────────────────────────────
+        # raw_text is always saved (independent of GRAPHITI_INCLUDE_RAW_OCR)
+        # — the flag only controls whether the text feeds Graphiti's episode
+        # body. The Extraction record is the canonical place the frontend
+        # reads OCR content from.
+        #
+        # The repository (shared.repositories.extractions) caps raw_text to
+        # stay safely under Firestore's 1 MB document limit and records the
+        # truncation flag for the UI; we pass the uncapped joined text and
+        # let the repo do the bookkeeping.
         update_processing_step(document_id, "saving_extraction")
+        raw_text_joined = "\n\n".join(combined_raw_blocks) if combined_raw_blocks else None
         save_extraction(
             Extraction(
                 doc_id=document_id,
@@ -189,6 +199,7 @@ async def run(*, document_id: str, uid: str) -> None:
                 document_type=doc_type,
                 confidence_score=confidence,
                 extracted_fields=combined_fields,
+                raw_text=raw_text_joined,
                 extracted_at=datetime.now(timezone.utc),
             )
         )
