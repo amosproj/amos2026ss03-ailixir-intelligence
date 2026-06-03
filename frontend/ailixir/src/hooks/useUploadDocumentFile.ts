@@ -33,10 +33,7 @@ export interface UploadDocumentFileResponse {
  * directly to the URL — no Blob serialization step. This is the Expo-
  * sanctioned way to PUT a binary file to a signed URL.
  */
-const uploadDocumentFileApi = async (
-  file: UploadDocumentFileInput,
-  onProgress: (progress: number) => void,
-): Promise<UploadDocumentFileResponse> => {
+const uploadDocumentFileApi = async (file: UploadDocumentFileInput, onProgress: (progress: number) => void): Promise<UploadDocumentFileResponse> => {
   // FileSystem.uploadAsync doesn't expose progress events; emit a one-shot
   // start/complete signal so the existing UI hook still works.
   onProgress(1);
@@ -62,9 +59,7 @@ const uploadDocumentFileApi = async (
   // GCS returns the actual rejection reason in the body — surface it so a
   // signature/header/size mismatch is debuggable instead of a generic axios
   // error. Truncate to keep logs sane.
-  throw new Error(
-    `GCS PUT failed: HTTP ${result.status} ${result.body?.slice(0, 200) ?? ''}`,
-  );
+  throw new Error(`GCS PUT failed: HTTP ${result.status} ${result.body?.slice(0, 200) ?? ''}`);
 };
 
 export function useUploadDocumentFile() {
