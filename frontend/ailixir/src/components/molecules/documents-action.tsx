@@ -1,6 +1,7 @@
 import { CButton } from '@/components/atoms';
+import { ActionPair } from '@/components/molecules';
 import { ChevronRight, Upload } from '@tamagui/lucide-icons-2';
-import { XStack } from 'tamagui';
+import { YStack } from 'tamagui';
 
 type DocumentsActionProps = {
   onUploadDocument: () => void;
@@ -9,13 +10,19 @@ type DocumentsActionProps = {
 
 export function DocumentsAction({ onUploadDocument, onScanDocument }: DocumentsActionProps) {
   return (
-    <XStack mt={170} justify="flex-end" items="center" gap={16}>
-      <CButton iconButton icon={Upload} emphasis="low" onPress={onUploadDocument}>
-        upload
-      </CButton>
-      <CButton iconButton icon={ChevronRight} emphasis="high" onPress={onScanDocument}>
-        scan
-      </CButton>
-    </XStack>
+    <YStack mt={170}>
+      <ActionPair
+        leftAction={
+          <CButton iconButton icon={Upload} emphasis="low" onPress={onUploadDocument}>
+            upload
+          </CButton>
+        }
+        rightAction={
+          <CButton iconButton icon={ChevronRight} emphasis="high" onPress={onScanDocument}>
+            scan
+          </CButton>
+        }
+      />
+    </YStack>
   );
 }

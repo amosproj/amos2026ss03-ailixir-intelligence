@@ -5,6 +5,8 @@ export * from './auxiliary-overview';
 export * from './chat-assistant-message';
 export * from './chat-input';
 export * from './chat-user-message';
+export * from './action-pair';
+export * from './document-detail-actions';
 export * from './delete-button';
 export * from './document-list-item';
 export * from './document-page-thumbnail';

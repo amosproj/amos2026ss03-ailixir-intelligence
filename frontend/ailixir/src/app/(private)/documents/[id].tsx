@@ -1,6 +1,5 @@
 import { CButton, CText } from '@/components/atoms';
-import { DeleteButton, DocumentPageThumbnail } from '@/components/molecules';
-import { OcrTextCard } from '@/components/organisms';
+import { DeleteButton, DocumentDetailActions, DocumentPageThumbnail } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
 import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
 import { showOcrTextAtom } from '@/state/debug';
@@ -234,16 +233,7 @@ export default function DocumentScreen() {
           </XStack>
         </YStack>
 
-        {document.status === 'failed' && <FailureCard processingStep={document.processing_step} error={document.error} />}
-
-        {document.status === 'uploaded' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
-
-        {/* Only render the button when there's a real signed URL to hit.
-            Avoids the user clicking a button that produces no result —
-            a worse UX than not seeing the button at all. */}
-        {document.cypher_download_url && <CButton onPress={handleDownloadGraph}>Download graph</CButton>}
-
-        {ocrTextEnabled && <OcrTextCard extraction={extraction} isLoading={extractionIsLoading} isError={extractionIsError} />}
+        <DocumentDetailActions status={document.status} onStartExtraction={handleStartExtraction} onDownloadGraph={handleDownloadGraph} />
 
         <YStack gap={12}>
           <CText variant="h2" color="$color11">
