@@ -29,6 +29,7 @@ Pub/Sub retries on any non-2xx response from the worker endpoint.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
 
 from shared.models.document import DocumentStatus
@@ -47,6 +48,21 @@ from workers.pipeline.graph.exporter import generate_and_upload as cypher_export
 from workers.pipeline.ocr.extractor import extract as ocr_extract
 
 _log = logging.getLogger(__name__)
+
+# Feature flag: whether to forward the full OCR raw text + tables into the
+# Graphiti episode body. With this OFF (default) the episode body is
+# filename-only and Graphiti makes ~2 Gemini calls per document — small,
+# fast, and well under any Vertex AI RPM quota. With it ON the episode
+# body carries the full clinical OCR content, which produces a richer
+# graph but triggers 30-50 Gemini calls per document and can exceed the
+# project's per-minute generate-content quota (the failure mode that
+# burned an afternoon of demo time).
+#
+# Toggle at runtime via the Cloud Run env var — no commit, no redeploy.
+# Always log the chosen path so it's traceable in Cloud Logging.
+_GRAPHITI_INCLUDE_RAW_OCR = (
+    os.environ.get("GRAPHITI_INCLUDE_RAW_OCR", "false").strip().lower() == "true"
+)
 
 
 async def run(*, document_id: str, uid: str) -> None:
@@ -181,34 +197,33 @@ async def run(*, document_id: str, uid: str) -> None:
         update_processing_step(document_id, "building_graph")
         graphiti = await get_graphiti()
 
-        # The merged_ocr dict goes into build_episode_body(). We intentionally
-        # send only the structured fields (+ doc_type / confidence) and NOT
-        # raw_text_blocks / tables.
-        #
-        # Why: passing the full ~5k chars of German clinical OCR text causes
-        # Graphiti to extract 30-50 candidate entities, then fire one Gemini
-        # resolve_extracted_node call per candidate. That burst overruns the
-        # Vertex AI Gemini per-project RPM quota and surfaces as
-        # RateLimitError → the document FAILS. With filename-only content
-        # Graphiti finds ~1 entity, makes ~2 LLM calls, and the document
-        # reaches status=extracted reliably.
-        #
-        # Trade-off: the graph is sparse (essentially an Episodic node + an
-        # Entity summarising the filename). The OCR text is still saved in
-        # the Extraction record (extracted_fields / persistence elsewhere)
-        # and can be surfaced in the app directly without going through
-        # Graphiti.
-        #
-        # Re-enabling rich graph content requires either (a) configuring
-        # add_episode with an entity_types Pydantic schema to constrain
-        # extraction (work-in-progress in ai-playground/pipeline_refinement)
-        # or (b) a Vertex AI Gemini quota bump. Until one of those lands,
-        # filename-only is the demo-stable path.
-        merged_ocr = {
+        # The merged_ocr dict feeds build_episode_body(). The rich-payload
+        # keys (raw_text_blocks, tables) are gated behind the
+        # GRAPHITI_INCLUDE_RAW_OCR feature flag — see the module-level
+        # constant for the rate-limit rationale. Default is filename-only:
+        # safe under quota, sparse graph. With the flag on the episode
+        # body carries full OCR content: richer graph, risk of
+        # RateLimitError under the current Vertex AI quota.
+        merged_ocr: dict = {
             "document_type": doc_type,
             "confidence_score": confidence,
             "extracted_fields": combined_fields,
         }
+        if _GRAPHITI_INCLUDE_RAW_OCR:
+            merged_ocr["raw_text_blocks"] = combined_raw_blocks
+            merged_ocr["tables"] = combined_tables
+            _log.info(
+                "pipeline_rich_payload_enabled doc_id=%s raw_chars=%d tables=%d",
+                document_id,
+                sum(len(b) for b in combined_raw_blocks),
+                len(combined_tables),
+            )
+        else:
+            _log.info(
+                "pipeline_rich_payload_disabled doc_id=%s "
+                "(set GRAPHITI_INCLUDE_RAW_OCR=true to enable full-content graph)",
+                document_id,
+            )
         episode_name = await graph_ingest(
             graphiti,
             doc_id=document_id,
