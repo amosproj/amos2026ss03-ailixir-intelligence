@@ -23,6 +23,24 @@ export interface DocumentResponse {
   created_at: string;
   updated_at: string;
   finalized_at: string;
+  // Worker-written fields. Populated once the extraction pipeline has
+  // produced a Cypher dump and uploaded it to GCS. Both URL and expiry
+  // are null when no extraction has been written yet, the user
+  // doesn't own the document, or signing failed server-side.
+  cypher_gcs_uri?: string | null;
+  cypher_download_url?: string | null;
+  cypher_download_expires_at?: string | null;
+  // Pipeline diagnostics. `processing_step` shows fine-grained progress
+  // for in-flight extractions ("downloading", "ocr", "building_graph",
+  // "exporting_cypher", "saving_extraction"). When `status === 'failed'`
+  // it records the step the worker was on at the moment it raised —
+  // useful for telling a Document AI failure from a Graphiti failure.
+  processing_step?: string | null;
+  // Free-form worker error message when `status === 'failed'`. May
+  // contain implementation detail (model names, exception classes). The
+  // frontend treats it as opaque diagnostic — display as-is in a
+  // monospace card so a user can copy it into a support request.
+  error?: string | null;
 }
 
 export interface DocumentValidationErrorDetail {

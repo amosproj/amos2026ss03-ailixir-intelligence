@@ -205,6 +205,50 @@ def generate_download_url(
     )
 
 
+def generate_download_url_for_gs_uri(
+    *,
+    gs_uri: str,
+    ttl: timedelta = DEFAULT_SIGNED_URL_TTL,
+    response_disposition: str | None = None,
+    response_content_type: str | None = None,
+) -> str:
+    """Generate a v4 GET signed URL for an arbitrary `gs://bucket/path` URI.
+
+    Documents live in the documents bucket but downstream artefacts (cypher
+    scripts, thumbnails, etc.) live in other buckets, and the per-bucket
+    `get_bucket()` helper can't sign across them. This helper parses any
+    `gs://...` URI and signs against whatever bucket it points at, using
+    the same signing credentials path as `generate_download_url`.
+
+    Optional parameters:
+      response_disposition  — overrides the Content-Disposition header GCS
+                              returns. Pass "attachment; filename=foo.cypher"
+                              to force the browser/RN to download instead
+                              of inline-render.
+      response_content_type — overrides the Content-Type header. Useful for
+                              objects stored with application/octet-stream
+                              that should download as text/plain.
+    """
+    if not gs_uri.startswith("gs://"):
+        raise ValueError(f"expected gs:// URI, got {gs_uri!r}")
+    bucket_name, _, object_path = gs_uri[len("gs://"):].partition("/")
+    if not bucket_name or not object_path:
+        raise ValueError(f"malformed gs:// URI: {gs_uri!r}")
+
+    blob = get_storage_client().bucket(bucket_name).blob(object_path)
+    kwargs = {
+        "version": "v4",
+        "expiration": ttl,
+        "method": "GET",
+        **_signing_kwargs(),
+    }
+    if response_disposition is not None:
+        kwargs["response_disposition"] = response_disposition
+    if response_content_type is not None:
+        kwargs["response_type"] = response_content_type
+    return blob.generate_signed_url(**kwargs)
+
+
 async def verify_object_exists(object_path: str) -> bool:
     """Async HEAD check on a GCS object.
 

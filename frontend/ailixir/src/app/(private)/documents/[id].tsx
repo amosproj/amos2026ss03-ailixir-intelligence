@@ -7,7 +7,7 @@ import { showOcrTextAtom } from '@/state/debug';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ChevronLeft, FileText, Trash2 } from '@tamagui/lucide-icons-2';
 import { useAtomValue } from 'jotai';
 import React, { useCallback } from 'react';
@@ -47,6 +47,65 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
   );
 }
 
+// Human-friendly labels for the worker's free-form processing_step values.
+// New steps added on the worker side will display as the raw key until
+// added here — a deliberate fallback rather than swallowing them with
+// a generic "unknown step".
+const processingStepLabels: Record<string, string> = {
+  downloading: 'downloading from storage',
+  ocr: 'OCR extraction',
+  saving_extraction: 'saving extraction record',
+  building_graph: 'building knowledge graph',
+  exporting_cypher: 'exporting Cypher script',
+};
+
+/** Failure detail card. Shown on `status === 'failed'`. */
+function FailureCard({ processingStep, error }: { processingStep?: string | null; error?: string | null }) {
+  // Worker-side errors are often a single line ("Rate limit exceeded.")
+  // but can be a long Document AI / gRPC message. Cap the visible height
+  // so a long error doesn't push the rest of the screen below the fold,
+  // and let the user scroll the body to read the full text.
+  const stepLabel = processingStep ? (processingStepLabels[processingStep] ?? processingStep) : null;
+  return (
+    <YStack gap={10} bg="$red1" p={16} borderWidth={1} borderColor="$red6" style={{ borderRadius: 16 }}>
+      <YStack gap={4}>
+        <CText variant="h2" color="$red11">
+          Extraction failed
+        </CText>
+        {stepLabel && (
+          <CText variant="caption" color="$red11">
+            Failed during {stepLabel}.
+          </CText>
+        )}
+      </YStack>
+
+      {error ? (
+        <ScrollView style={{ maxHeight: 200, borderRadius: 10 }} bg="$red2" p={10} showsVerticalScrollIndicator>
+          <CText
+            variant="caption"
+            color="$red12"
+            selectable
+            style={{
+              fontFamily: 'Menlo',
+              fontVariant: ['tabular-nums'],
+              lineHeight: 18,
+            }}>
+            {error}
+          </CText>
+        </ScrollView>
+      ) : (
+        <CText variant="caption" color="$red11">
+          The worker did not record an error message. Re-uploading the document is the easiest next step.
+        </CText>
+      )}
+
+      <CText variant="caption" color="$red11">
+        Try re-uploading the document. If it keeps failing, share the error above with the team.
+      </CText>
+    </YStack>
+  );
+}
+
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
@@ -60,24 +119,58 @@ export default function DocumentScreen() {
   const ocrTextEnabled = showOcrText && document?.status === 'extracted';
   const { data: extraction, isLoading: extractionIsLoading, isError: extractionIsError } = useDocumentExtraction(params.id, ocrTextEnabled);
 
+  // Download the Cypher graph script the worker produced for this document.
+  //
+  // Flow:
+  //   1. Backend serves the document with a short-lived v4 signed GET URL
+  //      (`cypher_download_url`). Its expiry sits on the same response so
+  //      we could re-fetch the document if it lapsed mid-session.
+  //   2. We stream the URL to a per-document file in the app's cache
+  //      directory (`<cacheDir>/<doc_id>_graph.cypher`). The destination
+  //      lives inside our sandbox so iOS' share-sheet can hand it off to
+  //      other apps without permission prompts.
+  //   3. Share-sheet handover to whatever the user picks (Files, AirDrop,
+  //      Slack, Notes…).
+  //
+  // The status guards mean this only fires when the worker has actually
+  // written a graph — the button is hidden otherwise (see JSX below).
   const handleDownloadGraph = useCallback(async () => {
-    const isAvailable = await Sharing.isAvailableAsync();
+    if (!document?.cypher_download_url) {
+      Alert.alert('Graph not ready', 'This document does not yet have a generated knowledge graph. ' + 'Wait for status to reach Extracted, then try again.');
+      return;
+    }
 
+    const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
       Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
       return;
     }
 
-    const graphAsset = Asset.fromModule(require('../../../static/graph-1.png'));
-    await graphAsset.downloadAsync();
+    const fileName = `${document.document_id}_graph.cypher`;
+    const localPath = `${FileSystem.cacheDirectory}${fileName}`;
 
-    const uri = graphAsset.localUri ?? graphAsset.uri;
-    await Sharing.shareAsync(uri, {
-      mimeType: 'image/png',
-      UTI: 'public.png',
-      dialogTitle: 'Download graph',
-    });
-  }, []);
+    try {
+      // downloadAsync streams the signed URL directly into the cache dir
+      // — never holding the full body in JS memory. Same expo-file-system
+      // legacy entry point we use for uploads.
+      const result = await FileSystem.downloadAsync(document.cypher_download_url, localPath);
+      if (result.status < 200 || result.status >= 300) {
+        throw new Error(`HTTP ${result.status}`);
+      }
+
+      await Sharing.shareAsync(result.uri, {
+        // Cypher is a plain-text format. text/plain lets receiving apps
+        // (Files, Notes, Slack) preview the contents instead of treating
+        // it as an opaque binary blob.
+        mimeType: 'text/plain',
+        UTI: 'public.plain-text',
+        dialogTitle: 'Download knowledge graph (Cypher)',
+      });
+    } catch (err) {
+      console.error('Cypher download failed:', err);
+      Alert.alert('Download failed', 'Could not download the knowledge graph. The signed URL may have expired — pull to refresh and try again.');
+    }
+  }, [document?.cypher_download_url, document?.document_id]);
 
   const handleStartExtraction = useCallback(() => {
     if (!document || document.status !== 'pending_upload') {
@@ -143,9 +236,14 @@ export default function DocumentScreen() {
           </XStack>
         </YStack>
 
+        {document.status === 'failed' && <FailureCard processingStep={document.processing_step} error={document.error} />}
+
         {document.status === 'uploaded' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
 
-        <CButton onPress={handleDownloadGraph}>Download graph</CButton>
+        {/* Only render the button when there's a real signed URL to hit.
+            Avoids the user clicking a button that produces no result —
+            a worse UX than not seeing the button at all. */}
+        {document.cypher_download_url && <CButton onPress={handleDownloadGraph}>Download graph</CButton>}
 
         {ocrTextEnabled && <OcrTextCard extraction={extraction} isLoading={extractionIsLoading} isError={extractionIsError} />}
 

@@ -280,10 +280,14 @@ class DocumentResponse(BaseModel):
     # extraction worker has touched the document. Older client builds that
     # don't know about these fields will ignore them.
     #
-    # `cypher_gcs_uri` is currently a raw `gs://` URI; the frontend cannot
-    # fetch it directly. A follow-up will replace this with a short-lived
-    # signed download URL mirroring how file downloads work.
+    # `cypher_gcs_uri` is the raw `gs://` URI; kept for backwards compatibility
+    # and tooling that consumes it directly (e.g. backups, debug tooling).
+    # `cypher_download_url` is a short-lived v4 signed GET URL the frontend
+    # can hit directly to download the .cypher file — mirrors how file
+    # downloads work on `DocumentFileResponse`.
     cypher_gcs_uri: str | None = None
+    cypher_download_url: str | None = None
+    cypher_download_expires_at: datetime | None = None
     # Fine-grained pipeline progress for clients polling during extraction
     # (e.g. "downloading", "ocr", "building_graph"). Free-form today; will
     # be tightened to an enum in a follow-up.
@@ -500,6 +504,33 @@ def _make_file_response(file: DocumentFile) -> DocumentFileResponse:
 
 
 def _to_document_response(document: Document) -> DocumentResponse:
+    # Generate the cypher download URL only when the worker has actually
+    # written one — pipelines that failed or never ran won't have a
+    # cypher_gcs_uri populated, and we shouldn't fabricate a URL that
+    # would 404 on click. The cypher file lives in a different bucket
+    # from the documents bucket, so we use the gs:// URI-based signer
+    # rather than the documents-bucket-bound one.
+    cypher_download_url: str | None = None
+    cypher_download_expires_at: datetime | None = None
+    if document.cypher_gcs_uri:
+        try:
+            cypher_download_url = gcs.generate_download_url_for_gs_uri(
+                gs_uri=document.cypher_gcs_uri,
+                response_content_type="text/plain; charset=utf-8",
+                response_disposition=f'attachment; filename="{document.id}_graph.cypher"',
+            )
+            cypher_download_expires_at = (
+                datetime.now(timezone.utc) + gcs.DEFAULT_SIGNED_URL_TTL
+            )
+        except ValueError:
+            # Malformed gs:// URI is a worker bug, not a client problem.
+            # Log and serve the response without the signed URL so the
+            # rest of the document detail still loads.
+            _log.warning(
+                "cypher_signed_url_failed document_id=%s gs_uri=%s",
+                document.id, document.cypher_gcs_uri,
+            )
+
     return DocumentResponse(
         document_id=document.id,
         status=document.status,
@@ -512,6 +543,8 @@ def _to_document_response(document: Document) -> DocumentResponse:
         updated_at=document.updated_at,
         finalized_at=document.finalized_at,
         cypher_gcs_uri=document.cypher_gcs_uri,
+        cypher_download_url=cypher_download_url,
+        cypher_download_expires_at=cypher_download_expires_at,
         processing_step=document.processing_step,
         error=document.error,
     )
