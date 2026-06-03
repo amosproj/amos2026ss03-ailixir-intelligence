@@ -11,6 +11,14 @@ locals {
   subscription_name           = "document-uploaded-ingestion"
   documents_bucket_name       = "ailixir-documents-${var.project_id}"
   cypher_bucket_name          = "ailixir-cypher-${var.project_id}"
+
+  # The API service account is defined in api/terraform/main.tf as
+  # `account_id = "ailixir-api"`. We hardcode its email here rather than
+  # using a `data "google_service_account"` lookup because that lookup
+  # would create a hard ordering between the two terraform states
+  # (api/ must apply before workers/ can plan). With this string the
+  # binding still applies cleanly even if both states race.
+  api_service_account_email = "ailixir-api@${var.project_id}.iam.gserviceaccount.com"
 }
 
 
@@ -57,6 +65,20 @@ resource "google_storage_bucket_iam_member" "worker_cypher_admin" {
   bucket     = google_storage_bucket.cypher.name
   role       = "roles/storage.objectAdmin"
   member     = "serviceAccount:${google_service_account.worker.email}"
+  depends_on = [google_storage_bucket.cypher]
+}
+
+# Read access for the API service account so it can sign v4 GET URLs for
+# the .cypher files. v4 signed URLs carry the signer's identity in the
+# signature; GCS evaluates the signer (not the caller) for object access.
+# Without this binding, the signed URL the API returns to the frontend
+# 403s with "ailixir-api does not have storage.objects.get access". This
+# is purely a read grant — the worker keeps exclusive write access via
+# the binding above.
+resource "google_storage_bucket_iam_member" "api_cypher_viewer" {
+  bucket     = google_storage_bucket.cypher.name
+  role       = "roles/storage.objectViewer"
+  member     = "serviceAccount:${local.api_service_account_email}"
   depends_on = [google_storage_bucket.cypher]
 }
 
