@@ -5,8 +5,7 @@ import { AssistantRuntimeProvider, useExternalStoreRuntime, type AppendMessage, 
 import { subscribeMessages, addUserMessage, addAssistantPlaceholder, resolveAssistantMessage } from '@/lib/chat-rtdb';
 import type { ChatMessageRecord } from '@/lib/chat-rtdb';
 import type { ChatMessage } from '@/components/organisms/chat-messages';
-import { userAtom } from '@/lib/authAtoms';
-import { useAtomValue } from 'jotai';
+import { getAuth } from 'firebase/auth';
 
 const APPEND_TEXT = (msg: AppendMessage) => {
   const part = msg.content[0];
@@ -52,7 +51,7 @@ interface FirebaseRuntimeProviderProps {
 }
 
 export function FirebaseRuntimeProvider({ chatId, children }: FirebaseRuntimeProviderProps) {
-  const user = useAtomValue(userAtom);
+  const user = getAuth().currentUser;
   const uid = user?.uid;
 
   const [records, setRecords] = useState<ChatMessageRecord[]>([]);
