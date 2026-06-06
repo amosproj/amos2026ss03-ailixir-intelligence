@@ -11,6 +11,7 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@assistant-ui/react-native": "^0.1.21",
     "@expo-google-fonts/raleway": "^0.4.2",
     "@langchain/core": "^1.1.48",
     "@langchain/react": "^1.0.17",
