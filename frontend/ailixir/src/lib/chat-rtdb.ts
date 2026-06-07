@@ -154,7 +154,7 @@ export function subscribeChats(uid: string, onNext: (chats: ChatSummary[]) => vo
     },
     (error) => {
       onError?.(error as Error);
-    }
+    },
   );
 }
 
@@ -183,7 +183,7 @@ export function subscribeMessages(uid: string, chatId: string, onNext: (messages
     },
     (error) => {
       onError?.(error as Error);
-    }
+    },
   );
 }
 
