@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { AssistantRuntimeProvider, useExternalStoreRuntime, type AppendMessage, type ThreadMessageLike } from '@assistant-ui/react';
 import { subscribeMessages, addUserMessage, addAssistantPlaceholder, resolveAssistantMessage } from '@/lib/chat-rtdb';
 import type { ChatMessageRecord } from '@/lib/chat-rtdb';
-import type { ChatMessage } from '@/components/organisms/chat-messages';
+import type { ChatMessage } from '@/components/organisms/';
 import { getAuth } from 'firebase/auth';
 
 const APPEND_TEXT = (msg: AppendMessage) => {
@@ -27,7 +27,7 @@ const chatMessageToThreadLike = (msg: ChatMessage): ThreadMessageLike => ({
   role: msg.role,
   content: [{ type: 'text' as const, text: msg.text }],
   createdAt: msg.timestamp,
-  status: { type: 'complete' as const, reason: 'stop' as const },
+  ...(msg.role === 'assistant' ? { status: { type: 'complete' as const, reason: 'stop' as const } } : {}),
   metadata: {},
 });
 
