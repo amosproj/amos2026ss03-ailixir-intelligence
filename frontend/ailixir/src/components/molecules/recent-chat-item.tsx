@@ -8,5 +8,5 @@ type RecentChatItemProps = {
 };
 
 export function RecentChatItem({ chat }: RecentChatItemProps) {
-  return <ListItemContent href="/chats" icon={<MessageCircle size={22} />} title={chat.title} subtitle={chat.timeAgo} />;
+  return <ListItemContent href={`/(private)/chats/${chat.id}`} icon={<MessageCircle size={22} />} title={chat.title} subtitle={chat.timeAgo} />;
 }

@@ -13,6 +13,7 @@ export type QuickAction = {
   iconSize: number;
   iconStrokeWidth: number;
   iconBackground: any;
+  onPress?: () => void;
 };
 
 export type RecentChat = {
