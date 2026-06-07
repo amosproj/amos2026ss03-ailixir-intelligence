@@ -10,12 +10,13 @@ type LoginFormValues = {
 };
 
 type LoginFormProps = {
-  width?: number;
+  width?: number | string;
   onForgotPasswordPress?: () => void;
   onSubmit?: SubmitHandler<LoginFormValues>;
+  serverError?: string;
 };
 
-export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data) => console.log(data) }: LoginFormProps) {
+export function LoginForm({ width = '100%', onForgotPasswordPress, onSubmit = (data) => console.log(data), serverError = '' }: LoginFormProps) {
   const {
     control,
     handleSubmit,
@@ -26,20 +27,14 @@ export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data
       password: '',
     },
   });
-  const errorMessage = errors.email?.message ?? errors.password?.message ?? '';
+  const fieldErrorMessage = errors.email?.message ?? errors.password?.message ?? '';
+  // Only show server errors when there are no field errors.
+  const errorMessage = fieldErrorMessage || serverError;
 
   return (
     <YStack gap={10}>
-      <XStack gap={10} justify="flex-start" width={width}>
-        <CText variant="h2" fontWeight="bold">
-          {FORM_MESSAGES.title}
-        </CText>
-      </XStack>
-
       <YStack gap={6}>
-        <CText variant="caption" color="$color9">
-          E-Mail
-        </CText>
+        <CText variant="caption">E-Mail</CText>
         <Controller
           name="email"
           control={control}
@@ -60,9 +55,7 @@ export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data
       </YStack>
 
       <YStack gap={6}>
-        <CText variant="caption" color="$color9">
-          Password
-        </CText>
+        <CText variant="caption">Password</CText>
         <Controller
           name="password"
           control={control}
@@ -89,7 +82,7 @@ export function LoginForm({ width = 300, onForgotPasswordPress, onSubmit = (data
         </CText>
       </XStack>
       <XStack width={width} justify="flex-end">
-        <CButton theme="blue" icon={ChevronRight} onPress={handleSubmit(onSubmit)}>
+        <CButton iconButton emphasis="high" icon={ChevronRight} onPress={handleSubmit(onSubmit)}>
           {FORM_MESSAGES.submitLabel}
         </CButton>
       </XStack>

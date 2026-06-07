@@ -9,7 +9,7 @@ import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
 import { getFileBaseName } from '@/utils/format';
 import { resolveDocumentContentType } from '@/utils/documents';
 import { router } from 'expo-router';
-import { UploadActions, UploadFilesPanel, UploadHeader } from '@/components/molecules';
+import { ScreenHeader, UploadActions, UploadFilesPanel } from '@/components/molecules';
 
 export default function UploadScreen() {
   const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
@@ -98,7 +98,7 @@ export default function UploadScreen() {
 
   return (
     <YStack flex={1} px={20} py={24} gap={20}>
-      <UploadHeader title="Upload documents" subtitle="Select PDFs or images and upload them securely to your workspace." />
+      <ScreenHeader title="Upload documents" subtitle="Select PDFs or images and upload them securely to your workspace." />
       <UploadFilesPanel files={selectedFiles} isBusy={isBusy} onPickFiles={handlePickFiles} onRemoveFile={handleRemoveFile} />
       <UploadActions isBusy={isBusy} hasFiles={selectedFiles.length > 0} onStartUpload={handleStartUpload} />
     </YStack>

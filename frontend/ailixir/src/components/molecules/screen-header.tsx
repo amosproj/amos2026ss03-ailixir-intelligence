@@ -1,16 +1,16 @@
 import { CText } from '@/components/atoms';
 import { YStack } from 'tamagui';
 
-type UploadHeaderProps = {
+type ScreenHeaderProps = {
   title: string;
-  subtitle: string;
+  subtitle?: string;
 };
 
-export function UploadHeader({ title, subtitle }: UploadHeaderProps) {
+export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
   return (
     <YStack gap={8}>
       <CText variant="h2">{title}</CText>
-      <CText variant="body">{subtitle}</CText>
+      {subtitle ? <CText variant="body">{subtitle}</CText> : null}
     </YStack>
   );
 }

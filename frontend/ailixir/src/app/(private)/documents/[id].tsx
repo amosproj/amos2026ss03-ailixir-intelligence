@@ -1,14 +1,14 @@
 import { CButton, CText } from '@/components/atoms';
-import { DeleteButton, DocumentPageThumbnail } from '@/components/molecules';
-import { OcrTextCard } from '@/components/organisms';
+import { DeleteButton, DocumentDetailActions, DocumentPageThumbnail } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
 import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
+import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { showOcrTextAtom } from '@/state/debug';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { ChevronLeft, FileText, Trash2 } from '@tamagui/lucide-icons-2';
+import { ChevronLeft, File, Trash2 } from '@tamagui/lucide-icons-2';
 import { useAtomValue } from 'jotai';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
@@ -37,70 +37,11 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
   return (
     <YStack gap={4} width="48%">
-      <CText variant="caption" color="$color9">
+      <CText variant="caption" color="$accent1">
         {label}
       </CText>
-      <CText variant="body" bold color="$color11">
+      <CText variant="body" bold color="$black5">
         {value}
-      </CText>
-    </YStack>
-  );
-}
-
-// Human-friendly labels for the worker's free-form processing_step values.
-// New steps added on the worker side will display as the raw key until
-// added here — a deliberate fallback rather than swallowing them with
-// a generic "unknown step".
-const processingStepLabels: Record<string, string> = {
-  downloading: 'downloading from storage',
-  ocr: 'OCR extraction',
-  saving_extraction: 'saving extraction record',
-  building_graph: 'building knowledge graph',
-  exporting_cypher: 'exporting Cypher script',
-};
-
-/** Failure detail card. Shown on `status === 'failed'`. */
-function FailureCard({ processingStep, error }: { processingStep?: string | null; error?: string | null }) {
-  // Worker-side errors are often a single line ("Rate limit exceeded.")
-  // but can be a long Document AI / gRPC message. Cap the visible height
-  // so a long error doesn't push the rest of the screen below the fold,
-  // and let the user scroll the body to read the full text.
-  const stepLabel = processingStep ? (processingStepLabels[processingStep] ?? processingStep) : null;
-  return (
-    <YStack gap={10} bg="$red1" p={16} borderWidth={1} borderColor="$red6" style={{ borderRadius: 16 }}>
-      <YStack gap={4}>
-        <CText variant="h2" color="$red11">
-          Extraction failed
-        </CText>
-        {stepLabel && (
-          <CText variant="caption" color="$red11">
-            Failed during {stepLabel}.
-          </CText>
-        )}
-      </YStack>
-
-      {error ? (
-        <ScrollView style={{ maxHeight: 200, borderRadius: 10 }} bg="$red2" p={10} showsVerticalScrollIndicator>
-          <CText
-            variant="caption"
-            color="$red12"
-            selectable
-            style={{
-              fontFamily: 'Menlo',
-              fontVariant: ['tabular-nums'],
-              lineHeight: 18,
-            }}>
-            {error}
-          </CText>
-        </ScrollView>
-      ) : (
-        <CText variant="caption" color="$red11">
-          The worker did not record an error message. Re-uploading the document is the easiest next step.
-        </CText>
-      )}
-
-      <CText variant="caption" color="$red11">
-        Try re-uploading the document. If it keeps failing, share the error above with the team.
       </CText>
     </YStack>
   );
@@ -172,11 +113,16 @@ export default function DocumentScreen() {
     }
   }, [document?.cypher_download_url, document?.document_id]);
 
-  const handleStartExtraction = useCallback(() => {
-    if (!document || document.status !== 'pending_upload') {
-      return;
+  const { mutateAsync: finalizeDocument, isPending: isFinalizing } = useFinalizeDocument();
+
+  const handleStartExtraction = useCallback(async () => {
+    if (!document || document.status !== 'pending_upload') return;
+    try {
+      await finalizeDocument({ documentId: document.document_id });
+    } catch {
+      Alert.alert('Extraction failed to start', 'Could not start the extraction pipeline. Please try again.');
     }
-  }, [document]);
+  }, [document, finalizeDocument]);
 
   if (isLoading) {
     return (
@@ -207,15 +153,13 @@ export default function DocumentScreen() {
   const fileLabel = document.file_count > 1 ? `${document.file_count} files` : document.files[0]?.file_name;
 
   return (
-    <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
+    <ScrollView flex={1} showsVerticalScrollIndicator={false}>
       <YStack gap={20} px={16} pt={16} pb={32}>
-        <YStack gap={16} bg="$color0" p={16} borderWidth={1} borderColor="$color3" style={{ borderRadius: 20 }}>
+        <YStack gap={16} bg="$accent12" p={16}>
           <XStack items="center" gap={12}>
-            <XStack width={48} height={48} bg="$color2" items="center" justify="center" style={{ borderRadius: 14 }}>
-              <FileText size={24} color="$color11" />
-            </XStack>
+            <File size={24} color="$color11" />
             <YStack gap={4} flex={1}>
-              <CText variant="caption" color="$color9">
+              <CText variant="caption" color="$accent1">
                 Status
               </CText>
               <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
@@ -225,7 +169,7 @@ export default function DocumentScreen() {
               </XStack>
             </YStack>
             <DeleteButton documentId={document.document_id} disabled={document.status === 'processing'} onSuccess={() => router.back()} circular>
-              <Trash2 size={20} color="#ef4444" />
+              <Trash2 size={20} color="$red10" />
             </DeleteButton>
           </XStack>
 
@@ -236,16 +180,19 @@ export default function DocumentScreen() {
           </XStack>
         </YStack>
 
-        {document.status === 'failed' && <FailureCard processingStep={document.processing_step} error={document.error} />}
-
-        {document.status === 'uploaded' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
-
-        {/* Only render the button when there's a real signed URL to hit.
-            Avoids the user clicking a button that produces no result —
-            a worse UX than not seeing the button at all. */}
-        {document.cypher_download_url && <CButton onPress={handleDownloadGraph}>Download graph</CButton>}
-
-        {ocrTextEnabled && <OcrTextCard extraction={extraction} isLoading={extractionIsLoading} isError={extractionIsError} />}
+        <DocumentDetailActions
+          status={document.status}
+          onStartExtraction={handleStartExtraction}
+          onDownloadGraph={handleDownloadGraph}
+          error={document.error}
+          processingStep={document.processing_step}
+          cypherDownloadUrl={document.cypher_download_url}
+          ocrTextEnabled={ocrTextEnabled}
+          extraction={extraction}
+          extractionIsLoading={extractionIsLoading}
+          extractionIsError={extractionIsError}
+          isStartingExtraction={isFinalizing}
+        />
 
         <YStack gap={12}>
           <CText variant="h2" color="$color11">

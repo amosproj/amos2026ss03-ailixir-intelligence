@@ -1,7 +1,6 @@
-import { AuxiliaryOverview } from '@/components/molecules';
-import { DocumentsAction } from '@/components/molecules/documents-action';
+import { AuxiliaryOverview, DocumentsAction } from '@/components/molecules';
 
-import { DocumentsList } from '@/components/organisms/documents-list';
+import { DocumentsList } from '@/components/organisms';
 import { useDocuments } from '@/hooks/useDocuments';
 import { formatDate, formatSize } from '@/utils/format';
 import { router } from 'expo-router';

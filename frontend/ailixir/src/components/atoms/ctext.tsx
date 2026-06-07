@@ -25,6 +25,7 @@ export const CText = styled(Text, {
       },
       caption: {
         ...typography.caption,
+        color: '$accent5',
       },
     },
     bold: {

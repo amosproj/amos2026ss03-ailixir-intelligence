@@ -14,13 +14,10 @@ export default function PrivateLayout() {
         headerShadowVisible: false,
         headerLeft: () =>
           navigation.canGoBack() ? (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 0 }}>
-              <ChevronLeft size={20} color="#111111" />
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <ChevronLeft size={20} />
             </TouchableOpacity>
           ) : null,
-        contentStyleontentStyle: {
-          backgroundColor: 'green',
-        },
         headerTitle: (props: any) => <CText variant="h1">{props?.children ?? props?.title ?? ''}</CText>,
       })}>
       <Stack.Screen
@@ -28,8 +25,8 @@ export default function PrivateLayout() {
         options={{
           title: 'AiLixir',
           headerRight: () => (
-            <TouchableOpacity onPress={() => router.navigate('/settings')} style={{ marginRight: 4 }}>
-              <Settings size={20} color="#111111" />
+            <TouchableOpacity onPress={() => router.navigate('/settings')}>
+              <Settings size={20} />
             </TouchableOpacity>
           ),
         }}
