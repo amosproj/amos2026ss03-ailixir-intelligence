@@ -2,6 +2,7 @@ import { CButton, CText } from '@/components/atoms';
 import { DeleteButton, DocumentDetailActions, DocumentPageThumbnail } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
 import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
+import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { showOcrTextAtom } from '@/state/debug';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -41,65 +42,6 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
       </CText>
       <CText variant="body" bold color="$black5">
         {value}
-      </CText>
-    </YStack>
-  );
-}
-
-// Human-friendly labels for the worker's free-form processing_step values.
-// New steps added on the worker side will display as the raw key until
-// added here — a deliberate fallback rather than swallowing them with
-// a generic "unknown step".
-const processingStepLabels: Record<string, string> = {
-  downloading: 'downloading from storage',
-  ocr: 'OCR extraction',
-  saving_extraction: 'saving extraction record',
-  building_graph: 'building knowledge graph',
-  exporting_cypher: 'exporting Cypher script',
-};
-
-/** Failure detail card. Shown on `status === 'failed'`. */
-function FailureCard({ processingStep, error }: { processingStep?: string | null; error?: string | null }) {
-  // Worker-side errors are often a single line ("Rate limit exceeded.")
-  // but can be a long Document AI / gRPC message. Cap the visible height
-  // so a long error doesn't push the rest of the screen below the fold,
-  // and let the user scroll the body to read the full text.
-  const stepLabel = processingStep ? (processingStepLabels[processingStep] ?? processingStep) : null;
-  return (
-    <YStack gap={10} bg="$red1" p={16} borderWidth={1} borderColor="$red6" style={{ borderRadius: 16 }}>
-      <YStack gap={4}>
-        <CText variant="h2" color="$red11">
-          Extraction failed
-        </CText>
-        {stepLabel && (
-          <CText variant="caption" color="$red11">
-            Failed during {stepLabel}.
-          </CText>
-        )}
-      </YStack>
-
-      {error ? (
-        <ScrollView style={{ maxHeight: 200, borderRadius: 10 }} bg="$red2" p={10} showsVerticalScrollIndicator>
-          <CText
-            variant="caption"
-            color="$red12"
-            selectable
-            style={{
-              fontFamily: 'Menlo',
-              fontVariant: ['tabular-nums'],
-              lineHeight: 18,
-            }}>
-            {error}
-          </CText>
-        </ScrollView>
-      ) : (
-        <CText variant="caption" color="$red11">
-          The worker did not record an error message. Re-uploading the document is the easiest next step.
-        </CText>
-      )}
-
-      <CText variant="caption" color="$red11">
-        Try re-uploading the document. If it keeps failing, share the error above with the team.
       </CText>
     </YStack>
   );
@@ -171,11 +113,16 @@ export default function DocumentScreen() {
     }
   }, [document?.cypher_download_url, document?.document_id]);
 
-  const handleStartExtraction = useCallback(() => {
-    if (!document || document.status !== 'pending_upload') {
-      return;
+  const { mutateAsync: finalizeDocument, isPending: isFinalizing } = useFinalizeDocument();
+
+  const handleStartExtraction = useCallback(async () => {
+    if (!document || document.status !== 'pending_upload') return;
+    try {
+      await finalizeDocument({ documentId: document.document_id });
+    } catch {
+      Alert.alert('Extraction failed to start', 'Could not start the extraction pipeline. Please try again.');
     }
-  }, [document]);
+  }, [document, finalizeDocument]);
 
   if (isLoading) {
     return (
@@ -233,7 +180,19 @@ export default function DocumentScreen() {
           </XStack>
         </YStack>
 
-        <DocumentDetailActions status={document.status} onStartExtraction={handleStartExtraction} onDownloadGraph={handleDownloadGraph} />
+        <DocumentDetailActions
+          status={document.status}
+          onStartExtraction={handleStartExtraction}
+          onDownloadGraph={handleDownloadGraph}
+          error={document.error}
+          processingStep={document.processing_step}
+          cypherDownloadUrl={document.cypher_download_url}
+          ocrTextEnabled={ocrTextEnabled}
+          extraction={extraction}
+          extractionIsLoading={extractionIsLoading}
+          extractionIsError={extractionIsError}
+          isStartingExtraction={isFinalizing}
+        />
 
         <YStack gap={12}>
           <CText variant="h2" color="$color11">

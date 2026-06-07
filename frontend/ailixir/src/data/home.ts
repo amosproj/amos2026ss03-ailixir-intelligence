@@ -1,7 +1,7 @@
 import type { IconProps } from '@tamagui/helpers-icon';
 import type { ComponentType } from 'react';
 
-import { File, Plus } from '@tamagui/lucide-icons-2';
+import { File, MessageCircle } from '@tamagui/lucide-icons-2';
 
 type IconComponent = ComponentType<IconProps>;
 
@@ -26,8 +26,8 @@ export const quickActions: QuickAction[] = [
     title: 'New Chat',
     subtitle: 'Start now',
     href: '/chats',
-    icon: Plus,
-    iconSize: 36,
+    icon: MessageCircle,
+    iconSize: 30,
     iconStrokeWidth: 2.8,
     iconBackground: '$accent10',
   },
