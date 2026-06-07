@@ -6,4 +6,5 @@ export const firebaseConfig = {
   messagingSenderId: '599892675013',
   appId: '1:599892675013:web:a1a92fa382b5058c9523ac',
   measurementId: 'G-QR1FPLHXKL',
+  databaseURL: 'https://amos26-default-rtdb.europe-west1.firebasedatabase.app/',
 };

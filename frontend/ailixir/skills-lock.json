@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "assistant-ui": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "skillPath": "assistant-ui/skills/assistant-ui/SKILL.md",
+      "computedHash": "5e342f1cae9193afe989d2244b73f5e1074951adc8cf7014119cedac88747a53"
+    },
     "tamagui": {
       "source": "tamagui/tamagui",
       "sourceType": "github",

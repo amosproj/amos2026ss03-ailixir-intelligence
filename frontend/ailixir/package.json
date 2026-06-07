@@ -11,7 +11,12 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.14.14",
+    "@assistant-ui/react-langchain": "^0.0.12",
+    "@assistant-ui/react-native": "^0.1.21",
     "@expo-google-fonts/raleway": "^0.4.2",
+    "@langchain/core": "^1.1.48",
+    "@langchain/react": "^1.0.17",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
@@ -55,8 +60,8 @@
     "tamagui": "^2.0.0-rc.41"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
     "@react-native-community/cli": "latest",
+    "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.0",
     "eslint-config-prettier": "^10.1.8",

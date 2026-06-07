@@ -1,8 +1,9 @@
 import { create } from 'axios';
 import { getAuth } from 'firebase/auth';
+import { API_BASE_URL } from '@/lib/api-config';
 
 const apiClient = create({
-  baseURL: 'https://ailixir-backend-5mg2ellzaa-ue.a.run.app',
+  baseURL: API_BASE_URL,
 });
 
 apiClient.interceptors.request.use(async (config) => {
