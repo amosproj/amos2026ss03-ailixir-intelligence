@@ -1,0 +1,1250 @@
+{
+  "group_id": "patient-1-temporal-20260603_060015",
+  "documents": [
+    {
+      "file": "ueberweisungsbrief_e01.pdf",
+      "detected_date": "2026-05-03T00:00:00+00:00",
+      "ocr_chars": 2168,
+      "ocr_document_type": "gcp_document_ai_ocr",
+      "ocr_cache_source": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\ocr_cache\\ueberweisungsbrief_e01_gcp_ocr.json"
+    },
+    {
+      "file": "pathologiebericht_e04.pdf",
+      "detected_date": "2026-06-09T00:00:00+00:00",
+      "ocr_chars": 2395,
+      "ocr_document_type": "gcp_document_ai_ocr",
+      "ocr_cache_source": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\ocr_cache\\pathologiebericht_e04_gcp_ocr.json"
+    },
+    {
+      "file": "tumorkonferenzprotokoll_e05.pdf",
+      "detected_date": "2026-06-21T00:00:00+00:00",
+      "ocr_chars": 2437,
+      "ocr_document_type": "gcp_document_ai_ocr",
+      "ocr_cache_source": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\ocr_cache\\tumorkonferenzprotokoll_e05_gcp_ocr.json"
+    },
+    {
+      "file": "arztbrief_e06.pdf",
+      "detected_date": "2026-06-26T00:00:00+00:00",
+      "ocr_chars": 2611,
+      "ocr_document_type": "gcp_document_ai_ocr",
+      "ocr_cache_source": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\ocr_cache\\arztbrief_e06_gcp_ocr.json"
+    },
+    {
+      "file": "laborbericht_e07_2.pdf",
+      "detected_date": "2027-06-12T00:00:00+00:00",
+      "ocr_chars": 2106,
+      "ocr_document_type": "gcp_document_ai_ocr",
+      "ocr_cache_source": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\ocr_cache\\laborbericht_e07_2_gcp_ocr.json"
+    },
+    {
+      "file": "verlaufsbericht_e07_3.pdf",
+      "detected_date": "2027-09-13T00:00:00+00:00",
+      "ocr_chars": 2329,
+      "ocr_document_type": "gcp_document_ai_ocr",
+      "ocr_cache_source": "C:\\Users\\hossa\\Desktop\\amos2026ss03-ailixir-intelligence\\ai-playground\\knowledge-graph-integration\\graph_outputs\\ocr_cache\\verlaufsbericht_e07_3_gcp_ocr.json"
+    }
+  ],
+  "summary": {
+    "episode_count": 6,
+    "edge_count": 28,
+    "temporal_edge_count": 28,
+    "invalidated_edge_count": 10
+  },
+  "episodes": [
+    {
+      "name": "patient-1-temporal-20260603_060015_ueberweisungsbrief_e01_20260503",
+      "created_at": "2026-06-03T06:00:22.320904000+00:00",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "source": "text"
+    },
+    {
+      "name": "patient-1-temporal-20260603_060015_pathologiebericht_e04_20260609",
+      "created_at": "2026-06-03T06:01:14.641854000+00:00",
+      "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+      "source": "text"
+    },
+    {
+      "name": "patient-1-temporal-20260603_060015_tumorkonferenzprotokoll_e05_20260621",
+      "created_at": "2026-06-03T06:01:46.887244000+00:00",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "source": "text"
+    },
+    {
+      "name": "patient-1-temporal-20260603_060015_arztbrief_e06_20260626",
+      "created_at": "2026-06-03T06:02:16.277560000+00:00",
+      "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+      "source": "text"
+    },
+    {
+      "name": "patient-1-temporal-20260603_060015_laborbericht_e07_2_20270612",
+      "created_at": "2026-06-03T06:02:37.794359000+00:00",
+      "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "source": "text"
+    },
+    {
+      "name": "patient-1-temporal-20260603_060015_verlaufsbericht_e07_3_20270913",
+      "created_at": "2026-06-03T06:03:16.064738000+00:00",
+      "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+      "source": "text"
+    }
+  ],
+  "temporal_edges": [
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "PSA",
+      "name": "HAS_MEASUREMENT_VALUE",
+      "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2026-05-03T00:00:00.000000000+00:00",
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "WORKS_AT",
+      "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7",
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom",
+      "name": "HAS_DIAGNOSIS",
+      "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7",
+        "cd6f41a8-800a-4f87-ae90-d900fc475371",
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e",
+        "e0cc9403-1ff4-4a4a-8a6e-0c3b7b0a8ad6",
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung",
+      "name": "HAS_CANCER_RISK_AND_MANAGEMENT",
+      "fact": "Patient-1 has Niedrigrisiko prostate cancer and is under active surveillance (Aktive Überwachung).",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Dr. med. Arzt-1",
+      "name": "REFERRED_BY",
+      "fact": "Patient-1 was referred by Dr. med. Arzt-1 for urological evaluation.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7",
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Erhöhter PSA-Wert",
+      "name": "HAS_CONDITION",
+      "fact": "Patient-1 has an elevated PSA level (Erhöhter PSA-Wert).",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Gleason 3+3=6 (ISUP 1)",
+      "name": "HAS_PATHOLOGY_GRADE",
+      "fact": "Patient-1 has a Gleason score of 3+3=6 (ISUP 1).",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "REFERRED_TO",
+      "fact": "Patient-1 was referred to Klinikum Düsseldorf - Klinik-1 Urologische Klinik for urological evaluation.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2026-06-09T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:01:38.681230000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "T-Stadium cT1c",
+      "name": "HAS_TUMOR_STAGE",
+      "fact": "Patient-1's tumor stage is cT1c.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "Patient-1",
+      "name": "TREATED_PATIENT",
+      "fact": "Dr. med. Arzt-1 treated Patient-1 at the Urologische Klinik.",
+      "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2026-06-09T00:00:00.000000000+00:00",
+      "episodes": [
+        "cd6f41a8-800a-4f87-ae90-d900fc475371"
+      ]
+    },
+    {
+      "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "BELONGS_TO",
+      "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 belongs to Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+      "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2026-06-09T00:00:00.000000000+00:00",
+      "episodes": [
+        "cd6f41a8-800a-4f87-ae90-d900fc475371"
+      ]
+    },
+    {
+      "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+      "type": "RELATES_TO",
+      "target": "Patient-1",
+      "name": "CONDUCTED_PATHOLOGY_ANALYSIS_FOR",
+      "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 conducted pathology analysis for Patient-1.",
+      "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2026-06-09T00:00:00.000000000+00:00",
+      "episodes": [
+        "cd6f41a8-800a-4f87-ae90-d900fc475371"
+      ]
+    },
+    {
+      "source": "C61 Prostatakarzinom",
+      "type": "RELATES_TO",
+      "target": "Pathologie",
+      "name": "IS_MANAGED_BY_DISCIPLINE",
+      "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Pathologie discipline.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "C61 Prostatakarzinom",
+      "type": "RELATES_TO",
+      "target": "Radiologie",
+      "name": "IS_MANAGED_BY_DISCIPLINE",
+      "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Radiologie discipline.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "C61 Prostatakarzinom",
+      "type": "RELATES_TO",
+      "target": "Urologie",
+      "name": "IS_MANAGED_BY_DISCIPLINE",
+      "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Urologie discipline.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "IS_TREATED_AT",
+      "fact": "Patient-1 is treated at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e",
+        "e0cc9403-1ff4-4a4a-8a6e-0c3b7b0a8ad6"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "Patient-1",
+      "name": "TREATS",
+      "fact": "Dr. med. Arzt-1 treated Patient-1 at Urologische Klinik on 26.06.2026",
+      "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2026-06-26T00:00:00.000000000+00:00",
+      "episodes": [
+        "e0cc9403-1ff4-4a4a-8a6e-0c3b7b0a8ad6"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "S3-Leitlinie Prostatakarzinom 2021",
+      "name": "FOLLOWS_GUIDELINE",
+      "fact": "Dr. med. Arzt-1 follows S3-Leitlinie Prostatakarzinom 2021 in therapy decision for Patient-1",
+      "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "e0cc9403-1ff4-4a4a-8a6e-0c3b7b0a8ad6"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "Laborbefund",
+      "name": "ISSUED",
+      "fact": "Dr. med. Arzt-1 issued the Laborbefund at Urologische Klinik, Klinikum Düsseldorf - Klinik-1, on 12 June 2027.",
+      "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-06-12T00:00:00.000000000+00:00",
+      "episodes": [
+        "a9eb69ed-40b1-46b0-bd9b-fa4a4d21afe5"
+      ]
+    },
+    {
+      "source": "Laborbefund",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "PRODUCED_AT",
+      "fact": "The Laborbefund was produced by Zentrallabor, Klinikum Düsseldorf - Klinik-1, on 12 June 2027.",
+      "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-06-12T00:00:00.000000000+00:00",
+      "episodes": [
+        "a9eb69ed-40b1-46b0-bd9b-fa4a4d21afe5"
+      ]
+    },
+    {
+      "source": "Laborbefund",
+      "type": "RELATES_TO",
+      "target": "PSA",
+      "name": "DOCUMENTS_PARAMETER",
+      "fact": "The Laborbefund documents the PSA (gesamt) parameter with a value of 7.6 ng/ml on 12 June 2027, which is elevated compared to the reference range 0.00-4.00 ng/ml.",
+      "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-06-12T00:00:00.000000000+00:00",
+      "episodes": [
+        "a9eb69ed-40b1-46b0-bd9b-fa4a4d21afe5"
+      ]
+    },
+    {
+      "source": "Laborbefund",
+      "type": "RELATES_TO",
+      "target": "Patient-1",
+      "name": "LAB_RESULTS_FOR",
+      "fact": "The Laborbefund documents lab results for Patient-1 on 12 June 2027.",
+      "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-06-12T00:00:00.000000000+00:00",
+      "episodes": [
+        "a9eb69ed-40b1-46b0-bd9b-fa4a4d21afe5"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom",
+      "name": "HAS_DIAGNOSIS",
+      "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom, as of 12 June 2027.",
+      "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-06-12T00:00:00.000000000+00:00",
+      "episodes": [
+        "a9eb69ed-40b1-46b0-bd9b-fa4a4d21afe5"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "WORKS_AT",
+      "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik as of 2027-09-13.",
+      "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-09-13T00:00:00.000000000+00:00",
+      "episodes": [
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "Patient-1",
+      "name": "TREATS",
+      "fact": "Dr. med. Arzt-1 treats Patient-1 as of 2027-09-13.",
+      "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-09-13T00:00:00.000000000+00:00",
+      "episodes": [
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom",
+      "name": "HAS_PSA_VALUE",
+      "fact": "Patient-1 has a stable PSA value of 7.6 ng/ml as of 2027-09-13.",
+      "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-09-13T00:00:00.000000000+00:00",
+      "episodes": [
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom",
+      "name": "HAS_TREATMENT_STRATEGY",
+      "fact": "Patient-1 is undergoing active surveillance for C61 Prostatakarzinom with a stable course as of 2027-09-13.",
+      "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-09-13T00:00:00.000000000+00:00",
+      "episodes": [
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "IS_TREATED_AT",
+      "fact": "Patient-1 is treated at Klinikum Düsseldorf - Klinik-1 Urologische Klinik as of 2027-09-13.",
+      "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+      "invalid_at": null,
+      "system_expired_at": null,
+      "reference_time": "2027-09-13T00:00:00.000000000+00:00",
+      "episodes": [
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    }
+  ],
+  "invalidated_edges": [
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom",
+      "name": "HAS_DIAGNOSIS",
+      "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7",
+        "cd6f41a8-800a-4f87-ae90-d900fc475371",
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e",
+        "e0cc9403-1ff4-4a4a-8a6e-0c3b7b0a8ad6",
+        "29dedf27-4f3c-4f00-9ce7-143c00daa1b8"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "C61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung",
+      "name": "HAS_CANCER_RISK_AND_MANAGEMENT",
+      "fact": "Patient-1 has Niedrigrisiko prostate cancer and is under active surveillance (Aktive Überwachung).",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Erhöhter PSA-Wert",
+      "name": "HAS_CONDITION",
+      "fact": "Patient-1 has an elevated PSA level (Erhöhter PSA-Wert).",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Gleason 3+3=6 (ISUP 1)",
+      "name": "HAS_PATHOLOGY_GRADE",
+      "fact": "Patient-1 has a Gleason score of 3+3=6 (ISUP 1).",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+      "name": "REFERRED_TO",
+      "fact": "Patient-1 was referred to Klinikum Düsseldorf - Klinik-1 Urologische Klinik for urological evaluation.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2026-06-09T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:01:38.681230000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "Patient-1",
+      "type": "RELATES_TO",
+      "target": "T-Stadium cT1c",
+      "name": "HAS_TUMOR_STAGE",
+      "fact": "Patient-1's tumor stage is cT1c.",
+      "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "7a9efb6f-1b7b-4211-86fc-118a5a7a60b7"
+      ]
+    },
+    {
+      "source": "C61 Prostatakarzinom",
+      "type": "RELATES_TO",
+      "target": "Pathologie",
+      "name": "IS_MANAGED_BY_DISCIPLINE",
+      "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Pathologie discipline.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "C61 Prostatakarzinom",
+      "type": "RELATES_TO",
+      "target": "Radiologie",
+      "name": "IS_MANAGED_BY_DISCIPLINE",
+      "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Radiologie discipline.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "C61 Prostatakarzinom",
+      "type": "RELATES_TO",
+      "target": "Urologie",
+      "name": "IS_MANAGED_BY_DISCIPLINE",
+      "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Urologie discipline.",
+      "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "ec024f8c-be9c-4594-93f0-8e0a86d50a9e"
+      ]
+    },
+    {
+      "source": "Dr. med. Arzt-1",
+      "type": "RELATES_TO",
+      "target": "S3-Leitlinie Prostatakarzinom 2021",
+      "name": "FOLLOWS_GUIDELINE",
+      "fact": "Dr. med. Arzt-1 follows S3-Leitlinie Prostatakarzinom 2021 in therapy decision for Patient-1",
+      "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+      "invalid_at": "2027-06-12T00:00:00.000000000+00:00",
+      "system_expired_at": "2026-06-03T06:03:07.512428000+00:00",
+      "reference_time": null,
+      "episodes": [
+        "e0cc9403-1ff4-4a4a-8a6e-0c3b7b0a8ad6"
+      ]
+    }
+  ],
+  "as_of_snapshots": [
+    {
+      "as_of": "2026-05-03",
+      "source_document": "ueberweisungsbrief_e01.pdf",
+      "active_edge_count_sampled": 1,
+      "active_edges_sample": [
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        }
+      ]
+    },
+    {
+      "as_of": "2026-06-09",
+      "source_document": "pathologiebericht_e04.pdf",
+      "active_edge_count_sampled": 11,
+      "active_edges_sample": [
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at the Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 belongs to Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 conducted pathology analysis for Patient-1.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung",
+          "fact": "Patient-1 has Niedrigrisiko prostate cancer and is under active surveillance (Aktive Überwachung).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Dr. med. Arzt-1",
+          "fact": "Patient-1 was referred by Dr. med. Arzt-1 for urological evaluation.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Erhöhter PSA-Wert",
+          "fact": "Patient-1 has an elevated PSA level (Erhöhter PSA-Wert).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Gleason 3+3=6 (ISUP 1)",
+          "fact": "Patient-1 has a Gleason score of 3+3=6 (ISUP 1).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "T-Stadium cT1c",
+          "fact": "Patient-1's tumor stage is cT1c.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        }
+      ]
+    },
+    {
+      "as_of": "2026-06-21",
+      "source_document": "tumorkonferenzprotokoll_e05.pdf",
+      "active_edge_count_sampled": 11,
+      "active_edges_sample": [
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at the Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 belongs to Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 conducted pathology analysis for Patient-1.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung",
+          "fact": "Patient-1 has Niedrigrisiko prostate cancer and is under active surveillance (Aktive Überwachung).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Dr. med. Arzt-1",
+          "fact": "Patient-1 was referred by Dr. med. Arzt-1 for urological evaluation.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Erhöhter PSA-Wert",
+          "fact": "Patient-1 has an elevated PSA level (Erhöhter PSA-Wert).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Gleason 3+3=6 (ISUP 1)",
+          "fact": "Patient-1 has a Gleason score of 3+3=6 (ISUP 1).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "T-Stadium cT1c",
+          "fact": "Patient-1's tumor stage is cT1c.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        }
+      ]
+    },
+    {
+      "as_of": "2026-06-26",
+      "source_document": "arztbrief_e06.pdf",
+      "active_edge_count_sampled": 16,
+      "active_edges_sample": [
+        {
+          "source": "C61 Prostatakarzinom",
+          "type": "RELATES_TO",
+          "target": "Pathologie",
+          "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Pathologie discipline.",
+          "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "C61 Prostatakarzinom",
+          "type": "RELATES_TO",
+          "target": "Radiologie",
+          "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Radiologie discipline.",
+          "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "C61 Prostatakarzinom",
+          "type": "RELATES_TO",
+          "target": "Urologie",
+          "fact": "The diagnosis Prostatakarzinom C61 is managed with the involvement of the Urologie discipline.",
+          "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at the Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at Urologische Klinik on 26.06.2026",
+          "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 belongs to Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 conducted pathology analysis for Patient-1.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung",
+          "fact": "Patient-1 has Niedrigrisiko prostate cancer and is under active surveillance (Aktive Überwachung).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Dr. med. Arzt-1",
+          "fact": "Patient-1 was referred by Dr. med. Arzt-1 for urological evaluation.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Erhöhter PSA-Wert",
+          "fact": "Patient-1 has an elevated PSA level (Erhöhter PSA-Wert).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Gleason 3+3=6 (ISUP 1)",
+          "fact": "Patient-1 has a Gleason score of 3+3=6 (ISUP 1).",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Patient-1 is treated at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "T-Stadium cT1c",
+          "fact": "Patient-1's tumor stage is cT1c.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        }
+      ]
+    },
+    {
+      "as_of": "2027-06-12",
+      "source_document": "laborbericht_e07_2.pdf",
+      "active_edge_count_sampled": 14,
+      "active_edges_sample": [
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Laborbefund",
+          "fact": "Dr. med. Arzt-1 issued the Laborbefund at Urologische Klinik, Klinikum Düsseldorf - Klinik-1, on 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at the Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at Urologische Klinik on 26.06.2026",
+          "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 belongs to Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 conducted pathology analysis for Patient-1.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Laborbefund",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "The Laborbefund was produced by Zentrallabor, Klinikum Düsseldorf - Klinik-1, on 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Laborbefund",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "The Laborbefund documents the PSA (gesamt) parameter with a value of 7.6 ng/ml on 12 June 2027, which is elevated compared to the reference range 0.00-4.00 ng/ml.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Laborbefund",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "The Laborbefund documents lab results for Patient-1 on 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": "2027-06-12T00:00:00.000000000+00:00"
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom, as of 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Dr. med. Arzt-1",
+          "fact": "Patient-1 was referred by Dr. med. Arzt-1 for urological evaluation.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Patient-1 is treated at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        }
+      ]
+    },
+    {
+      "as_of": "2027-09-13",
+      "source_document": "verlaufsbericht_e07_3.pdf",
+      "active_edge_count_sampled": 18,
+      "active_edges_sample": [
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Dr. med. Arzt-1 works at Klinikum Düsseldorf - Klinik-1 Urologische Klinik as of 2027-09-13.",
+          "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Laborbefund",
+          "fact": "Dr. med. Arzt-1 issued the Laborbefund at Urologische Klinik, Klinikum Düsseldorf - Klinik-1, on 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at the Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treated Patient-1 at Urologische Klinik on 26.06.2026",
+          "valid_at": "2026-06-26T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Dr. med. Arzt-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Dr. med. Arzt-1 treats Patient-1 as of 2027-09-13.",
+          "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 belongs to Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "Institut für Pathologie, Klinikum Düsseldorf - Klinik-1 conducted pathology analysis for Patient-1.",
+          "valid_at": "2026-06-09T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Laborbefund",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "The Laborbefund was produced by Zentrallabor, Klinikum Düsseldorf - Klinik-1, on 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Laborbefund",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "The Laborbefund documents the PSA (gesamt) parameter with a value of 7.6 ng/ml on 12 June 2027, which is elevated compared to the reference range 0.00-4.00 ng/ml.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Laborbefund",
+          "type": "RELATES_TO",
+          "target": "Patient-1",
+          "fact": "The Laborbefund documents lab results for Patient-1 on 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has the diagnosis C61 Prostatakarzinom, as of 12 June 2027.",
+          "valid_at": "2027-06-12T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 has a stable PSA value of 7.6 ng/ml as of 2027-09-13.",
+          "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "C61 Prostatakarzinom",
+          "fact": "Patient-1 is undergoing active surveillance for C61 Prostatakarzinom with a stable course as of 2027-09-13.",
+          "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Dr. med. Arzt-1",
+          "fact": "Patient-1 was referred by Dr. med. Arzt-1 for urological evaluation.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Patient-1 is treated at Klinikum Düsseldorf - Klinik-1 Urologische Klinik.",
+          "valid_at": "2026-06-21T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "Klinikum Düsseldorf - Klinik-1 Urologische Klinik",
+          "fact": "Patient-1 is treated at Klinikum Düsseldorf - Klinik-1 Urologische Klinik as of 2027-09-13.",
+          "valid_at": "2027-09-13T00:00:00.000000000+00:00",
+          "invalid_at": null
+        },
+        {
+          "source": "Patient-1",
+          "type": "RELATES_TO",
+          "target": "PSA",
+          "fact": "Patient-1's PSA value is 7.6 ng/ml.",
+          "valid_at": "2026-05-03T00:00:00.000000000+00:00",
+          "invalid_at": null
+        }
+      ]
+    }
+  ]
+}

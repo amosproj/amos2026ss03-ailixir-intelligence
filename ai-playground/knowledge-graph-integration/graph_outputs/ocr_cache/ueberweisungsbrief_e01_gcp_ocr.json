@@ -1,0 +1,30 @@
+{
+  "document_type": "gcp_document_ai_ocr",
+  "confidence_score": null,
+  "metadata": {
+    "source_pdf": "ueberweisungsbrief_e01.pdf",
+    "ocr_engine": "gcp_document_ai",
+    "processor": "projects/599892675013/locations/us/processors/3098c18357d9742d",
+    "page_count": 1,
+    "date_detected": "2026-05-03"
+  },
+  "extracted_fields": {
+    "entities": [],
+    "form_fields": [],
+    "pages": [
+      {
+        "page": 1,
+        "text": "KL\nKlinikum Düsseldorf -\nKlinik-1\nUrologische Klinik\nFriedrichstraße 94 73976 Düsseldorf\nPATIENT\nPatient-1\nGEBURTSDATUM 18.01.1959\nFALLNUMMER\nURO-2026-0001\nDIAGNOSE\nC61 Prostatakarzinom\nDr. med. Arzt-1 Urologische Klinik\nÜberweisungsbrief\nAn die\nKlinikum Düsseldorf - Klinik-1\nUrologische Klinik\nFriedrichstraße 94\n73976 Düsseldorf\nSehr geehrte Damen und Herren,\nÜberweisung von Patient-1, geb. 18.01.1959, zur urolog. Abklärung.\nÜBERWEISUNGSGRUND\nErhöhter PSA-Wert\nBISHERIGE BEFUNDE\nParameter\nPSA\nGleason\nT-Stadium\nDIAGNOSE\nWert\n7,6 ng/ml\n3+3=6 (ISUP 1)\ncT1c\nC61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung\nBitte um zeitnahe Vorstellung und Rückmeldung. Bei Fragen stehe ich zur Verfügung.\nMit freundlichen Grüßen\nDr. med. Arzt-1\nUrologische Klinik\nKlinikum Düsseldorf - Klinik-1 Urologische Klinik Friedrichstraße 94, 73976 Düsseldorf\n3. Mai 2026",
+        "dimension": {
+          "width": 1681.0,
+          "height": 2378.0,
+          "unit": "pixels"
+        }
+      }
+    ]
+  },
+  "tables": [],
+  "raw_text_blocks": [
+    "KL\nKlinikum Düsseldorf -\nKlinik-1\nUrologische Klinik\nFriedrichstraße 94 73976 Düsseldorf\nPATIENT\nPatient-1\nGEBURTSDATUM 18.01.1959\nFALLNUMMER\nURO-2026-0001\nDIAGNOSE\nC61 Prostatakarzinom\nDr. med. Arzt-1 Urologische Klinik\nÜberweisungsbrief\nAn die\nKlinikum Düsseldorf - Klinik-1\nUrologische Klinik\nFriedrichstraße 94\n73976 Düsseldorf\nSehr geehrte Damen und Herren,\nÜberweisung von Patient-1, geb. 18.01.1959, zur urolog. Abklärung.\nÜBERWEISUNGSGRUND\nErhöhter PSA-Wert\nBISHERIGE BEFUNDE\nParameter\nPSA\nGleason\nT-Stadium\nDIAGNOSE\nWert\n7,6 ng/ml\n3+3=6 (ISUP 1)\ncT1c\nC61 Prostatakarzinom – Niedrigrisiko – Aktive Überwachung\nBitte um zeitnahe Vorstellung und Rückmeldung. Bei Fragen stehe ich zur Verfügung.\nMit freundlichen Grüßen\nDr. med. Arzt-1\nUrologische Klinik\nKlinikum Düsseldorf - Klinik-1 Urologische Klinik Friedrichstraße 94, 73976 Düsseldorf\n3. Mai 2026\n"
+  ]
+}
