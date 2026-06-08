@@ -19,18 +19,16 @@ class Extraction(BaseModel):
     doc_id: str
     uid: str
     document_type: str
+    # Populated by old Document AI OCR pipeline; None in new LLM pipeline.
     confidence_score: float | None = None
-    extracted_fields: dict
-    # Optional. Full raw OCR text concatenated across files/pages.
-    # Capped at the persistence layer (see shared.repositories.extractions)
-    # to stay safely under Firestore's 1 MB per-document limit. Old
-    # Extraction records pre-dating this field load with raw_text=None.
+    # Populated by old Document AI form parser; empty dict in new LLM pipeline.
+    extracted_fields: dict = {}
+    # Populated by old Document AI OCR pipeline; None in new LLM pipeline.
     raw_text: str | None = None
-    # Length of the persisted raw_text (after the cap). Useful for the UI
-    # to show a chip ("12,418 chars") without reading the whole body.
     raw_text_chars: int | None = None
-    # True if raw_text was truncated to fit Firestore's document size limit.
-    # When True, the displayed text is the leading slice — not all OCR
-    # output. Lets the UI show a "Truncated" badge so users aren't misled.
     raw_text_truncated: bool | None = None
+    # Fields populated by the new LLM extraction pipeline.
+    document_purpose: str | None = None   # one-sentence role in patient journey
+    document_date: str | None = None      # YYYY-MM-DD date from the document itself
+    episode_body: str | None = None       # rich clinical narrative fed to Graphiti
     extracted_at: datetime
