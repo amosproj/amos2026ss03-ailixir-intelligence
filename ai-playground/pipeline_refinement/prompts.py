@@ -33,8 +33,14 @@ Read this medical document and write ONE rich clinical narrative paragraph
 that captures everything medically relevant about this document.
 
 This paragraph is what an AI knowledge graph engine will read to extract
-entities (Patient, Diagnosis, Medication, LabTest, Procedure, Provider,
-PathologyResult, TumorMarker, TreatmentPlan) and their relationships.
+entities and their relationships. The engine understands these entity types:
+  Patient, Diagnosis, Medication, LabTest, Procedure, Provider,
+  PathologyResult, TumorMarker, TreatmentPlan,
+  ImagingResult, Symptom, Allergy, VitalSigns, Referral, Appointment.
+
+Write the narrative so that ALL entity types present in the document are
+mentioned explicitly — even if this is a referral letter, radiology report,
+discharge summary, or any other document type.
 
 WHAT TO INCLUDE in the narrative
   • Patient identifiers: full name as written, date of birth, patient/case ID
@@ -46,6 +52,12 @@ WHAT TO INCLUDE in the narrative
   • All procedures done or planned: name, date, outcome
   • All medications: name, dosage, route, frequency, start/stop dates
   • Pathology findings: Gleason score, grade, specimen site, finding
+  • Imaging/radiology findings: modality, body region, key finding, impression
+  • Symptoms or complaints: what the patient reports, severity, onset
+  • Allergies or drug intolerances mentioned in the document
+  • Vital signs: blood pressure, pulse, weight, height, temperature if present
+  • Referrals: who is referring, to whom, for what reason
+  • Scheduled appointments or follow-up plans
   • Treatment decisions or recommendations made in this document
   • Any changes from previous findings (e.g. PSA changed from X to Y)
 
@@ -59,11 +71,12 @@ STYLE
 
 OUTPUT FORMAT
 =============
-Return ONLY valid JSON with exactly these three keys — no markdown, no extra text.
+Return ONLY valid JSON with exactly these four keys — no markdown, no extra text.
 
 {{
-  "document_type": "Exact German document type: Laborbericht | Arztbrief | Verlaufsbericht | Befundbericht | Tumorkonferenzprotokoll | Überweisungsbrief | Pathologiebericht | etc.",
+  "document_type": "Exact German document type: Laborbericht | Arztbrief | Verlaufsbericht | Befundbericht | Tumorkonferenzprotokoll | Überweisungsbrief | Pathologiebericht | Radiologiebericht | etc.",
   "document_purpose": "One sentence: what this document is and its role in this patient's journey.",
+  "document_date": "The date of this document in YYYY-MM-DD format. Use the report date, visit date, or issue date — whichever appears in the document. Return null if no date is present.",
   "episode_body": "Full clinical narrative paragraph here..."
 }}
 """

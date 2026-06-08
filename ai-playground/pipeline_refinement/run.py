@@ -35,6 +35,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -58,12 +59,40 @@ logging.basicConfig(level=logging.WARNING)
 _SEP = "=" * 66
 
 
+def _load_patient_info() -> dict:
+    """
+    Load optional patient identity from environment variables.
+
+    These are used to build a fixed header prepended to every Graphiti episode,
+    anchoring all documents to one consistent Patient node regardless of how each
+    document refers to the patient (abbreviations, titles, name order variations).
+
+    Set before running:
+      PATIENT_NAME=<full name>       e.g.  PATIENT_NAME="Hans Schmidt"
+      PATIENT_DOB=<YYYY-MM-DD>       e.g.  PATIENT_DOB="1979-03-12"
+
+    Both are optional. If PATIENT_NAME is not set, only the user_id is used as
+    the patient anchor (still better than nothing for cross-doc entity merging).
+    """
+    name = os.getenv("PATIENT_NAME", "").strip()
+    dob  = os.getenv("PATIENT_DOB", "").strip()
+    return {"name": name, "dob": dob}
+
+
 async def run(pdf_path: Path, user_id: str) -> None:
+    patient_info = _load_patient_info()
+
     print(f"\n{_SEP}")
     print("  Pipeline Refinement — Full Pipeline")
     print(_SEP)
     print(f"  Document : {pdf_path.name}")
     print(f"  User ID  : {user_id}")
+    if patient_info.get("name"):
+        print(f"  Patient  : {patient_info['name']}")
+    if patient_info.get("dob"):
+        print(f"  DOB      : {patient_info['dob']}")
+    else:
+        print("  Patient  : (set PATIENT_NAME / PATIENT_DOB env vars for stronger entity anchoring)")
     print(f"{_SEP}\n")
 
     # ── Step 1: Load existing journey summary ─────────────────────────────────
@@ -104,12 +133,14 @@ async def run(pdf_path: Path, user_id: str) -> None:
     print()
 
     # ── Step 4: Ingest episode ────────────────────────────────────────────────
-    print(f"[ 4/6 ]  Ingesting episode into Neo4j (group_id={user_id})...")
+    doc_date_str = extraction.get("document_date") or "not found in document"
+    print(f"[ 4/6 ]  Ingesting episode into Neo4j (group_id={user_id}, doc_date={doc_date_str})...")
     episode_name = await ingest_document_episode(
         graphiti,
         user_id=user_id,
         doc_name=pdf_path.name,
         extraction=extraction,
+        patient_info=patient_info,
     )
     await graphiti.close()
     print(f"         Episode ingested → '{episode_name}'")
