@@ -40,7 +40,8 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 firebase-export-*/
-
+ai-playground/knowledge-graph-integration/graph_outputs/
+ai-playground/knowledge-graph-integration/Patient-1-Data/
 # vscode
 .vscode/
 web-build/
