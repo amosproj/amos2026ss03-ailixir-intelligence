@@ -31,10 +31,9 @@ resource "google_project_service" "vertex_ai" {
   disable_on_destroy = false
 }
 
-resource "google_project_service" "document_ai" {
-  service            = "documentai.googleapis.com"
-  disable_on_destroy = false
-}
+# google_project_service.document_ai removed — the pipeline no longer uses
+# Google Cloud Document AI for OCR. Gemini multimodal (Vertex AI) now handles
+# document analysis directly, reading PDF bytes and producing the episode_body.
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -90,13 +89,9 @@ resource "google_project_iam_member" "worker_vertex_ai_user" {
   depends_on = [google_project_service.vertex_ai]
 }
 
-# Document AI — required for PDF OCR via google-cloud-documentai.
-resource "google_project_iam_member" "worker_document_ai_user" {
-  project    = var.project_id
-  role       = "roles/documentai.apiUser"
-  member     = "serviceAccount:${google_service_account.worker.email}"
-  depends_on = [google_project_service.document_ai]
-}
+# google_project_iam_member.worker_document_ai_user removed — Document AI is no
+# longer used. Gemini multimodal via Vertex AI (covered by worker_vertex_ai_user
+# above) handles all document analysis.
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -208,20 +203,14 @@ resource "google_cloud_run_v2_service" "worker" {
       }
 
       # ── Graphiti pipeline ───────────────────────────────────────────────────
-      # When ON, the worker forwards the full OCR raw text (and tables) into
-      # Graphiti's episode body. Gemini then extracts real clinical entities
-      # ("Schmidt, Johannes", "Bandscheibenprolaps L4/L5", etc.) instead of
-      # just the filename. Off would degrade gracefully to a filename-only
-      # graph — useful as an emergency kill-switch if Vertex rate limits
-      # ever break extraction again. See workers/pipeline/document_pipeline.py.
-      env {
-        name  = "GRAPHITI_INCLUDE_RAW_OCR"
-        value = "true"
-      }
+      # GRAPHITI_INCLUDE_RAW_OCR removed — the new LLM pipeline builds the
+      # episode body via Gemini multimodal analysis rather than raw OCR text.
+      # The fixed medical schema in workers/pipeline/graph/medical_schema.py
+      # drives entity merging and temporal updates.
+
       # Paces Vertex Gemini calls at one per N seconds to stay under the
       # project's Generate-Content RPM quota. 0.5s = 120 RPM ceiling, safe
-      # under the gemini-2.5-flash default quota even with the rich-payload
-      # burst. See workers/connections/paced_gemini.py.
+      # under the gemini-2.5-flash default quota. See paced_gemini.py.
       env {
         name  = "GEMINI_PACER_MIN_INTERVAL_S"
         value = "0.5"
@@ -245,15 +234,8 @@ resource "google_cloud_run_v2_service" "worker" {
         value = var.neo4j_database
       }
 
-      # ── Google Cloud Document AI OCR (PDFs) ──────────────────────────────────
-      env {
-        name  = "DOCUMENT_AI_PROCESSOR_ID"
-        value = var.document_ai_processor_id
-      }
-      env {
-        name  = "DOCUMENT_AI_LOCATION"
-        value = var.document_ai_location
-      }
+      # DOCUMENT_AI_PROCESSOR_ID / DOCUMENT_AI_LOCATION removed.
+      # Document AI is replaced by Gemini multimodal (Vertex AI).
     }
   }
 
@@ -262,7 +244,6 @@ resource "google_cloud_run_v2_service" "worker" {
     google_storage_bucket_iam_member.worker_documents_viewer,
     google_storage_bucket_iam_member.worker_cypher_admin,
     google_project_iam_member.worker_vertex_ai_user,
-    google_project_iam_member.worker_document_ai_user,
   ]
 }
 
