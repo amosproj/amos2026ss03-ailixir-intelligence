@@ -1,34 +1,27 @@
-import { Link } from 'expo-router';
-
-import { CButton, CText } from '@/components/atoms';
 import { getAuth } from 'firebase/auth';
-import { YStack } from 'tamagui';
-import { File, Bubbles, Settings } from '@tamagui/lucide-icons-2';
+
+import { CText } from '@/components/atoms';
+import { QuickActionsGrid, RecentChatsSection } from '@/components/organisms';
+import { quickActions, recentChats } from '@/data/home';
+import { ScrollView, YStack } from 'tamagui';
 
 export default function HomeScreen() {
   const auth = getAuth();
-  const user = auth.currentUser;
+  const displayName = auth.currentUser?.displayName?.trim();
+
   return (
-    <YStack width="100%" height="100%" background="$background" justify="center" items="center" gap={10}>
-      <CText variant="h1">Hello {user?.email}</CText>
-      <CText variant="h2">Welcome to Ailixir!</CText>
+    <ScrollView flex={1} bg="$background">
+      <YStack gap={14} px={16} py={16}>
+        <YStack px={6} pb={4}>
+          <CText variant="h2">Welcome back {displayName || ''}</CText>
+          <CText variant="lead" mt={4}>
+            What do you want to explore today?
+          </CText>
+        </YStack>
 
-      <Link href="/documents" asChild>
-        <CButton iconButton icon={File} bg="$background06">
-          Documents
-        </CButton>
-      </Link>
-      <Link href="/chats" asChild>
-        <CButton iconButton icon={Bubbles} bg="$background06">
-          Chats
-        </CButton>
-      </Link>
-
-      <Link href="/settings" asChild>
-        <CButton iconButton icon={Settings} bg="$background06">
-          Settings
-        </CButton>
-      </Link>
-    </YStack>
+        <QuickActionsGrid actions={quickActions} />
+        <RecentChatsSection chats={recentChats} />
+      </YStack>
+    </ScrollView>
   );
 }

@@ -3,8 +3,6 @@ import { styled, Input } from 'tamagui';
 export const CInput = styled(Input, {
   borderWidth: 0,
   borderColor: 'transparent',
-  color: '$darkgray',
-  placeholderTextColor: '$gray',
   variants: {
     theme: {
       bright: {

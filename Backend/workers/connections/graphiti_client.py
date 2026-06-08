@@ -29,11 +29,18 @@ import os
 
 from google import genai
 from graphiti_core import Graphiti
-from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
 from graphiti_core.llm_client.config import LLMConfig
-from graphiti_core.llm_client.gemini_client import GeminiClient
+
+# Paced wrappers: serialise Vertex Gemini calls behind a shared rate cap
+# so Graphiti's burst-y add_episode doesn't trip the per-project RPM
+# quota and surface as RateLimitError → document FAILED. See module
+# docstring for the full rationale.
+from workers.connections.paced_gemini import (
+    PacedGeminiClient,
+    PacedGeminiRerankerClient,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -74,7 +81,7 @@ async def get_graphiti() -> Graphiti:
                     os.environ["NEO4J_PASSWORD"],
                     database=neo4j_database,
                 ),
-                llm_client=GeminiClient(
+                llm_client=PacedGeminiClient(
                     config=LLMConfig(
                         api_key="vertex-ai-adc",  # placeholder; auth via ADC, not API key
                         model=llm_model,
@@ -86,7 +93,7 @@ async def get_graphiti() -> Graphiti:
                     config=GeminiEmbedderConfig(embedding_model=embedding_model, embedding_dim=768),
                     client=vertex_client,
                 ),
-                cross_encoder=GeminiRerankerClient(
+                cross_encoder=PacedGeminiRerankerClient(
                     config=LLMConfig(
                         api_key="vertex-ai-adc",
                         model=llm_model,

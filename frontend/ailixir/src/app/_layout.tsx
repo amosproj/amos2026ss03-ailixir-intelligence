@@ -12,6 +12,7 @@ import { authLoadingAtom, isLoggedInAtom, userAtom } from '@/lib/authAtoms';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { View } from 'react-native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native'; // 1. Navigation-Theme-Imports hinzufügen
 
 import { config } from '@/tamagui.config';
 
@@ -23,6 +24,14 @@ function RootStackContent() {
   const authLoading = useAtomValue(authLoadingAtom);
   const bgColor = theme.background.val as string;
 
+  const NavTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: bgColor,
+    },
+  };
+
   if (authLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -32,24 +41,25 @@ function RootStackContent() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Stack
-        screenOptions={{
-          headerShown: true,
-          headerStyle: { backgroundColor: bgColor },
-          headerShadowVisible: false,
-          headerTitle: () => <CText variant="h1">AiLixir</CText>,
-          headerRight: () => <Circle size={40} background="blue" mr={16} />,
-        }}>
-        <Stack.Protected guard={isLoggedIn}>
-          <Stack.Screen name="(private)" options={{ title: 'App', headerShown: false }} />
-        </Stack.Protected>
+    <ThemeProvider value={NavTheme}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+        <Stack
+          screenOptions={{
+            headerShown: true,
+            headerShadowVisible: false,
+            headerTitle: () => <CText variant="h1">AiLixir</CText>,
+            headerRight: () => <Circle size={40} background="blue" mr={16} />,
+          }}>
+          <Stack.Protected guard={isLoggedIn}>
+            <Stack.Screen name="(private)" options={{ title: 'App', headerShown: false }} />
+          </Stack.Protected>
 
-        <Stack.Protected guard={!isLoggedIn}>
-          <Stack.Screen name="(auth)" options={{ title: 'Auth' }} />
-        </Stack.Protected>
-      </Stack>
-    </SafeAreaView>
+          <Stack.Protected guard={!isLoggedIn}>
+            <Stack.Screen name="(auth)" options={{ title: 'Auth', headerShown: false }} />
+          </Stack.Protected>
+        </Stack>
+      </SafeAreaView>
+    </ThemeProvider>
   );
 }
 

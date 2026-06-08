@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-import { ChevronLeft } from '@tamagui/lucide-icons-2';
+import { ChevronLeft, Settings } from '@tamagui/lucide-icons-2';
 import { CText } from '@/components/atoms';
 
 export default function PrivateLayout() {
@@ -14,17 +14,28 @@ export default function PrivateLayout() {
         headerShadowVisible: false,
         headerLeft: () =>
           navigation.canGoBack() ? (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginLeft: 0 }}>
-              <ChevronLeft size={20} color="#111111" />
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <ChevronLeft size={20} />
             </TouchableOpacity>
           ) : null,
         headerTitle: (props: any) => <CText variant="h1">{props?.children ?? props?.title ?? ''}</CText>,
       })}>
+      <Stack.Screen
+        name="index"
+        options={{
+          title: 'AiLixir',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => router.navigate('/settings')}>
+              <Settings size={20} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       <Stack.Screen name="chats/index" options={{ title: 'Chats' }} />
       <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />
       <Stack.Screen name="documents/index" options={{ title: 'Documents' }} />
-      <Stack.Screen name="documents/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="documents/[id]" options={{ title: 'Document' }} />
       <Stack.Screen name="documents/capture" options={{ title: 'Capture' }} />
       <Stack.Screen name="documents/upload" options={{ title: 'Upload' }} />
     </Stack>

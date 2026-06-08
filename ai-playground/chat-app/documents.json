@@ -1,0 +1,22 @@
+[
+  {
+    "id": "doc-001",
+    "title": "Drug Interaction Report – Patient A",
+    "content": "Patient A is prescribed Warfarin (5 mg/day) and Aspirin (100 mg/day). Concomitant use significantly increases bleeding risk. The clinical team recommends monitoring INR weekly and adjusting the Warfarin dose accordingly."
+  },
+  {
+    "id": "doc-002",
+    "title": "Side Effects Summary – Metformin",
+    "content": "Metformin is a first-line oral antidiabetic drug. Common side effects include gastrointestinal symptoms such as nausea, diarrhoea, and abdominal discomfort. Lactic acidosis is a rare but serious adverse effect. Vitamin B12 deficiency may develop with long-term use."
+  },
+  {
+    "id": "doc-003",
+    "title": "Clinical Trial Summary – NovaDrug X",
+    "content": "Phase II trial of NovaDrug X enrolled 240 participants with Type 2 diabetes. The primary endpoint (HbA1c reduction at 24 weeks) was met by 68% of the treatment arm vs 22% placebo. Most common adverse event was headache (12%). No serious cardiac events recorded."
+  },
+  {
+    "id": "doc-004",
+    "title": "Contraindications – Warfarin",
+    "content": "Warfarin is contraindicated in pregnancy, active bleeding disorders, haemorrhagic stroke within the past 3 months, and known hypersensitivity to coumarin derivatives. Caution required in elderly patients and those with renal or hepatic impairment."
+  }
+]

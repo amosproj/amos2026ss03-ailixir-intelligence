@@ -6,6 +6,12 @@ on:
     paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
   pull_request:
     paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
+  # Manual trigger button in the Actions UI. Needed when only a GitHub Secret
+  # (e.g. NEO4J_PASSWORD, DOCUMENT_AI_PROCESSOR_ID) was rotated and we want to
+  # redeploy without otherwise touching any tracked file. Without this, a
+  # secret rotation requires either an unrelated code change or a manual
+  # `terraform apply` to take effect.
+  workflow_dispatch:
 
 # One run per ref at a time. If a new push arrives while a run is in progress
 # for the same branch, cancel the older run (prevents terraform state lock races).

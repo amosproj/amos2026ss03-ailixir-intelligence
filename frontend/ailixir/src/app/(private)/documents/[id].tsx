@@ -1,11 +1,15 @@
 import { CButton, CText } from '@/components/atoms';
-import { DocumentPageThumbnail } from '@/components/molecules';
+import { DeleteButton, DocumentDetailActions, DocumentPageThumbnail } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
+import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
+import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
+import { showOcrTextAtom } from '@/state/debug';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { Asset } from 'expo-asset';
-import { ChevronLeft, FileText } from '@tamagui/lucide-icons-2';
+import * as FileSystem from 'expo-file-system/legacy';
+import { ChevronLeft, File, Trash2 } from '@tamagui/lucide-icons-2';
+import { useAtomValue } from 'jotai';
 import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
@@ -33,10 +37,10 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
   return (
     <YStack gap={4} width="48%">
-      <CText variant="caption" color="$color9">
+      <CText variant="caption" color="$accent1">
         {label}
       </CText>
-      <CText variant="body" bold color="$color11">
+      <CText variant="body" bold color="$black5">
         {value}
       </CText>
     </YStack>
@@ -46,32 +50,79 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 export default function DocumentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { data: document, isLoading, isError } = useDocument(params.id);
+  const { data: document, isLoading, isError } = useDocument(params.id, true);
 
+  // Debug-only OCR text fetch. Gated behind (a) the user's Settings toggle
+  // and (b) status === 'extracted' so we don't hammer the API while the
+  // worker is still mid-pipeline. The hook short-circuits when either gate
+  // is false; no request is sent.
+  const showOcrText = useAtomValue(showOcrTextAtom);
+  const ocrTextEnabled = showOcrText && document?.status === 'extracted';
+  const { data: extraction, isLoading: extractionIsLoading, isError: extractionIsError } = useDocumentExtraction(params.id, ocrTextEnabled);
+
+  // Download the Cypher graph script the worker produced for this document.
+  //
+  // Flow:
+  //   1. Backend serves the document with a short-lived v4 signed GET URL
+  //      (`cypher_download_url`). Its expiry sits on the same response so
+  //      we could re-fetch the document if it lapsed mid-session.
+  //   2. We stream the URL to a per-document file in the app's cache
+  //      directory (`<cacheDir>/<doc_id>_graph.cypher`). The destination
+  //      lives inside our sandbox so iOS' share-sheet can hand it off to
+  //      other apps without permission prompts.
+  //   3. Share-sheet handover to whatever the user picks (Files, AirDrop,
+  //      Slack, Notes…).
+  //
+  // The status guards mean this only fires when the worker has actually
+  // written a graph — the button is hidden otherwise (see JSX below).
   const handleDownloadGraph = useCallback(async () => {
-    const isAvailable = await Sharing.isAvailableAsync();
+    if (!document?.cypher_download_url) {
+      Alert.alert('Graph not ready', 'This document does not yet have a generated knowledge graph. ' + 'Wait for status to reach Extracted, then try again.');
+      return;
+    }
 
+    const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
       Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
       return;
     }
 
-    const graphAsset = Asset.fromModule(require('../../../static/graph-1.png'));
-    await graphAsset.downloadAsync();
+    const fileName = `${document.document_id}_graph.cypher`;
+    const localPath = `${FileSystem.cacheDirectory}${fileName}`;
 
-    const uri = graphAsset.localUri ?? graphAsset.uri;
-    await Sharing.shareAsync(uri, {
-      mimeType: 'image/png',
-      UTI: 'public.png',
-      dialogTitle: 'Download graph',
-    });
-  }, []);
+    try {
+      // downloadAsync streams the signed URL directly into the cache dir
+      // — never holding the full body in JS memory. Same expo-file-system
+      // legacy entry point we use for uploads.
+      const result = await FileSystem.downloadAsync(document.cypher_download_url, localPath);
+      if (result.status < 200 || result.status >= 300) {
+        throw new Error(`HTTP ${result.status}`);
+      }
 
-  const handleStartExtraction = useCallback(() => {
-    if (!document || document.status !== 'pending_upload') {
-      return;
+      await Sharing.shareAsync(result.uri, {
+        // Cypher is a plain-text format. text/plain lets receiving apps
+        // (Files, Notes, Slack) preview the contents instead of treating
+        // it as an opaque binary blob.
+        mimeType: 'text/plain',
+        UTI: 'public.plain-text',
+        dialogTitle: 'Download knowledge graph (Cypher)',
+      });
+    } catch (err) {
+      console.error('Cypher download failed:', err);
+      Alert.alert('Download failed', 'Could not download the knowledge graph. The signed URL may have expired — pull to refresh and try again.');
     }
-  }, [document]);
+  }, [document?.cypher_download_url, document?.document_id]);
+
+  const { mutateAsync: finalizeDocument, isPending: isFinalizing } = useFinalizeDocument();
+
+  const handleStartExtraction = useCallback(async () => {
+    if (!document || document.status !== 'pending_upload') return;
+    try {
+      await finalizeDocument({ documentId: document.document_id });
+    } catch {
+      Alert.alert('Extraction failed to start', 'Could not start the extraction pipeline. Please try again.');
+    }
+  }, [document, finalizeDocument]);
 
   if (isLoading) {
     return (
@@ -102,22 +153,13 @@ export default function DocumentScreen() {
   const fileLabel = document.file_count > 1 ? `${document.file_count} files` : document.files[0]?.file_name;
 
   return (
-    <ScrollView flex={1} bg="$background" showsVerticalScrollIndicator={false}>
+    <ScrollView flex={1} showsVerticalScrollIndicator={false}>
       <YStack gap={20} px={16} pt={16} pb={32}>
-        <XStack items="center" gap={12}>
-          <CButton icon={ChevronLeft} onPress={() => router.back()} />
-          <CText variant="h1" color="$color11" flex={1}>
-            {document.title}
-          </CText>
-        </XStack>
-
-        <YStack gap={16} bg="$color0" p={16} borderWidth={1} borderColor="$color3" style={{ borderRadius: 20 }}>
+        <YStack gap={16} bg="$accent12" p={16}>
           <XStack items="center" gap={12}>
-            <XStack width={48} height={48} bg="$color2" items="center" justify="center" style={{ borderRadius: 14 }}>
-              <FileText size={24} color="$color11" />
-            </XStack>
+            <File size={24} color="$color11" />
             <YStack gap={4} flex={1}>
-              <CText variant="caption" color="$color9">
+              <CText variant="caption" color="$accent1">
                 Status
               </CText>
               <XStack px={10} py={4} bg={statusStyles[document.status].backgroundColor} style={{ borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0, alignItems: 'center' }}>
@@ -126,6 +168,9 @@ export default function DocumentScreen() {
                 </CText>
               </XStack>
             </YStack>
+            <DeleteButton documentId={document.document_id} disabled={document.status === 'processing'} onSuccess={() => router.back()} circular>
+              <Trash2 size={20} color="$red10" />
+            </DeleteButton>
           </XStack>
 
           <XStack flexWrap="wrap" justify="space-between" gap={16}>
@@ -135,9 +180,19 @@ export default function DocumentScreen() {
           </XStack>
         </YStack>
 
-        {document.status === 'uploaded' && <CButton onPress={handleStartExtraction}>Start knowledge extraction</CButton>}
-
-        <CButton onPress={handleDownloadGraph}>Download graph</CButton>
+        <DocumentDetailActions
+          status={document.status}
+          onStartExtraction={handleStartExtraction}
+          onDownloadGraph={handleDownloadGraph}
+          error={document.error}
+          processingStep={document.processing_step}
+          cypherDownloadUrl={document.cypher_download_url}
+          ocrTextEnabled={ocrTextEnabled}
+          extraction={extraction}
+          extractionIsLoading={extractionIsLoading}
+          extractionIsError={extractionIsError}
+          isStartingExtraction={isFinalizing}
+        />
 
         <YStack gap={12}>
           <CText variant="h2" color="$color11">

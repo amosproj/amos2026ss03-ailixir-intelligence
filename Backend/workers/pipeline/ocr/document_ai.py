@@ -60,6 +60,17 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
     client = documentai.DocumentProcessorServiceClient(client_options=opts)
     name = client.processor_path(project_id, location, processor_id)
 
+    # imageless_mode=True raises Document AI's sync per-call page limit from
+    # 15 to 30 pages (and bypasses the rendered-image generation that drives
+    # that limit). We only consume `raw_text_blocks` downstream — never the
+    # rendered page images — so dropping them is free. Without this flag,
+    # any PDF with >15 pages (typical for multi-page pathology reports)
+    # fails with InvalidArgument PAGE_LIMIT_EXCEEDED on the very first call.
+    #
+    # Beyond 30 pages we'd need Document AI's batch_process_documents API,
+    # which is async and a much bigger change. Tracked as a follow-up:
+    # if we see PAGE_LIMIT_EXCEEDED logs after this fix, the batch path
+    # is next.
     result = client.process_document(
         request=documentai.ProcessRequest(
             name=name,
@@ -67,6 +78,7 @@ def extract_document(file_bytes: bytes, mime_type: str) -> dict:
                 content=file_bytes,
                 mime_type=effective_mime,
             ),
+            imageless_mode=True,
         )
     )
     doc = result.document

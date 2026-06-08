@@ -29,6 +29,7 @@ Pub/Sub retries on any non-2xx response from the worker endpoint.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
 
 from shared.models.document import DocumentStatus
@@ -47,6 +48,21 @@ from workers.pipeline.graph.exporter import generate_and_upload as cypher_export
 from workers.pipeline.ocr.extractor import extract as ocr_extract
 
 _log = logging.getLogger(__name__)
+
+# Feature flag: whether to forward the full OCR raw text + tables into the
+# Graphiti episode body. With this OFF (default) the episode body is
+# filename-only and Graphiti makes ~2 Gemini calls per document — small,
+# fast, and well under any Vertex AI RPM quota. With it ON the episode
+# body carries the full clinical OCR content, which produces a richer
+# graph but triggers 30-50 Gemini calls per document and can exceed the
+# project's per-minute generate-content quota (the failure mode that
+# burned an afternoon of demo time).
+#
+# Toggle at runtime via the Cloud Run env var — no commit, no redeploy.
+# Always log the chosen path so it's traceable in Cloud Logging.
+_GRAPHITI_INCLUDE_RAW_OCR = (
+    os.environ.get("GRAPHITI_INCLUDE_RAW_OCR", "false").strip().lower() == "true"
+)
 
 
 async def run(*, document_id: str, uid: str) -> None:
@@ -85,8 +101,28 @@ async def run(*, document_id: str, uid: str) -> None:
         )
 
         # ── 2. Process each file ──────────────────────────────────────────────
-        # Collect OCR results across all files then build one unified graph
+        # Collect OCR results across all files then build one unified graph.
+        #
+        # Two distinct payloads accumulate here:
+        #
+        #   combined_fields    — the structured key/value pairs `extracted_fields`
+        #                        emits. Populated only by Form Parser / specialised
+        #                        Document AI processors; empty for the basic
+        #                        Document OCR processor we use today.
+        #
+        #   combined_raw_blocks— the per-page raw text Document OCR returns. THIS
+        #                        is where the actual document content lives for
+        #                        the OCR processor type. Dropping it (as we did
+        #                        before this fix) meant Gemini received only the
+        #                        filename in the episode body — every graph
+        #                        collapsed to a single Entity with summary
+        #                        'This document is from file <name>.pdf'.
+        #
+        # Both flow into the Graphiti episode body via build_episode_body() so
+        # Gemini has actual content to extract entities from.
         combined_fields: dict = {}
+        combined_raw_blocks: list[str] = []
+        combined_tables: list = []
         doc_type = "unknown"
         confidence: float | None = None
         last_file_name = uploaded_files[0].file_name
@@ -115,17 +151,47 @@ async def run(*, document_id: str, uid: str) -> None:
             confidence = ocr_data.get("confidence_score", confidence)
             last_file_name = file.file_name
 
-            # Merge extracted fields from multiple files under their file name key
-            file_fields = ocr_data.get("extracted_fields", {})
+            # Structured fields (Form Parser shape)
+            file_fields = ocr_data.get("extracted_fields", {}) or {}
             if len(uploaded_files) == 1:
                 combined_fields = file_fields
             else:
                 combined_fields[file.file_name] = file_fields
 
-        _log.info("pipeline_ocr_done document_id=%s doc_type=%s", document_id, doc_type)
+            # Raw OCR text — where the actual content is for the Document OCR processor.
+            # Full content is forwarded to Graphiti; Vertex Gemini bursts are
+            # rate-paced inside PacedGeminiClient (see workers/connections/
+            # paced_gemini.py) so the project RPM quota is not exceeded.
+            for block in ocr_data.get("raw_text_blocks", []) or []:
+                if block and isinstance(block, str) and block.strip():
+                    combined_raw_blocks.append(block.strip())
+
+            # Tables — secondary content source
+            for table in ocr_data.get("tables", []) or []:
+                if table:
+                    combined_tables.append(table)
+
+        _log.info(
+            "pipeline_ocr_done document_id=%s doc_type=%s "
+            "raw_blocks=%d raw_chars=%d tables=%d structured_keys=%d",
+            document_id, doc_type,
+            len(combined_raw_blocks),
+            sum(len(b) for b in combined_raw_blocks),
+            len(combined_tables), len(combined_fields),
+        )
 
         # ── 3. Save extraction to Firestore ───────────────────────────────────
+        # raw_text is always saved (independent of GRAPHITI_INCLUDE_RAW_OCR)
+        # — the flag only controls whether the text feeds Graphiti's episode
+        # body. The Extraction record is the canonical place the frontend
+        # reads OCR content from.
+        #
+        # The repository (shared.repositories.extractions) caps raw_text to
+        # stay safely under Firestore's 1 MB document limit and records the
+        # truncation flag for the UI; we pass the uncapped joined text and
+        # let the repo do the bookkeeping.
         update_processing_step(document_id, "saving_extraction")
+        raw_text_joined = "\n\n".join(combined_raw_blocks) if combined_raw_blocks else None
         save_extraction(
             Extraction(
                 doc_id=document_id,
@@ -133,6 +199,7 @@ async def run(*, document_id: str, uid: str) -> None:
                 document_type=doc_type,
                 confidence_score=confidence,
                 extracted_fields=combined_fields,
+                raw_text=raw_text_joined,
                 extracted_at=datetime.now(timezone.utc),
             )
         )
@@ -141,12 +208,33 @@ async def run(*, document_id: str, uid: str) -> None:
         update_processing_step(document_id, "building_graph")
         graphiti = await get_graphiti()
 
-        # Build a merged ocr_data dict for the graph episode
-        merged_ocr = {
+        # The merged_ocr dict feeds build_episode_body(). The rich-payload
+        # keys (raw_text_blocks, tables) are gated behind the
+        # GRAPHITI_INCLUDE_RAW_OCR feature flag — see the module-level
+        # constant for the rate-limit rationale. Default is filename-only:
+        # safe under quota, sparse graph. With the flag on the episode
+        # body carries full OCR content: richer graph, risk of
+        # RateLimitError under the current Vertex AI quota.
+        merged_ocr: dict = {
             "document_type": doc_type,
             "confidence_score": confidence,
             "extracted_fields": combined_fields,
         }
+        if _GRAPHITI_INCLUDE_RAW_OCR:
+            merged_ocr["raw_text_blocks"] = combined_raw_blocks
+            merged_ocr["tables"] = combined_tables
+            _log.info(
+                "pipeline_rich_payload_enabled doc_id=%s raw_chars=%d tables=%d",
+                document_id,
+                sum(len(b) for b in combined_raw_blocks),
+                len(combined_tables),
+            )
+        else:
+            _log.info(
+                "pipeline_rich_payload_disabled doc_id=%s "
+                "(set GRAPHITI_INCLUDE_RAW_OCR=true to enable full-content graph)",
+                document_id,
+            )
         episode_name = await graph_ingest(
             graphiti,
             doc_id=document_id,

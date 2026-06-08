@@ -1,7 +1,6 @@
-import { AuxiliaryOverview } from '@/components/molecules';
-import { DocumentsAction } from '@/components/molecules/documents-action';
+import { AuxiliaryOverview, DocumentsAction } from '@/components/molecules';
 
-import { DocumentsList } from '@/components/organisms/documents-list';
+import { DocumentsList } from '@/components/organisms';
 import { useDocuments } from '@/hooks/useDocuments';
 import { formatDate, formatSize } from '@/utils/format';
 import { router } from 'expo-router';
@@ -9,8 +8,9 @@ import React from 'react';
 import { YStack } from 'tamagui';
 
 export default function DocumentsScreen() {
-  const { data } = useDocuments();
-  const overviewItems = ['6 Documents', '2 Uploads pending', 'Another information'];
+  const { data } = useDocuments({}, true);
+  const documentCount = data?.documents?.length ?? 0;
+  const overviewItems = [`${documentCount} Documents`];
 
   const documents = (data?.documents ?? []).map((doc) => ({
     id: doc.document_id,
