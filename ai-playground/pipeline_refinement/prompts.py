@@ -59,11 +59,12 @@ STYLE
 
 OUTPUT FORMAT
 =============
-Return ONLY valid JSON with exactly these three keys — no markdown, no extra text.
+Return ONLY valid JSON with exactly these four keys — no markdown, no extra text.
 
 {{
-  "document_type": "Exact German document type: Laborbericht | Arztbrief | Verlaufsbericht | Befundbericht | Tumorkonferenzprotokoll | Überweisungsbrief | Pathologiebericht | etc.",
+  "document_type": "Exact German document type: Laborbericht | Arztbrief | Verlaufsbericht | Befundbericht | Tumorkonferenzprotokoll | Überweisungsbrief | Pathologiebericht | Radiologiebericht | etc.",
   "document_purpose": "One sentence: what this document is and its role in this patient's journey.",
+  "document_date": "The date of this document in YYYY-MM-DD format. Use the report date, visit date, or issue date — whichever appears in the document. Return null if no date is present.",
   "episode_body": "Full clinical narrative paragraph here..."
 }}
 """
