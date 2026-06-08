@@ -128,13 +128,16 @@ async def run(*, document_id: str, uid: str) -> None:
                     "the upload likely sent a URL or metadata instead of the actual file."
                 )
 
-            # Gemini multimodal: reads the PDF and produces a rich clinical narrative.
-            # The current journey summary is passed as context so the LLM can refer
-            # back to previous findings (e.g. "PSA changed from 7.6 to 5.2").
+            # Gemini multimodal: reads the document and produces a rich clinical
+            # narrative. The current journey summary is passed as context so the
+            # LLM can refer back to previous findings (e.g. "PSA changed from X to Y").
+            # mime_type from file.content_type (validated by the API at upload time)
+            # is forwarded so Gemini receives the correct format hint.
             update_processing_step(document_id, "analyzing")
             extraction = await analyze_document(
-                pdf_bytes=file_bytes,
+                file_bytes=file_bytes,
                 filename=file.file_name,
+                mime_type=file.content_type,
                 previous_summary=current_summary,
             )
 

@@ -57,12 +57,17 @@ def _extract_json_object(text: str) -> dict:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 async def analyze_document(
-    pdf_bytes: bytes,
+    file_bytes: bytes,
     filename: str,
+    mime_type: str = "application/pdf",
     previous_summary: str = "",
 ) -> dict:
     """
-    Send a PDF to Gemini multimodal and extract clinical information.
+    Send a document to Gemini multimodal and extract clinical information.
+
+    Supports any MIME type that Gemini accepts (application/pdf, image/jpeg,
+    image/png, image/webp, image/gif). The mime_type should match the actual
+    file content — it is forwarded directly to the Gemini API.
 
     Passes the patient journey summary as context so each new document
     is interpreted relative to the patient's known history.
@@ -85,7 +90,7 @@ async def analyze_document(
     response = await client.aio.models.generate_content(
         model=model,
         contents=[
-            types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
+            types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
             types.Part.from_text(text=prompt_text),
         ],
     )
@@ -96,8 +101,9 @@ async def analyze_document(
 
     result = _extract_json_object(raw)
     _log.info(
-        "llm_extract_done filename=%s doc_type=%s doc_date=%s episode_len=%d",
+        "llm_extract_done filename=%s mime=%s doc_type=%s doc_date=%s episode_len=%d",
         filename,
+        mime_type,
         result.get("document_type", "unknown"),
         result.get("document_date"),
         len(result.get("episode_body", "")),

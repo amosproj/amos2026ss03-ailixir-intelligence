@@ -187,12 +187,10 @@ resource "google_cloud_run_v2_service" "worker" {
         name  = "VERTEX_LOCATION"
         value = "us-central1"
       }
-      # gemini-2.5-flash chosen over the cheaper -flash-lite because flash
-      # carries a much higher per-project Generate-Content RPM quota. With
-      # GRAPHITI_INCLUDE_RAW_OCR=true below, Graphiti can burst 30-50 Gemini
-      # calls per document during entity resolution — flash-lite's quota
-      # was being exhausted by that pattern and surfacing as RateLimitError
-      # → document FAILED. Changes here need a worker redeploy to apply.
+      # gemini-2.5-flash: higher RPM quota than flash-lite, needed because
+      # the pipeline makes Gemini calls at two levels — the LLM extraction step
+      # (analyze_document) and Graphiti's internal entity resolution. Changes
+      # here need a worker redeploy to apply.
       env {
         name  = "VERTEX_LLM_MODEL"
         value = "gemini-2.5-flash"
