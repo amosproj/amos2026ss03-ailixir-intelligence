@@ -10,6 +10,11 @@ This is what enables Graphiti to:
   - Update entity properties when new documents provide newer values
   - Expire old fact-edges and create new ones when data changes (temporal effect)
 
+Patient identity header (name, DOB) is prepended to every episode body so that
+Graphiti always sees a consistent anchor and extracts ONE Patient entity across
+all documents, even when individual documents refer to the patient differently
+(e.g. "H. Schmidt" vs "Hans Schmidt" vs "Herr Schmidt").
+
 reference_time is set to the document's own date (extracted by Gemini from the PDF),
 so the temporal graph reflects the REAL medical timeline rather than ingestion time.
 If PSA was measured in January and another in March, Graphiti will correctly order
@@ -31,6 +36,29 @@ from pipeline_refinement.medical_schema import (
 )
 
 _log = logging.getLogger(__name__)
+
+
+def _build_patient_header(user_id: str, patient_info: dict) -> str:
+    """
+    Build a fixed identity sentence prepended to every episode body.
+
+    Graphiti's internal LLM reads this text before any document content, so it
+    always extracts ONE Patient entity with a consistent anchor ID. Without this,
+    two documents that refer to the same person differently (abbreviations, titles,
+    German vs English name order) would produce separate Patient nodes that never
+    merge — breaking the patient-centred graph.
+
+    patient_info keys (all optional):
+      name — canonical full name  (e.g. "Hans Schmidt")
+      dob  — date of birth string (e.g. "1979-03-12")
+    """
+    parts: list[str] = []
+    if patient_info.get("name"):
+        parts.append(f"Patient: {patient_info['name']}")
+    parts.append(f"Patient ID: {user_id}")
+    if patient_info.get("dob"):
+        parts.append(f"DOB: {patient_info['dob']}")
+    return ", ".join(parts) + ".\n"
 
 
 def _parse_doc_date(extraction: dict) -> datetime:
@@ -70,9 +98,16 @@ async def ingest_document_episode(
     user_id: str,
     doc_name: str,
     extraction: dict,
+    patient_info: dict | None = None,
 ) -> str:
     """
     Add one document to the Graphiti knowledge graph as a single episode.
+
+    patient_info (optional dict):
+      name — canonical patient name  (set via PATIENT_NAME env var)
+      dob  — patient date of birth   (set via PATIENT_DOB  env var)
+    If provided, a fixed identity header is prepended to the episode body so
+    Graphiti always anchors to ONE Patient node across all documents.
 
     reference_time is set to the actual document date (extracted by Gemini),
     not the ingestion timestamp. This ensures temporal ordering in the graph
@@ -89,6 +124,10 @@ async def ingest_document_episode(
 
     if not episode_body:
         raise ValueError(f"extraction has no episode_body for doc '{doc_name}'")
+
+    # Prepend patient header so Graphiti always extracts one consistent Patient entity
+    header = _build_patient_header(user_id, patient_info or {})
+    episode_body = header + episode_body
 
     _log.info(
         "graphiti_ingest_start episode=%s user=%s doc_date=%s",
