@@ -46,7 +46,6 @@ function RootStackContent() {
         <Stack
           screenOptions={{
             headerShown: true,
-            headerStyle: { backgroundColor: bgColor },
             headerShadowVisible: false,
             headerTitle: () => <CText variant="h1">AiLixir</CText>,
             headerRight: () => <Circle size={40} background="blue" mr={16} />,
@@ -56,7 +55,7 @@ function RootStackContent() {
           </Stack.Protected>
 
           <Stack.Protected guard={!isLoggedIn}>
-            <Stack.Screen name="(auth)" options={{ title: 'Auth' }} />
+            <Stack.Screen name="(auth)" options={{ title: 'Auth', headerShown: false }} />
           </Stack.Protected>
         </Stack>
       </SafeAreaView>

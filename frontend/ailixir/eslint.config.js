@@ -11,7 +11,7 @@ module.exports = defineConfig([
   },
   {
     files: ['src/**/*.{ts,tsx,js,jsx}'],
-    ignores: ['src/components/atoms/**/*'],
+    ignores: ['src/components/atoms/**/*', 'src/components/molecules/**/*', 'src/components/organisms/**/*'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -20,6 +20,14 @@ module.exports = defineConfig([
             {
               group: ['@/components/atoms/*', '@src/components/atoms/*', '**/components/atoms/*'],
               message: 'Import atoms via the barrel: @/components/atoms',
+            },
+            {
+              group: ['@/components/molecules/*', '@src/components/molecules/*', '**/components/molecules/*'],
+              message: 'Import molecules via the barrel: @/components/molecules',
+            },
+            {
+              group: ['@/components/organisms/*', '@src/components/organisms/*', '**/components/organisms/*'],
+              message: 'Import organisms via the barrel: @/components/organisms',
             },
           ],
         },

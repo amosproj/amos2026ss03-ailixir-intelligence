@@ -1,9 +1,8 @@
 import { CText } from '@/components/atoms';
-import { ListItemContainer } from '@/components/molecules/list-item-container';
+import { DeleteButton, ListItemContent } from '@/components/molecules';
 import type { DocumentStatus } from '@/hooks/useDocuments';
-import { Link } from 'expo-router';
-import { ArrowRight, File } from '@tamagui/lucide-icons-2';
-import { XStack, YStack } from 'tamagui';
+import { ArrowRight, File, Trash2 } from '@tamagui/lucide-icons-2';
+import { XStack } from 'tamagui';
 
 export type DocumentListItemData = {
   id: string;
@@ -40,32 +39,33 @@ export function DocumentListItem({ document }: { document: DocumentListItemData 
   const statusStyle = statusStyles[document.status];
 
   return (
-    <ListItemContainer href={`/documents/${document.id}`}>
-      <XStack items="center" gap={14} flex={1}>
-        <File size={34} color="#111111" />
-        <YStack gap={2} flex={1}>
-          <CText variant="lead" color="#111111" numberOfLines={1}>
-            {document.title}
-          </CText>
-          <CText variant="body" color="#667085">
-            {document.timestamp} {document.size}
-          </CText>
-          <XStack items="center" gap={8} flexWrap="wrap">
-            <XStack px={10} py={4} bg={statusStyle.backgroundColor} style={{ borderRadius: 999 }}>
-              <CText variant="caption" color={statusStyle.color}>
-                {statusLabels[document.status]}
-              </CText>
-            </XStack>
-            {!!document.tags?.length && (
-              <CText variant="caption" tag>
-                {document.tags.map((tag) => `#${tag}`).join(' ')}
-              </CText>
-            )}
+    <ListItemContent
+      href={`/documents/${document.id}`}
+      icon={<File size={22} />}
+      title={document.title}
+      subtitle={`${document.timestamp} ${document.size}`}
+      meta={
+        <XStack items="center" gap={8} flexWrap="wrap">
+          <XStack px={10} py={4} bg={statusStyle.backgroundColor} style={{ borderRadius: 999 }}>
+            <CText variant="caption" color={statusStyle.color}>
+              {statusLabels[document.status]}
+            </CText>
           </XStack>
-        </YStack>
-      </XStack>
-
-      <ArrowRight size={22} color="#847EF3" />
-    </ListItemContainer>
+          {!!document.tags?.length && (
+            <CText variant="caption" tag>
+              {document.tags.map((tag) => `#${tag}`).join(' ')}
+            </CText>
+          )}
+        </XStack>
+      }
+      contentAccessory={
+        document.status !== 'processing' ? (
+          <DeleteButton documentId={document.id} circular>
+            <Trash2 size={20} color="red" />
+          </DeleteButton>
+        ) : null
+      }
+      endAdornment={<ArrowRight size={22} />}
+    />
   );
 }

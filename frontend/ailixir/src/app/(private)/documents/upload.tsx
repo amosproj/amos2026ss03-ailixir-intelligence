@@ -7,8 +7,9 @@ import { useCreateDocument } from '@/hooks/useCreateDocument';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { useUploadDocumentFile } from '@/hooks/useUploadDocumentFile';
 import { getFileBaseName } from '@/utils/format';
+import { resolveDocumentContentType } from '@/utils/documents';
 import { router } from 'expo-router';
-import { UploadActions, UploadFilesPanel, UploadHeader } from '@/components/molecules';
+import { ScreenHeader, UploadActions, UploadFilesPanel } from '@/components/molecules';
 
 export default function UploadScreen() {
   const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
@@ -27,7 +28,14 @@ export default function UploadScreen() {
 
     if (pickerResult.canceled) return;
 
-    setSelectedFiles(pickerResult.assets);
+    const acceptedFiles = pickerResult.assets.filter((file) => Boolean(resolveDocumentContentType(file.name ?? '', file.mimeType)));
+    const rejectedCount = pickerResult.assets.length - acceptedFiles.length;
+
+    setSelectedFiles(acceptedFiles);
+
+    if (rejectedCount > 0) {
+      alert(`Skipped ${rejectedCount} file(s). Allowed types: PDF, PNG, JPEG.`);
+    }
   };
 
   const handleRemoveFile = (uri: string) => {
@@ -41,9 +49,15 @@ export default function UploadScreen() {
       const fileRequests = selectedFiles.map((file, index) => ({
         asset: file,
         fileName: file.name ?? `upload_file_${index + 1}`,
-        contentType: file.mimeType || 'application/octet-stream',
+        contentType: resolveDocumentContentType(file.name ?? '', file.mimeType),
         sizeBytes: file.size ?? 0,
       }));
+
+      const invalidFiles = fileRequests.filter((file) => !file.contentType);
+      if (invalidFiles.length > 0) {
+        alert('Only PDF, PNG, or JPEG files can be uploaded.');
+        return;
+      }
 
       const title = getFileBaseName(fileRequests[0]?.fileName);
 
@@ -52,7 +66,7 @@ export default function UploadScreen() {
         title,
         files: fileRequests.map((file) => ({
           file_name: file.fileName,
-          content_type: file.contentType,
+          content_type: file.contentType ?? 'application/octet-stream',
           size_bytes: file.sizeBytes,
         })),
       });
@@ -84,7 +98,7 @@ export default function UploadScreen() {
 
   return (
     <YStack flex={1} px={20} py={24} gap={20}>
-      <UploadHeader title="Upload documents" subtitle="Select PDFs or images and upload them securely to your workspace." />
+      <ScreenHeader title="Upload documents" subtitle="Select PDFs or images and upload them securely to your workspace." />
       <UploadFilesPanel files={selectedFiles} isBusy={isBusy} onPickFiles={handlePickFiles} onRemoveFile={handleRemoveFile} />
       <UploadActions isBusy={isBusy} hasFiles={selectedFiles.length > 0} onStartUpload={handleStartUpload} />
     </YStack>

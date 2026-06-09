@@ -11,7 +11,12 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.14.14",
+    "@assistant-ui/react-langchain": "^0.0.12",
+    "@assistant-ui/react-native": "^0.1.21",
     "@expo-google-fonts/raleway": "^0.4.2",
+    "@langchain/core": "^1.1.48",
+    "@langchain/react": "^1.0.17",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
@@ -21,13 +26,16 @@
     "@tanstack/react-query": "^5.100.9",
     "axios": "^1.16.1",
     "expo": "~55.0.15",
+    "expo-clipboard": "~55.0.13",
     "expo-constants": "~55.0.14",
     "expo-device": "~55.0.15",
     "expo-document-picker": "~55.0.13",
+    "expo-file-system": "~55.0.21",
     "expo-font": "~55.0.6",
     "expo-glass-effect": "~55.0.10",
     "expo-image": "~55.0.8",
     "expo-image-picker": "~55.0.20",
+    "expo-linear-gradient": "~55.0.14",
     "expo-linking": "~55.0.13",
     "expo-router": "~55.0.12",
     "expo-sharing": "~55.0.19",
@@ -52,8 +60,8 @@
     "tamagui": "^2.0.0-rc.41"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
     "@react-native-community/cli": "latest",
+    "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.0",
     "eslint-config-prettier": "^10.1.8",
@@ -61,7 +69,6 @@
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.3",
     "typescript": "~5.9.2"
-
   },
   "private": true
 }

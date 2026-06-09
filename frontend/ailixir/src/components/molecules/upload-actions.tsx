@@ -15,7 +15,7 @@ export function UploadActions({ isBusy, hasFiles, onStartUpload }: UploadActions
       {isBusy && (
         <XStack items="center" gap={10} px={14} py={12}>
           <ActivityIndicator size="small" />
-          <CText variant="body" color="#111111">
+          <CText variant="body" color="$black06">
             Upload in progress...
           </CText>
         </XStack>
