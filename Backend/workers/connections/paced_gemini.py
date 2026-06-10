@@ -73,6 +73,22 @@ async def _admit() -> None:
         _last_call_at = asyncio.get_running_loop().time()
 
 
+async def pace_gemini_call() -> None:
+    """Public admission hook for callers outside Graphiti's client surface.
+
+    The new LLM document-analysis step (workers/pipeline/llm/extractor.py)
+    invokes Vertex Gemini directly via `client.aio.models.generate_content`
+    — not through Graphiti's GeminiClient — so it would otherwise bypass
+    this pacer. Calling `await pace_gemini_call()` before each direct
+    Vertex invocation keeps every Gemini call in the worker — Graphiti
+    internal AND top-level analyzer — going through the same shared
+    admission queue. One queue per worker process, one Vertex quota
+    bucket per project: keeping them aligned is what prevents the
+    `RateLimitError` we burned half a day on.
+    """
+    await _admit()
+
+
 class PacedGeminiClient(GeminiClient):
     """GeminiClient that admits at most one call per _MIN_INTERVAL_S.
 

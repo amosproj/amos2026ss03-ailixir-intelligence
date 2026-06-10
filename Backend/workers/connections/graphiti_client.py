@@ -48,7 +48,13 @@ _graphiti: Graphiti | None = None
 _indices_built: bool = False
 _init_lock = asyncio.Lock()
 
-_DEFAULT_LLM_MODEL = "gemini-2.5-flash-lite"
+# Default to gemini-2.5-flash (not -lite). Even with PacedGeminiClient the
+# entity-resolution burst across a fixed-schema episode body would saturate
+# -lite's lower RPM budget; -flash carries enough headroom. Terraform pins
+# the same value via VERTEX_LLM_MODEL — this default only kicks in for local
+# dev or if an env-var rotation drops the key. Either way, never silently
+# downgrade.
+_DEFAULT_LLM_MODEL = "gemini-2.5-flash"
 _DEFAULT_EMBEDDING_MODEL = "text-embedding-005"
 _DEFAULT_LOCATION = "us-central1"
 

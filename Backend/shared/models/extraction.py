@@ -12,7 +12,7 @@ layer — only debug surfaces should rely on it being populated.
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Extraction(BaseModel):
@@ -22,7 +22,10 @@ class Extraction(BaseModel):
     # Populated by old Document AI OCR pipeline; None in new LLM pipeline.
     confidence_score: float | None = None
     # Populated by old Document AI form parser; empty dict in new LLM pipeline.
-    extracted_fields: dict = {}
+    # `default_factory=dict` produces a fresh {} per instance — using `= {}`
+    # directly would be a shared-mutable-default footgun even under Pydantic
+    # (works today, but invites bugs the first time someone mutates it).
+    extracted_fields: dict = Field(default_factory=dict)
     # Populated by old Document AI OCR pipeline; None in new LLM pipeline.
     raw_text: str | None = None
     raw_text_chars: int | None = None
