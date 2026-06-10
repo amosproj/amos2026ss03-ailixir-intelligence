@@ -1,6 +1,7 @@
 // Barrel file for organisms components
 
 export * from './chat-messages';
+export * from './document-narrative-card';
 export * from './documents-list';
 export * from './login-form';
 export * from './ocr-text-card';

@@ -10,17 +10,26 @@ Full flow with status updates (frontend polls document status):
   PROCESSING
     ↓ step: downloading
   Download file bytes from GCS_DOCUMENTS_BUCKET
-    ↓ step: ocr
-  OCR extraction (OpenRouter vision LLM) per file
+    ↓ step: analyzing
+  Gemini multimodal analysis — produces episode_body, document_type, document_date
     ↓ step: saving_extraction
-  Save clean extracted_fields to Firestore (extractions collection)
+  Save extraction to Firestore (extractions collection)
     ↓ step: building_graph
-  Graphiti → entity/relationship extraction → Neo4j knowledge graph
+  Graphiti → fixed medical schema → entity/relationship extraction → Neo4j
+    ↓ step: updating_summary
+  Update patient journey summary in Firestore (journey_summaries collection)
     ↓ step: exporting_cypher
   Generate Cypher script → upload to GCS_CYPHER_BUCKET
     ↓
   Attach cypher_gcs_uri to Firestore document record
   EXTRACTED
+
+Key improvements over the old OCR pipeline:
+  - Gemini multimodal reads PDFs directly — richer, context-aware narratives
+  - Fixed medical schema enables entity merging across all patient documents
+  - reference_time set to the document's own date (not ingestion time)
+  - Journey summary provides context to each new document's extraction
+  - Patient ID header anchors all episodes to one Patient node in Neo4j
 
 Any exception → FAILED (error message recorded in Firestore).
 Pub/Sub retries on any non-2xx response from the worker endpoint.
@@ -29,7 +38,6 @@ Pub/Sub retries on any non-2xx response from the worker endpoint.
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timezone
 
 from shared.models.document import DocumentStatus
@@ -41,28 +49,14 @@ from shared.repositories.documents import (
     update_status,
 )
 from shared.repositories.extractions import save_extraction
+from shared.repositories.journey_summaries import get_summary, upsert_summary
 from workers.connections.gcs import download_document
 from workers.connections.graphiti_client import get_graphiti
 from workers.pipeline.graph.builder import ingest as graph_ingest
 from workers.pipeline.graph.exporter import generate_and_upload as cypher_export
-from workers.pipeline.ocr.extractor import extract as ocr_extract
+from workers.pipeline.llm.extractor import analyze_document, update_journey_summary
 
 _log = logging.getLogger(__name__)
-
-# Feature flag: whether to forward the full OCR raw text + tables into the
-# Graphiti episode body. With this OFF (default) the episode body is
-# filename-only and Graphiti makes ~2 Gemini calls per document — small,
-# fast, and well under any Vertex AI RPM quota. With it ON the episode
-# body carries the full clinical OCR content, which produces a richer
-# graph but triggers 30-50 Gemini calls per document and can exceed the
-# project's per-minute generate-content quota (the failure mode that
-# burned an afternoon of demo time).
-#
-# Toggle at runtime via the Cloud Run env var — no commit, no redeploy.
-# Always log the chosen path so it's traceable in Cloud Logging.
-_GRAPHITI_INCLUDE_RAW_OCR = (
-    os.environ.get("GRAPHITI_INCLUDE_RAW_OCR", "false").strip().lower() == "true"
-)
 
 
 async def run(*, document_id: str, uid: str) -> None:
@@ -70,7 +64,8 @@ async def run(*, document_id: str, uid: str) -> None:
     Process one uploaded document end-to-end.
 
     Looks up the Document from Firestore, then for each uploaded file:
-    downloads from GCS → OCR → saves extraction → builds graph → exports Cypher.
+    downloads from GCS → Gemini analysis → saves extraction → builds graph
+    → updates journey summary → exports Cypher.
     """
     _log.info("pipeline_start document_id=%s uid=%s", document_id, uid)
 
@@ -90,7 +85,7 @@ async def run(*, document_id: str, uid: str) -> None:
     update_status(document_id, DocumentStatus.PROCESSING)
 
     try:
-        # ── 1. Validate uploaded files (document already fetched above) ────────
+        # ── 1. Validate uploaded files ─────────────────────────────────────────
         uploaded_files = [f for f in document.files if f.upload_completed_at is not None]
         if not uploaded_files:
             raise ValueError(f"Document {document_id} has no uploaded files to process")
@@ -100,43 +95,31 @@ async def run(*, document_id: str, uid: str) -> None:
             document_id, len(uploaded_files),
         )
 
-        # ── 2. Process each file ──────────────────────────────────────────────
-        # Collect OCR results across all files then build one unified graph.
-        #
-        # Two distinct payloads accumulate here:
-        #
-        #   combined_fields    — the structured key/value pairs `extracted_fields`
-        #                        emits. Populated only by Form Parser / specialised
-        #                        Document AI processors; empty for the basic
-        #                        Document OCR processor we use today.
-        #
-        #   combined_raw_blocks— the per-page raw text Document OCR returns. THIS
-        #                        is where the actual document content lives for
-        #                        the OCR processor type. Dropping it (as we did
-        #                        before this fix) meant Gemini received only the
-        #                        filename in the episode body — every graph
-        #                        collapsed to a single Entity with summary
-        #                        'This document is from file <name>.pdf'.
-        #
-        # Both flow into the Graphiti episode body via build_episode_body() so
-        # Gemini has actual content to extract entities from.
-        combined_fields: dict = {}
-        combined_raw_blocks: list[str] = []
-        combined_tables: list = []
-        doc_type = "unknown"
-        confidence: float | None = None
-        last_file_name = uploaded_files[0].file_name
+        # ── 2. Load patient journey context ────────────────────────────────────
+        # The summary of previously processed documents is passed as context to
+        # the LLM so it can interpret each new document relative to the patient's
+        # known history — producing richer episode bodies.
+        journey = get_summary(uid)
+        current_summary = journey.summary if journey else ""
+        _log.info(
+            "pipeline_journey_context uid=%s has_summary=%s doc_count=%d",
+            uid,
+            bool(current_summary),
+            journey.document_count if journey else 0,
+        )
+
+        # ── 3. Download + LLM analysis for each file ──────────────────────────
+        # Collect per-file extractions, then aggregate into one extraction
+        # record and one Graphiti episode for the whole document.
+        per_file_extractions: list[dict] = []
+        last_file_name: str = uploaded_files[0].file_name
 
         for file in uploaded_files:
-            # Download — use the content_type declared at upload time (validated by the
-            # API), not the GCS blob metadata (often application/octet-stream when the
-            # client omits the Content-Type header during the presigned PUT).
             update_processing_step(document_id, "downloading")
             file_bytes, _ = download_document(file.gcs_object_path)
-            mime_type = file.content_type
             _log.info(
-                "pipeline_downloaded document_id=%s file=%s mime=%s bytes=%d",
-                document_id, file.file_name, mime_type, len(file_bytes),
+                "pipeline_downloaded document_id=%s file=%s bytes=%d",
+                document_id, file.file_name, len(file_bytes),
             )
             if len(file_bytes) < 100:
                 raise ValueError(
@@ -144,116 +127,106 @@ async def run(*, document_id: str, uid: str) -> None:
                     "the upload likely sent a URL or metadata instead of the actual file."
                 )
 
-            # OCR — routed by mime_type: PDF → Document AI, image → OpenRouter
-            update_processing_step(document_id, "ocr")
-            ocr_data = ocr_extract(file_bytes, mime_type)
-            doc_type = ocr_data.get("document_type", doc_type)
-            confidence = ocr_data.get("confidence_score", confidence)
+            # Gemini multimodal: reads the document and produces a rich clinical
+            # narrative. The current journey summary is passed as context so the
+            # LLM can refer back to previous findings (e.g. "PSA changed from X to Y").
+            # mime_type from file.content_type (validated by the API at upload time)
+            # is forwarded so Gemini receives the correct format hint.
+            update_processing_step(document_id, "analyzing")
+            extraction = await analyze_document(
+                file_bytes=file_bytes,
+                filename=file.file_name,
+                mime_type=file.content_type,
+                previous_summary=current_summary,
+            )
+
+            per_file_extractions.append(extraction)
             last_file_name = file.file_name
 
-            # Structured fields (Form Parser shape)
-            file_fields = ocr_data.get("extracted_fields", {}) or {}
-            if len(uploaded_files) == 1:
-                combined_fields = file_fields
-            else:
-                combined_fields[file.file_name] = file_fields
+        # ── 4. Aggregate extraction across all files ───────────────────────────
+        # Single-file case: pass-through. Multi-file case: combine without
+        # silently dropping per-file metadata (the old code took only the
+        # *last* file's type/purpose/date, which broke when a user uploaded
+        # e.g. lab report + imaging report + referral as one document).
+        merged_extraction = _aggregate_extractions(per_file_extractions)
 
-            # Raw OCR text — where the actual content is for the Document OCR processor.
-            # Full content is forwarded to Graphiti; Vertex Gemini bursts are
-            # rate-paced inside PacedGeminiClient (see workers/connections/
-            # paced_gemini.py) so the project RPM quota is not exceeded.
-            for block in ocr_data.get("raw_text_blocks", []) or []:
-                if block and isinstance(block, str) and block.strip():
-                    combined_raw_blocks.append(block.strip())
-
-            # Tables — secondary content source
-            for table in ocr_data.get("tables", []) or []:
-                if table:
-                    combined_tables.append(table)
-
-        _log.info(
-            "pipeline_ocr_done document_id=%s doc_type=%s "
-            "raw_blocks=%d raw_chars=%d tables=%d structured_keys=%d",
-            document_id, doc_type,
-            len(combined_raw_blocks),
-            sum(len(b) for b in combined_raw_blocks),
-            len(combined_tables), len(combined_fields),
-        )
-
-        # ── 3. Save extraction to Firestore ───────────────────────────────────
-        # raw_text is always saved (independent of GRAPHITI_INCLUDE_RAW_OCR)
-        # — the flag only controls whether the text feeds Graphiti's episode
-        # body. The Extraction record is the canonical place the frontend
-        # reads OCR content from.
-        #
-        # The repository (shared.repositories.extractions) caps raw_text to
-        # stay safely under Firestore's 1 MB document limit and records the
-        # truncation flag for the UI; we pass the uncapped joined text and
-        # let the repo do the bookkeeping.
+        # ── 5. Save extraction to Firestore ────────────────────────────────────
         update_processing_step(document_id, "saving_extraction")
-        raw_text_joined = "\n\n".join(combined_raw_blocks) if combined_raw_blocks else None
         save_extraction(
             Extraction(
                 doc_id=document_id,
                 uid=uid,
-                document_type=doc_type,
-                confidence_score=confidence,
-                extracted_fields=combined_fields,
-                raw_text=raw_text_joined,
+                document_type=merged_extraction["document_type"],
+                document_purpose=merged_extraction["document_purpose"],
+                document_date=merged_extraction["document_date"],
+                episode_body=merged_extraction["episode_body"],
                 extracted_at=datetime.now(timezone.utc),
             )
         )
 
-        # ── 4. Build knowledge graph ──────────────────────────────────────────
+        # ── 6. Build knowledge graph ───────────────────────────────────────────
+        # Fixed medical schema enables cross-document entity merging and temporal
+        # fact updates. Patient ID header ensures one consistent Patient node.
         update_processing_step(document_id, "building_graph")
         graphiti = await get_graphiti()
-
-        # The merged_ocr dict feeds build_episode_body(). The rich-payload
-        # keys (raw_text_blocks, tables) are gated behind the
-        # GRAPHITI_INCLUDE_RAW_OCR feature flag — see the module-level
-        # constant for the rate-limit rationale. Default is filename-only:
-        # safe under quota, sparse graph. With the flag on the episode
-        # body carries full OCR content: richer graph, risk of
-        # RateLimitError under the current Vertex AI quota.
-        merged_ocr: dict = {
-            "document_type": doc_type,
-            "confidence_score": confidence,
-            "extracted_fields": combined_fields,
-        }
-        if _GRAPHITI_INCLUDE_RAW_OCR:
-            merged_ocr["raw_text_blocks"] = combined_raw_blocks
-            merged_ocr["tables"] = combined_tables
-            _log.info(
-                "pipeline_rich_payload_enabled doc_id=%s raw_chars=%d tables=%d",
-                document_id,
-                sum(len(b) for b in combined_raw_blocks),
-                len(combined_tables),
-            )
-        else:
-            _log.info(
-                "pipeline_rich_payload_disabled doc_id=%s "
-                "(set GRAPHITI_INCLUDE_RAW_OCR=true to enable full-content graph)",
-                document_id,
-            )
         episode_name = await graph_ingest(
             graphiti,
+            uid=uid,
             doc_id=document_id,
-            file_name=last_file_name,
-            doc_type=doc_type,
-            ocr_data=merged_ocr,
+            doc_name=last_file_name,
+            extraction=merged_extraction,
         )
 
-        # ── 5. Export Cypher → GCS ────────────────────────────────────────────
+        # ── 7. Update patient journey summary (best-effort) ────────────────────
+        # The extraction record is saved and the knowledge graph is built. The
+        # journey summary is *context for the NEXT document's analysis*, not
+        # output a user sees on this one. If the LLM call here fails (Vertex
+        # hiccup, MAX_TOKENS, safety filter), we DO NOT mark this document
+        # FAILED — that would invalidate work the user can already see in the
+        # graph and on the OCR/narrative card. We log loudly so the failure
+        # is visible to ops, but the document still reaches EXTRACTED.
+        #
+        # Downside accepted: the next document for this user will be analysed
+        # against the previous summary, missing this document's contribution.
+        # That's recoverable on the next successful summary update.
+        update_processing_step(document_id, "updating_summary")
+        try:
+            new_summary = await update_journey_summary(
+                current_summary=current_summary,
+                extraction=merged_extraction,
+                doc_name=last_file_name,
+            )
+            upsert_summary(
+                uid=uid,
+                summary_text=new_summary,
+                last_extraction_id=document_id,
+            )
+            _log.info(
+                "pipeline_summary_updated document_id=%s summary_len=%d",
+                document_id, len(new_summary),
+            )
+        except Exception as summary_exc:
+            # Log with full traceback so it shows up in Cloud Logging at WARNING
+            # severity. WARNING (not ERROR) because the document IS extracted;
+            # only the next-doc-context is degraded.
+            _log.warning(
+                "pipeline_summary_update_failed_nonfatal document_id=%s err=%s",
+                document_id, summary_exc, exc_info=True,
+            )
+
+        # ── 8. Export Cypher → GCS ─────────────────────────────────────────────
         update_processing_step(document_id, "exporting_cypher")
+        doc_type = merged_extraction["document_type"]
         cypher_gcs_uri = cypher_export(
             episode_name, document_id, last_file_name, doc_type
         )
 
-        # ── 6. Attach cypher link + mark complete ─────────────────────────────
+        # ── 9. Attach cypher link + mark complete ──────────────────────────────
         update_cypher_uri(document_id, cypher_gcs_uri)
         update_status(document_id, DocumentStatus.EXTRACTED)
         _log.info(
-            "pipeline_done document_id=%s cypher_gcs=%s", document_id, cypher_gcs_uri
+            "pipeline_done document_id=%s cypher_gcs=%s",
+            document_id, cypher_gcs_uri,
         )
 
     except Exception as exc:
@@ -262,3 +235,78 @@ async def run(*, document_id: str, uid: str) -> None:
         )
         update_status(document_id, DocumentStatus.FAILED, error=str(exc))
         raise
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _aggregate_extractions(per_file: list[dict]) -> dict:
+    """Combine per-file LLM extractions into one record for the whole document.
+
+    Single-file: pass-through with the canonical key shape.
+
+    Multi-file: applies deterministic rules so two unrelated files attached to
+    the same document (e.g. lab report + imaging report bundled by the user)
+    don't silently lose one file's metadata to the other.
+
+      document_type    — first non-empty / non-"Unknown" value across files
+      document_purpose — concatenation in upload order, deduplicated, "; " joined
+      document_date    — earliest non-null date across files (medical context:
+                         the document's earliest signal is the most clinically
+                         meaningful anchor for temporal ordering)
+      episode_body     — concatenation in upload order, separated by blank lines
+                         so Graphiti sees one continuous narrative
+    """
+    if not per_file:
+        return {
+            "document_type":    "Unknown",
+            "document_purpose": "",
+            "document_date":    None,
+            "episode_body":     "",
+        }
+
+    if len(per_file) == 1:
+        e = per_file[0]
+        return {
+            "document_type":    e.get("document_type") or "Unknown",
+            "document_purpose": e.get("document_purpose") or "",
+            "document_date":    e.get("document_date"),
+            "episode_body":     e.get("episode_body") or "",
+        }
+
+    # Multi-file aggregation.
+    def _first_meaningful(values, *, generic=("", "Unknown", "unknown", None)):
+        for v in values:
+            if v not in generic:
+                return v
+        return values[0] if values else None
+
+    doc_type = _first_meaningful([e.get("document_type") for e in per_file]) or "Unknown"
+
+    # Preserve purpose order, drop duplicates, drop empties.
+    purposes_seen: set[str] = set()
+    purposes_ordered: list[str] = []
+    for e in per_file:
+        p = (e.get("document_purpose") or "").strip()
+        if p and p not in purposes_seen:
+            purposes_seen.add(p)
+            purposes_ordered.append(p)
+    doc_purpose = "; ".join(purposes_ordered)
+
+    # Earliest non-null date wins. Compare as strings; ISO/YYYY-MM-DD sorts
+    # correctly lexicographically, and non-ISO dates compare safely vs each
+    # other (consistency, not correctness) — the per-file LLM is prompted to
+    # emit ISO, so non-ISO is an edge case we tolerate without ranking.
+    dates = [e.get("document_date") for e in per_file if e.get("document_date")]
+    doc_date = min(dates) if dates else None
+
+    episode_body = "\n\n".join(
+        (e.get("episode_body") or "").strip() for e in per_file
+        if (e.get("episode_body") or "").strip()
+    )
+
+    return {
+        "document_type":    doc_type,
+        "document_purpose": doc_purpose,
+        "document_date":    doc_date,
+        "episode_body":     episode_body,
+    }
