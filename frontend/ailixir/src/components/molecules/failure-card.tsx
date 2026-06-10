@@ -2,11 +2,19 @@ import { CText } from '@/components/atoms';
 import React from 'react';
 import { ScrollView, YStack } from 'tamagui';
 
+// Human-friendly labels for the worker's `processing_step` values. Includes
+// steps from BOTH the legacy Document-AI pipeline (`ocr`) and the new
+// Gemini-multimodal pipeline (`analyzing`, `updating_summary`) so a doc that
+// fails on either pipeline shows a readable cause. Unknown keys fall back to
+// the raw value via the `??` below — deliberate, so a new step added on the
+// worker won't show up as "undefined" while we catch up here.
 const processingStepLabels: Record<string, string> = {
   downloading: 'downloading from storage',
   ocr: 'OCR extraction',
+  analyzing: 'AI document analysis',
   saving_extraction: 'saving extraction record',
   building_graph: 'building knowledge graph',
+  updating_summary: 'updating patient journey summary',
   exporting_cypher: 'exporting Cypher script',
 };
 

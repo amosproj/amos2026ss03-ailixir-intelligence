@@ -19,11 +19,21 @@ import apiClient from '@/lib/axios';
 export interface ExtractionResponse {
   doc_id: string;
   document_type: string;
+  // ── Legacy OCR fields (populated only by the Document-AI pipeline) ────────
+  // Older extraction records still carry these. The new Gemini-multimodal
+  // pipeline leaves them null. The OCR debug card uses them when present.
   confidence_score: number | null;
   extracted_fields: Record<string, unknown>;
   raw_text: string | null;
   raw_text_chars: number | null;
   raw_text_truncated: boolean | null;
+  // ── New LLM fields (populated only by the Gemini-multimodal pipeline) ────
+  // `episode_body` is the rich clinical narrative shown on the Document
+  // Narrative card. `document_purpose` and `document_date` drive the chips
+  // on that card's header.
+  document_purpose: string | null;
+  document_date: string | null;
+  episode_body: string | null;
   extracted_at: string;
 }
 
