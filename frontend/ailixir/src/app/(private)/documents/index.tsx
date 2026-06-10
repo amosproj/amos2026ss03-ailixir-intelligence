@@ -7,7 +7,6 @@ import { router } from 'expo-router';
 import React from 'react';
 import { YStack } from 'tamagui';
 
-
 export default function DocumentsScreen() {
   const { data } = useDocuments({}, true);
   const documentCount = data?.documents?.length ?? 0;

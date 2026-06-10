@@ -1,6 +1,11 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+// @assistant-ui/react is in package.json + package-lock.json and resolves at
+// bundle time (Metro/Webpack), but the project's ESLint import-resolver can't
+// trace its subpath exports. Suppress on this one line rather than reshape
+// the package; CI lint shouldn't block PRs on a static-resolver limitation.
+// eslint-disable-next-line import/no-unresolved
 import { AssistantRuntimeProvider, useExternalStoreRuntime, type AppendMessage, type ThreadMessageLike } from '@assistant-ui/react';
 import { subscribeMessages, addUserMessage, addAssistantPlaceholder, resolveAssistantMessage } from '@/lib/chat-rtdb';
 import type { ChatMessageRecord } from '@/lib/chat-rtdb';
