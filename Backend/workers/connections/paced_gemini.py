@@ -50,6 +50,18 @@ _log = logging.getLogger(__name__)
 # sharing the project. Override via env if Vertex quota is later raised.
 _MIN_INTERVAL_S = float(os.environ.get("GEMINI_PACER_MIN_INTERVAL_S", "0.5"))
 
+# Gemini 2.5 models count thinking tokens against max_output_tokens. Graphiti
+# hardcodes extract_edges_max_tokens=16384 for its edge extraction call. On a
+# dense clinical prompt that includes 20 FACT_TYPES, the model can spend up to
+# ~15,900 thinking tokens internally, leaving only ~430 for the JSON output —
+# which gets cut off mid-string ("Unterminated string starting at char 1751").
+#
+# Fix: override the caller-supplied max_tokens with a floor equal to the model's
+# full output capacity. Thinking gets its full budget; the JSON response also
+# has room. 65536 is the published output limit for gemini-2.5-flash; override
+# via env var if the model or quota tier changes.
+_MAX_OUTPUT_TOKENS = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS", "65536"))
+
 # A single asyncio.Lock + last-call timestamp shared by ALL paced callers
 # in this worker process. One lock = one serialised admission queue.
 _pacer_lock = asyncio.Lock()
@@ -92,12 +104,17 @@ async def pace_gemini_call() -> None:
 class PacedGeminiClient(GeminiClient):
     """GeminiClient that admits at most one call per _MIN_INTERVAL_S.
 
-    Wraps both the public generate_response entry point and the small-
-    model variant Graphiti reaches for during cheaper extraction steps.
+    Also floors max_output_tokens to _MAX_OUTPUT_TOKENS so that Gemini 2.5
+    thinking tokens don't crowd out the JSON response when Graphiti passes
+    its hardcoded 16384-token cap.
     """
 
     async def generate_response(self, *args, **kwargs):
         await _admit()
+        # Graphiti passes max_tokens as a keyword arg. Floor it to the model's
+        # full output capacity so thinking + JSON both fit in the budget.
+        if kwargs.get("max_tokens") is not None:
+            kwargs["max_tokens"] = max(kwargs["max_tokens"], _MAX_OUTPUT_TOKENS)
         return await super().generate_response(*args, **kwargs)
 
 
