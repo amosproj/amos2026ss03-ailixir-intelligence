@@ -1,5 +1,5 @@
 import { CButton, CText } from '@/components/atoms';
-import { DeleteButton, DocumentDetailActions, DocumentPageThumbnail } from '@/components/molecules';
+import { DeleteButton, DocumentDetailActions, DocumentPagesThumbnails } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
 import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
@@ -204,14 +204,7 @@ export default function DocumentScreen() {
           <CText variant="h2" color="$color11">
             Pages
           </CText>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <XStack gap={12} pb={8}>
-              {document.files.map((file, index) => (
-                <DocumentPageThumbnail key={file.file_id} page={{ id: file.file_id, pageNumber: index + 1 }} />
-              ))}
-            </XStack>
-          </ScrollView>
+          <DocumentPagesThumbnails files={document.files} />
         </YStack>
       </YStack>
     </ScrollView>
