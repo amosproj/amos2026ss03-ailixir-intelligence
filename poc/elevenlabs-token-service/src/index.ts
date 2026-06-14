@@ -1,5 +1,6 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { loadEnvFile } from "node:process";
 // TODO: Implement firbase Auth token validation
@@ -13,6 +14,7 @@ const elevenlabs = new ElevenLabsClient({
 });
 
 // middleware
+app.use('*', cors());
 app.use(async (c, next) => {
   // TODO: implement authentication w/ firebase
   /*
