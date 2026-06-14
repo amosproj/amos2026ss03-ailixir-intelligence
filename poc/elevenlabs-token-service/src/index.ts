@@ -1,11 +1,21 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { loadEnvFile } from "node:process";
 // TODO: Implement firbase Auth token validation
 import { initializeApp } from "firebase-admin/app";
 
+// initialization
+loadEnvFile();
 const app = new Hono();
+const elevenlabs = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
+});
 
+// middleware
 app.use(async (c, next) => {
+  // TODO: implement authentication w/ firebase
+  /*
   const authHeader = c.req.header("Authorization");
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
@@ -14,14 +24,17 @@ app.use(async (c, next) => {
     console.log("No Bearer Token found");
     return c.text("Unauthorized Request", 401);
   }
+  */
 
-  next();
+  await next();
+});
+// endpoints
+app.get("/scribe-token", async (c) => {
+  const token = await elevenlabs.tokens.singleUse.create("realtime_scribe");
+  return c.json(token);
 });
 
-app.get("/scribe-token", (c) => {
-  return c.json({ token: 1234 });
-});
-
+// server
 serve(
   {
     fetch: app.fetch,
