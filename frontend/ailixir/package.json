@@ -14,6 +14,7 @@
     "@assistant-ui/react": "^0.14.14",
     "@assistant-ui/react-langchain": "^0.0.12",
     "@assistant-ui/react-native": "^0.1.21",
+    "@elevenlabs/react": "^1.6.7",
     "@expo-google-fonts/raleway": "^0.4.2",
     "@langchain/core": "^1.1.48",
     "@langchain/react": "^1.0.17",
