@@ -1,7 +1,8 @@
 import { CButton, CInput, CText } from '@/components/atoms';
 import { FORM_MESSAGES } from '@/constants/form-messages';
-import { ChevronRight } from '@tamagui/lucide-icons-2';
+import { ChevronRight, Eye, EyeOff } from '@tamagui/lucide-icons-2';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 
 type LoginFormValues = {
@@ -17,6 +18,7 @@ type LoginFormProps = {
 };
 
 export function LoginForm({ width = '100%', onForgotPasswordPress, onSubmit = (data) => console.log(data), serverError = '' }: LoginFormProps) {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const {
     control,
     handleSubmit,
@@ -68,7 +70,10 @@ export function LoginForm({ width = '100%', onForgotPasswordPress, onSubmit = (d
             // hides genuine sign-in attempts before they ever hit Firebase.
           }}
           render={({ field: { onBlur, onChange, value } }) => (
-            <CInput theme="bright" placeholder={FORM_MESSAGES.passwordPlaceholder} width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />
+            <XStack gap={8} alignItems="center" width={width}>
+              <CInput theme="bright" placeholder={FORM_MESSAGES.passwordPlaceholder} flex={1} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry={!isPasswordVisible} />
+              <CButton size="$3" chromeless onPress={() => setIsPasswordVisible(!isPasswordVisible)} icon={isPasswordVisible ? EyeOff : Eye} />
+            </XStack>
           )}
         />
       </YStack>

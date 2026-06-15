@@ -1,6 +1,7 @@
 import { CButton, CInput, CText } from '@/components/atoms';
-import { ChevronRight } from '@tamagui/lucide-icons-2';
+import { ChevronRight, Eye, EyeOff } from '@tamagui/lucide-icons-2';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 
 const PASSWORD_MIN_LENGTH = 8;
@@ -19,6 +20,7 @@ type SignUpFormProps = {
 };
 
 export function SignUpForm({ width = '100%', onSubmit = (data) => console.log(data), serverError = '' }: SignUpFormProps) {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const {
     control,
     handleSubmit,
@@ -100,7 +102,12 @@ export function SignUpForm({ width = '100%', onSubmit = (data) => console.log(da
               message: `Password required at least ${PASSWORD_MIN_LENGTH} characters`,
             },
           }}
-          render={({ field: { onBlur, onChange, value } }) => <CInput placeholder="password" theme="bright" width={width} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry />}
+          render={({ field: { onBlur, onChange, value } }) => (
+            <XStack gap={8} alignItems="center" width={width}>
+              <CInput placeholder="password" theme="bright" flex={1} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry={!isPasswordVisible} />
+              <CButton size="$3" chromeless onPress={() => setIsPasswordVisible(!isPasswordVisible)} icon={isPasswordVisible ? EyeOff : Eye} />
+            </XStack>
+          )}
         />
         {errors.password?.message ? (
           <CText variant="caption" color="$red10">
