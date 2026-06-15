@@ -70,8 +70,18 @@ export function LoginForm({ width = '100%', onForgotPasswordPress, onSubmit = (d
             // hides genuine sign-in attempts before they ever hit Firebase.
           }}
           render={({ field: { onBlur, onChange, value } }) => (
-            <XStack gap={8} alignItems="center" width={width}>
-              <CInput theme="bright" placeholder={FORM_MESSAGES.passwordPlaceholder} flex={1} value={value} onBlur={onBlur} onChangeText={onChange} secureTextEntry={!isPasswordVisible} />
+            <XStack gap={0} alignItems="center" paddingRight={8} paddingLeft={0} borderRadius={6} backgroundColor="$gray2" width={width}>
+              <CInput
+                theme="bright"
+                placeholder={FORM_MESSAGES.passwordPlaceholder}
+                flex={1}
+                value={value}
+                onBlur={onBlur}
+                onChangeText={onChange}
+                secureTextEntry={!isPasswordVisible}
+                borderWidth={0}
+                backgroundColor="transparent"
+              />
               <CButton size="$3" chromeless onPress={() => setIsPasswordVisible(!isPasswordVisible)} icon={isPasswordVisible ? EyeOff : Eye} />
             </XStack>
           )}
