@@ -1,70 +1,150 @@
+"""
+graph/builder.py
+----------------
+Assembles the LangGraph StateGraph and wires up the PostgreSQL checkpointer.
+
+Graph shape
+-----------
+
+    guardrail_node
+         │
+    ─────┼──── intent=="BLOCKED" ──▶ END
+         │
+    intent_node
+         │
+    ─────┼──── intent=="FOLLOWUP" ──▶ rewrite_node ──┐
+         │                                            │
+         └────────── NEW_QUESTION ────────────────────┤
+                                                      │
+                                                 retrieve_node
+                                                      │
+                                        ─────────────────────────
+                                        streaming==True  │  False
+                                              END        │  answer_node
+                                                         │
+                                                        END
+
+The streaming branch skips answer_node so main.py can call Gemini with
+stream=True and pipe tokens directly to the SSE client — no wasted non-
+streaming LLM call inside the graph.
+
+DB setup
+--------
+LangGraph's checkpointer.setup() creates the two required tables
+(checkpoints, writes) on first run if they don't already exist.
+init_db.py is therefore only needed for local dev environments that want
+to pre-create the schema before first startup.
+"""
+
+import os
+from pathlib import Path
+
+import psycopg
+from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
-from psycopg import Connection
 
 from graph.state import AgentState
 from graph.nodes import (
-    detect_intent_node,
-    rewrite_question_node,
+    guardrail_node,
+    intent_node,
+    rewrite_node,
     retrieve_node,
     answer_node,
-    guardrail_node,
 )
 
-DB_URI = "postgresql://postgres:123@localhost:5432/ailixir"
+# ---------------------------------------------------------------------------
+# Load .env — lives in ai-playground/ which is:
+#   chat-app/graph/builder.py  →  ../../  →  ai-playground/
+# load_dotenv is a no-op if the vars are already in the environment,
+# so this is safe to call even in production.
+# ---------------------------------------------------------------------------
+
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_ENV_PATH)
+
+# ---------------------------------------------------------------------------
+# Database URI — always from environment, never hardcoded
+# ---------------------------------------------------------------------------
+
+DB_URI = os.getenv(
+    "DB_URI",
+    "postgresql://postgres:password@localhost:5432/ailixir",  # fallback for local dev
+)
 
 
-def route_after_guardrail(state: AgentState):
-    return "blocked" if state.get("intent") == "BLOCKED" else "allowed"
+# ---------------------------------------------------------------------------
+# Routing functions
+# ---------------------------------------------------------------------------
+
+def _route_after_guardrail(state: AgentState) -> str:
+    """Block immediately if guardrail fired; otherwise continue to intent."""
+    return END if state.get("intent") == "BLOCKED" else "intent_node"
 
 
-def route_after_intent(state: AgentState):
-    return "rewrite" if state["intent"] == "FOLLOWUP" else "retrieve"
+def _route_after_intent(state: AgentState) -> str:
+    """Follow-ups need rewriting; new questions go straight to retrieval."""
+    return "rewrite_node" if state.get("intent") == "FOLLOWUP" else "retrieve_node"
 
+
+def _route_after_retrieve(state: AgentState) -> str:
+    """
+    If the caller set streaming=True (the /chat/stream endpoint), skip the
+    answer node entirely — main.py will stream Gemini directly.
+    Otherwise, run the answer node for a complete synchronous response.
+    """
+    return END if state.get("streaming") else "answer_node"
+
+
+# ---------------------------------------------------------------------------
+# Graph factory
+# ---------------------------------------------------------------------------
 
 def build_graph():
+    """
+    Builds and compiles the LangGraph agent with a PostgreSQL checkpointer.
 
-    workflow = StateGraph(AgentState)
+    Call once on application startup (FastAPI lifespan).
+    """
+    builder = StateGraph(AgentState)
 
-    # --- Nodes ---
-    workflow.add_node("guardrail", guardrail_node)
-    workflow.add_node("intent", detect_intent_node)
-    workflow.add_node("rewrite", rewrite_question_node)
-    workflow.add_node("retrieve", retrieve_node)
-    workflow.add_node("answer", answer_node)
+    # Register nodes
+    builder.add_node("guardrail_node", guardrail_node)
+    builder.add_node("intent_node",    intent_node)
+    builder.add_node("rewrite_node",   rewrite_node)
+    builder.add_node("retrieve_node",  retrieve_node)
+    builder.add_node("answer_node",    answer_node)
 
-    # --- Entry point ---
-    workflow.set_entry_point("guardrail")
+    # Entry point
+    builder.set_entry_point("guardrail_node")
 
-    # --- Guardrail: allow → intent, block → END ---
-    workflow.add_conditional_edges(
-        "guardrail",
-        route_after_guardrail,
-        {
-            "allowed": "intent",
-            "blocked": END,
-        },
+    # Edges
+    builder.add_conditional_edges(
+        "guardrail_node",
+        _route_after_guardrail,
+        {"intent_node": "intent_node", END: END},
     )
 
-    # --- Intent: followup → rewrite, new → retrieve ---
-    workflow.add_conditional_edges(
-        "intent",
-        route_after_intent,
-        {
-            "rewrite": "rewrite",
-            "retrieve": "retrieve",
-        },
+    builder.add_conditional_edges(
+        "intent_node",
+        _route_after_intent,
+        {"rewrite_node": "rewrite_node", "retrieve_node": "retrieve_node"},
     )
 
-    workflow.add_edge("rewrite", "retrieve")
-    workflow.add_edge("retrieve", "answer")
-    workflow.add_edge("answer", END)
+    # rewrite always feeds into retrieve
+    builder.add_edge("rewrite_node", "retrieve_node")
 
-    # --- Postgres checkpointer ---
-    conn = Connection.connect(DB_URI)
-    conn.autocommit = True
+    builder.add_conditional_edges(
+        "retrieve_node",
+        _route_after_retrieve,
+        {"answer_node": "answer_node", END: END},
+    )
 
-    checkpointer = PostgresSaver(conn)
-    checkpointer.setup()
+    builder.add_edge("answer_node", END)
 
-    return workflow.compile(checkpointer=checkpointer)
+    # Checkpointer (session memory via PostgreSQL)
+    connection = psycopg.connect(DB_URI)
+    checkpointer = PostgresSaver(connection)
+    checkpointer.setup()   # creates tables if they don't exist — idempotent
+
+    return builder.compile(checkpointer=checkpointer)

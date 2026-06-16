@@ -324,19 +324,40 @@ class ExtractionResponse(BaseModel):
     """Wire shape for GET /documents/{document_id}/extraction.
 
     Mirrors the persisted Extraction record minus the internal `uid` field
-    (it's enforced by the auth middleware, not surfaced to clients). Fields
-    that didn't exist on older Extraction records load as None, so this
-    response is forward-compatible with documents extracted before the
-    raw_text feature shipped.
+    (it's enforced by the auth middleware, not surfaced to clients). All
+    fields except doc_id/document_type/extracted_at are optional so the
+    response loads cleanly for extractions produced by either pipeline:
+
+      - Legacy Document-AI OCR pipeline: populates raw_text, raw_text_chars,
+        raw_text_truncated, extracted_fields, confidence_score; LLM fields
+        are None.
+      - New Gemini-multimodal pipeline: populates document_purpose,
+        document_date, episode_body; OCR fields are None.
+
+    Clients should treat both sets as optional and render whichever is
+    present. The Extraction model on the persistence side carries the
+    same fields, so this transformation is field-for-field.
     """
 
     doc_id: str
     document_type: str
+    # Legacy OCR fields — populated only by the Document-AI pipeline.
     confidence_score: float | None = None
-    extracted_fields: dict
+    # `default_factory=dict` — fresh {} per instance. Pydantic v2 deep-copies
+    # the bare `= {}` default safely today, but `default_factory` is the
+    # documented pattern and avoids surprising future readers. Same shape
+    # as the Extraction persistence model.
+    extracted_fields: dict = Field(default_factory=dict)
     raw_text: str | None = None
     raw_text_chars: int | None = None
     raw_text_truncated: bool | None = None
+    # New LLM fields — populated only by the Gemini-multimodal pipeline.
+    # `episode_body` is the rich clinical narrative the LLM produced and is
+    # what powers the iOS Document Narrative card; `document_purpose` is a
+    # one-sentence role description; `document_date` is YYYY-MM-DD or None.
+    document_purpose: str | None = None
+    document_date: str | None = None
+    episode_body: str | None = None
     extracted_at: datetime
 
 
@@ -921,11 +942,19 @@ def get_document_extraction(
     return ExtractionResponse(
         doc_id=extraction.doc_id,
         document_type=extraction.document_type,
+        # Legacy OCR fields — pass through as-is. Defaults coerce None when the
+        # Extraction came from the new LLM pipeline (which doesn't set them).
         confidence_score=extraction.confidence_score,
         extracted_fields=extraction.extracted_fields,
         raw_text=extraction.raw_text,
         raw_text_chars=extraction.raw_text_chars,
         raw_text_truncated=extraction.raw_text_truncated,
+        # New LLM fields — pass through so the iOS Document Narrative card
+        # has something to render. Empty for legacy OCR records, populated
+        # for documents extracted by the Gemini-multimodal pipeline.
+        document_purpose=extraction.document_purpose,
+        document_date=extraction.document_date,
+        episode_body=extraction.episode_body,
         extracted_at=extraction.extracted_at,
     )
 

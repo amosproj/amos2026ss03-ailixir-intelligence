@@ -43,14 +43,18 @@ variable "neo4j_database" {
   default     = "neo4j"
 }
 
+# document_ai_processor_id and document_ai_location are retained here so that
+# existing terraform.tfvars files setting these values do not cause Terraform
+# to error. They are no longer referenced by any resource — the pipeline now
+# uses Gemini multimodal (Vertex AI) instead of Document AI for document analysis.
 variable "document_ai_processor_id" {
-  description = "Document AI processor ID for PDF OCR (create in GCP Console under Document AI)"
+  description = "UNUSED — kept for tfvars compatibility. Document AI replaced by Gemini multimodal."
   type        = string
-  default     = "fill value here"
+  default     = ""
 }
 
 variable "document_ai_location" {
-  description = "Document AI processor region — must match where the processor was created (e.g. us, eu)"
+  description = "UNUSED — kept for tfvars compatibility. Document AI replaced by Gemini multimodal."
   type        = string
-  default     = "us"
+  default     = ""
 }

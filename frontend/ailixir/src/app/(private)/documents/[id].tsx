@@ -1,5 +1,5 @@
 import { CButton, CText } from '@/components/atoms';
-import { DeleteButton, DocumentDetailActions, DocumentPageThumbnail } from '@/components/molecules';
+import { DeleteButton, DocumentDetailActions, DocumentPagesThumbnails } from '@/components/molecules';
 import { useDocument } from '@/hooks/useDocument';
 import { useDocumentExtraction } from '@/hooks/useDocumentExtraction';
 import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
@@ -52,13 +52,19 @@ export default function DocumentScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const { data: document, isLoading, isError } = useDocument(params.id, true);
 
-  // Debug-only OCR text fetch. Gated behind (a) the user's Settings toggle
-  // and (b) status === 'extracted' so we don't hammer the API while the
-  // worker is still mid-pipeline. The hook short-circuits when either gate
-  // is false; no request is sent.
+  // The extraction fetch powers TWO cards now:
+  //   - DocumentNarrativeCard: shown whenever an extraction exists (always
+  //     fetched on status='extracted', no debug toggle required).
+  //   - OcrTextCard: gated behind the Settings debug toggle.
+  //
+  // The hook is gated on `status === 'extracted'` rather than the debug
+  // toggle so the narrative card has data to render. The card itself
+  // auto-hides if `episode_body` is absent (legacy OCR records), so
+  // unconditional fetching is safe and behavior-neutral for legacy docs.
   const showOcrText = useAtomValue(showOcrTextAtom);
-  const ocrTextEnabled = showOcrText && document?.status === 'extracted';
-  const { data: extraction, isLoading: extractionIsLoading, isError: extractionIsError } = useDocumentExtraction(params.id, ocrTextEnabled);
+  const documentIsExtracted = document?.status === 'extracted';
+  const ocrTextEnabled = showOcrText && documentIsExtracted;
+  const { data: extraction, isLoading: extractionIsLoading, isError: extractionIsError } = useDocumentExtraction(params.id, documentIsExtracted);
 
   // Download the Cypher graph script the worker produced for this document.
   //
@@ -198,14 +204,7 @@ export default function DocumentScreen() {
           <CText variant="h2" color="$color11">
             Pages
           </CText>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <XStack gap={12} pb={8}>
-              {document.files.map((file, index) => (
-                <DocumentPageThumbnail key={file.file_id} page={{ id: file.file_id, pageNumber: index + 1 }} />
-              ))}
-            </XStack>
-          </ScrollView>
+          <DocumentPagesThumbnails files={document.files} />
         </YStack>
       </YStack>
     </ScrollView>
