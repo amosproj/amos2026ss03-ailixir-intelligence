@@ -166,6 +166,16 @@ resource "google_project_iam_member" "api_firebase_auth_admin" {
   member  = "serviceAccount:${google_service_account.api.email}"
 }
 
+# Vertex AI — required for the chat pipeline (Gemini LLM calls for
+# contextualization + answering, and Gemini embeddings for Graphiti search).
+# The same role is already granted to the worker; the API now needs it too
+# because the /chat/query endpoint runs Graphiti retrieval inline.
+resource "google_project_iam_member" "api_vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.api.email}"
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Cloud Run API service.
@@ -207,6 +217,39 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "FIREBASE_KEY_RELATIVE_PATH"
         value = ""
       }
+
+      # ── Vertex AI (chat pipeline) ────────────────────────────────────────────
+      # Gemini models require us-central1 regardless of the Cloud Run region.
+      env {
+        name  = "VERTEX_PROJECT"
+        value = var.project_id
+      }
+      env {
+        name  = "VERTEX_LOCATION"
+        value = var.vertex_location
+      }
+      env {
+        name  = "VERTEX_LLM_MODEL"
+        value = var.vertex_llm_model
+      }
+
+      # ── Neo4j (chat pipeline — Graphiti knowledge graph retrieval) ───────────
+      env {
+        name  = "NEO4J_URI"
+        value = var.neo4j_uri
+      }
+      env {
+        name  = "NEO4J_USER"
+        value = var.neo4j_user
+      }
+      env {
+        name  = "NEO4J_PASSWORD"
+        value = var.neo4j_password
+      }
+      env {
+        name  = "NEO4J_DATABASE"
+        value = var.neo4j_database
+      }
     }
   }
 
@@ -217,6 +260,7 @@ resource "google_cloud_run_v2_service" "backend" {
     google_pubsub_topic_iam_member.api_publisher,
     google_project_iam_member.api_firestore_user,
     google_project_iam_member.api_firebase_auth_admin,
+    google_project_iam_member.api_vertex_ai_user,
   ]
 }
 

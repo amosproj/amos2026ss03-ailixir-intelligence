@@ -43,6 +43,11 @@ class ErrorCode(str, Enum):
     IDEMPOTENCY_KEY_REQUIRED = "IDEMPOTENCY_KEY_REQUIRED"
     INVALID_PAGINATION_CURSOR = "INVALID_PAGINATION_CURSOR"
 
+    # Chat / knowledge graph query
+    CHAT_RETRIEVAL_FAILED = "CHAT_RETRIEVAL_FAILED"
+    CHAT_LLM_FAILED       = "CHAT_LLM_FAILED"
+    CHAT_LLM_TIMEOUT      = "CHAT_LLM_TIMEOUT"
+
 
 class ErrorDetail(BaseModel):
     code: ErrorCode

@@ -1,10 +1,14 @@
 """
-Ailixir Documents API.
+Ailixir Documents + Chat API.
 
 Sync HTTP entrypoint for the mobile client. The API never streams file bytes
 through itself — clients receive time-limited signed URLs and upload directly
-to GCS. Heavy AI work (OCR, extraction) happens in the worker service,
-triggered via Pub/Sub events the API publishes after finalize.
+to GCS. Heavy AI ingestion work happens in the worker service, triggered via
+Pub/Sub events the API publishes after finalize.
+
+Chat queries (POST /chat/query) are handled inline here — the three-step
+graph-RAG pipeline (contextualize → retrieve → answer) is fast enough to
+serve synchronously within Cloud Run's request timeout.
 
 Run from the `Backend/` directory:
     uvicorn api.main:app --reload
@@ -15,6 +19,7 @@ import logging
 import os
 import re
 import unicodedata
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -32,6 +37,7 @@ from api.auth import (
     delete_firebase_user,
     get_current_user,
 )
+from api.chat import router as chat_router
 from api.errors import (
     APIError,
     api_error_handler,
@@ -83,6 +89,15 @@ for handler in logging.getLogger().handlers:
 _log = logging.getLogger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup: nothing needed — Graphiti initialises lazily on first request
+    yield
+    # shutdown: close the Neo4j connection held by the chat pipeline
+    from api.chat_pipeline.graphiti_client import close_graphiti
+    await close_graphiti()
+
+
 app = FastAPI(
     title="Document Processing API",
     version="1.0.0",
@@ -96,6 +111,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 app.add_middleware(RequestIDMiddleware)
@@ -114,6 +130,8 @@ app.add_exception_handler(APIError, api_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
+
+app.include_router(chat_router, prefix="/chat", tags=["Chat"])
 
 
 # ──────────────────────────────────────────────────────────────────────────────
