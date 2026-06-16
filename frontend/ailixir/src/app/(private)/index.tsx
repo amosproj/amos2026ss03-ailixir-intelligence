@@ -6,20 +6,11 @@ import { CText } from '@/components/atoms';
 import { QuickActionsGrid, RecentChatsSection } from '@/components/organisms';
 import { quickActions } from '@/data/home';
 import type { RecentChat } from '@/data/home';
-import { createChat, subscribeChats } from '@/lib/chat-rtdb';
-import type { ChatSummary } from '@/lib/chat-rtdb';
+import { subscribeChats, createChat } from '@/lib/chat-rtdb';
+import { chatSummaryToRecentChat } from '@/utils/chats';
 import { ScrollView, YStack } from 'tamagui';
 
-function summaryToRecentChat(s: ChatSummary): RecentChat {
-  const date = new Date(s.lastMessageAt);
-  const timeAgo = date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  return { id: s.chatId, title: s.title, timeAgo };
-}
+const RECENT_CHATS_LIMIT = 4;
 
 export default function HomeScreen() {
   const auth = getAuth();
@@ -31,7 +22,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!uid) return;
     const unsub = subscribeChats(uid, (summaries) => {
-      setChats(summaries.map(summaryToRecentChat));
+      setChats(summaries.map(chatSummaryToRecentChat));
     });
     return unsub;
   }, [uid]);
@@ -55,7 +46,7 @@ export default function HomeScreen() {
         </YStack>
 
         <QuickActionsGrid actions={actions} />
-        <RecentChatsSection chats={chats} />
+        <RecentChatsSection chats={chats.slice(0, RECENT_CHATS_LIMIT)} />
       </YStack>
     </ScrollView>
   );
