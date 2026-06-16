@@ -31,7 +31,7 @@ export default function ChatsScreen() {
 
         <YStack gap={10}>
           {chats.map((chat) => (
-            <RecentChatItem key={chat.id} chat={chat} />
+            <RecentChatItem key={chat.id} chat={chat} deletable />
           ))}
         </YStack>
       </YStack>

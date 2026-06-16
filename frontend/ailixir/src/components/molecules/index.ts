@@ -10,6 +10,7 @@ export * from './auth-footer-link';
 export * from './document-detail-actions';
 export * from './failure-card';
 export * from './delete-button';
+export * from './delete-chat-button';
 export * from './document-list-item';
 export * from './document-page-thumbnail';
 export * from './documents-action';
