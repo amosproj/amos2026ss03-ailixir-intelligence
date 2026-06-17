@@ -3,9 +3,20 @@ name: Workers CI/CD
 on:
   push:
     branches: [main, "feature/**", "chore/"]
-    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
+    # `Backend/shared/**` is included because the worker image bundles shared
+    # code (retryable_errors, models, etc.). Without this, a change to shared
+    # code redeploys the API but leaves the worker on a stale revision —
+    # exactly the failure mode that left the worker pointing at a dead Neo4j
+    # instance after the chat-pipeline merge.
+    paths:
+      - "Backend/workers/**"
+      - "Backend/shared/**"
+      - ".github/workflows/worker-ci-cd.yml"
   pull_request:
-    paths: ["Backend/workers/**", ".github/workflows/worker-ci-cd.yml"]
+    paths:
+      - "Backend/workers/**"
+      - "Backend/shared/**"
+      - ".github/workflows/worker-ci-cd.yml"
   # Manual trigger button in the Actions UI. Needed when only a GitHub Secret
   # (e.g. NEO4J_PASSWORD, DOCUMENT_AI_PROCESSOR_ID) was rotated and we want to
   # redeploy without otherwise touching any tracked file. Without this, a

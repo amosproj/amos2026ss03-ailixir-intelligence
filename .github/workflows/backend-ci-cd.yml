@@ -3,9 +3,19 @@ name: API CI/CD
 on:
   push:
     branches: [main, "feature/**", "chore/issue-47-CI/CD-for-Backend"]
-    paths: ["Backend/api/**", ".github/workflows/backend-ci-cd.yml"]
+    # `Backend/shared/**` is included because the API image bundles shared
+    # code (retryable_errors, models, etc.). Without it, a PR that only
+    # touches shared/ skips the API redeploy and leaves the service on a
+    # stale revision — silent drift between code and what's running.
+    paths:
+      - "Backend/api/**"
+      - "Backend/shared/**"
+      - ".github/workflows/backend-ci-cd.yml"
   pull_request:
-    paths: ["Backend/api/**", ".github/workflows/backend-ci-cd.yml"]
+    paths:
+      - "Backend/api/**"
+      - "Backend/shared/**"
+      - ".github/workflows/backend-ci-cd.yml"
 
 # One run per ref at a time. Cancels stale runs to avoid terraform lock races.
 concurrency:
