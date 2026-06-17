@@ -3,19 +3,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 import { CButton, CButtonProps } from '@/components/atoms';
 
-export interface Photo {
-  uri: string;
-  width?: number;
-  height?: number;
-  type?: string;
-}
-
 export type CameraButtonProps = Omit<CButtonProps, 'onPress' | 'disabled' | 'opacity'> & {
-  onPhoto: (photo: Photo) => void;
+  onPhoto: (photo: ImagePicker.ImagePickerAsset) => void;
   onCancel?: () => void;
+  defaultText?: string;
+  loadingText?: string;
 };
 
-export const CameraButton: React.FC<CameraButtonProps> = ({ onPhoto, onCancel }) => {
+export const CameraButton: React.FC<CameraButtonProps> = ({ onPhoto, onCancel, defaultText = 'Take Photo', loadingText = 'Taking Photo...', ...restProps }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const requestCameraPermission = async () => {
@@ -46,13 +41,7 @@ export const CameraButton: React.FC<CameraButtonProps> = ({ onPhoto, onCancel })
 
       // Handle result
       if (!result.canceled) {
-        const photo: Photo = {
-          uri: result.assets[0].uri,
-          width: result.assets[0].width,
-          height: result.assets[0].height,
-          type: result.assets[0].type ?? undefined,
-        };
-        // photos.push(photo);
+        const photo: ImagePicker.ImagePickerAsset = result.assets[0];
         onPhoto(photo);
       } else if (onCancel) {
         onCancel();
@@ -72,8 +61,8 @@ export const CameraButton: React.FC<CameraButtonProps> = ({ onPhoto, onCancel })
   };
 
   return (
-    <CButton onPress={handleTakePhoto} disabled={isLoading} opacity={isLoading ? 0.6 : 1}>
-      {isLoading ? 'Taking Photo...' : 'Take Photo'}
+    <CButton onPress={handleTakePhoto} disabled={isLoading} opacity={isLoading ? 0.6 : 1} {...restProps}>
+      {isLoading ? loadingText : defaultText}
     </CButton>
   );
 };
