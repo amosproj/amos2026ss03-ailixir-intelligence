@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -8,14 +10,25 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from kg_chat.config import AppConfig, load_config
+from kg_chat.graphiti_search import (
+    GraphitiSearchClient,
+    GraphitiSearchConfigurationError,
+)
 from kg_chat.llm import LlmConfigurationError, build_llm_client
 from kg_chat.models import ChatRequest, ChatResponse, QueryRequest, QueryResponse
 from kg_chat.neo4j_client import Neo4jConfigurationError, Neo4jGraphClient
-from kg_chat.query import QueryGenerationError, QueryValidationError
+from kg_chat.query import QueryValidationError
 from kg_chat.retriever import GraphChatService
 
 
 BASE_DIR = Path(__file__).resolve().parent
+_startup_config = load_config(BASE_DIR)
+
+logging.basicConfig(
+    level=os.environ.get("KG_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logging.getLogger("kg_chat").setLevel(os.environ.get("KG_LOG_LEVEL", "INFO").upper())
 
 
 @asynccontextmanager
@@ -24,10 +37,13 @@ async def lifespan(app: FastAPI):
     app.state.config = config
     app.state.startup_errors = []
     app.state.graph_client = None
+    app.state.graphiti_search = None
     app.state.service = None
 
     graph_client = _build_graph_client(config, app.state.startup_errors)
     app.state.graph_client = graph_client
+    graphiti_search = _build_graphiti_search(config, app.state.startup_errors)
+    app.state.graphiti_search = graphiti_search
     llm = _build_llm(config, app.state.startup_errors)
 
     if graph_client and llm:
@@ -35,6 +51,7 @@ async def lifespan(app: FastAPI):
             config=config,
             llm=llm,
             graph_client=graph_client,
+            graphiti_search=graphiti_search,
         )
 
     try:
@@ -42,20 +59,21 @@ async def lifespan(app: FastAPI):
     finally:
         if graph_client:
             graph_client.close()
+        if graphiti_search:
+            await graphiti_search.aclose()
 
 
 app = FastAPI(
     title="AIlixir Knowledge Graph Chat API",
     description=(
         "Chat with an existing Neo4j knowledge graph using startup schema "
-        "introspection, schema-plus-example Cypher generation, validation, "
-        "and grounded answer generation."
+        "introspection, structured query planning, strategy routing, "
+        "read-only Cypher validation, and grounded answer generation."
     ),
     version="0.1.0",
     lifespan=lifespan,
 )
 
-_startup_config = load_config(BASE_DIR)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_startup_config.cors_allowed_origins,
@@ -69,10 +87,13 @@ def health() -> dict[str, Any]:
     config: AppConfig = app.state.config
     service: GraphChatService | None = app.state.service
     graph_client: Neo4jGraphClient | None = app.state.graph_client
+    graphiti_search: GraphitiSearchClient | None = app.state.graphiti_search
     schema = graph_client.schema if graph_client else None
     return {
         "status": "ok" if service else "degraded",
         "neo4j_configured": config.neo4j_configured,
+        "graphiti_search_configured": config.graphiti_search_configured,
+        "graphiti_search_available": graphiti_search is not None,
         "llm_provider": config.llm_provider,
         "llm_configured": config.llm_configured,
         "schema_cached": schema is not None,
@@ -100,8 +121,9 @@ def generate_query(body: QueryRequest) -> QueryResponse:
         return service.generate_query_only(
             question=body.question,
             session_id=body.session_id,
+            group_id=body.group_id,
         )
-    except (QueryGenerationError, QueryValidationError) as exc:
+    except QueryValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -114,9 +136,10 @@ def chat(body: ChatRequest) -> ChatResponse:
         return service.chat(
             question=body.question,
             session_id=body.session_id,
+            group_id=body.group_id,
             include_debug=body.include_debug,
         )
-    except (QueryGenerationError, QueryValidationError) as exc:
+    except QueryValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -159,6 +182,29 @@ def _build_llm(config: AppConfig, startup_errors: list[str]):
         startup_errors.append(str(exc))
     except Exception as exc:
         startup_errors.append(f"Could not initialise LLM client: {exc}")
+    return None
+
+
+def _build_graphiti_search(
+    config: AppConfig,
+    startup_errors: list[str],
+) -> GraphitiSearchClient | None:
+    if not config.graphiti_search_enabled:
+        return None
+
+    if not config.graphiti_search_configured:
+        startup_errors.append(
+            "Native Graphiti search is not configured. Set OPENAI_API_KEY, "
+            "or set GRAPHITI_SEARCH_ENABLED=false to use Cypher fallback only."
+        )
+        return None
+
+    try:
+        return GraphitiSearchClient(config)
+    except GraphitiSearchConfigurationError as exc:
+        startup_errors.append(str(exc))
+    except Exception as exc:
+        startup_errors.append(f"Could not initialise native Graphiti search: {exc}")
     return None
 
 

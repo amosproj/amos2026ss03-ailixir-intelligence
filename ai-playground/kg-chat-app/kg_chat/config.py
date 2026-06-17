@@ -22,6 +22,10 @@ class AppConfig:
     gemini_api_key: str | None
     google_cloud_project: str | None
     google_cloud_location: str
+    openai_api_key: str | None
+
+    graphiti_search_enabled: bool
+    graphiti_search_limit: int
 
     default_query_limit: int
     schema_pattern_limit: int
@@ -41,6 +45,14 @@ class AppConfig:
             # Vertex can sometimes infer project from ADC, so do not require it here.
             return True
         return False
+
+    @property
+    def graphiti_search_configured(self) -> bool:
+        return bool(
+            self.graphiti_search_enabled
+            and self.neo4j_configured
+            and self.openai_api_key
+        )
 
 
 def load_config(base_dir: Path) -> AppConfig:
@@ -64,6 +76,9 @@ def load_config(base_dir: Path) -> AppConfig:
         gemini_api_key=os.environ.get("GEMINI_API_KEY"),
         google_cloud_project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
         google_cloud_location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
+        openai_api_key=os.environ.get("OPENAI_API_KEY"),
+        graphiti_search_enabled=_bool_env("GRAPHITI_SEARCH_ENABLED", True),
+        graphiti_search_limit=_int_env("GRAPHITI_SEARCH_LIMIT", 10),
         default_query_limit=_int_env("KG_QUERY_LIMIT", 20),
         schema_pattern_limit=_int_env("KG_SCHEMA_PATTERN_LIMIT", 50),
         max_rows_for_answer=_int_env("KG_MAX_ROWS_FOR_ANSWER", 30),
@@ -86,6 +101,10 @@ def _load_env_files(base_dir: Path) -> None:
     if parent_env.exists():
         load_dotenv(parent_env, override=False)
 
+    graphiti_env = base_dir.parent / "knowledge-graph-integration" / ".env"
+    if graphiti_env.exists():
+        load_dotenv(graphiti_env, override=False)
+
 
 def _int_env(name: str, default: int) -> int:
     value = os.environ.get(name)
@@ -105,6 +124,18 @@ def _float_env(name: str, default: float) -> float:
         return float(value)
     except ValueError:
         return default
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None or value.strip() == "":
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
 def _list_env(name: str, default: list[str]) -> list[str]:

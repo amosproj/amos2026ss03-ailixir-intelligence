@@ -7,3 +7,5 @@ google-cloud-aiplatform>=1.49.0
 google-genai>=0.5.0
 streamlit>=1.35.0
 requests>=2.31.0
+graphiti-core>=0.3.17
+openai>=1.57.0

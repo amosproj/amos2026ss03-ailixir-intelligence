@@ -27,6 +27,7 @@ import asyncio
 import json
 import os
 import re
+import random
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,8 +44,10 @@ from graphiti_core.llm_client.openai_client import OpenAIClient
 from graphiti_core.nodes import EpisodeType
 
 
+# HERE = Path(__file__).resolve().parent
 HERE = Path(__file__).resolve().parent
-DATA_DIR = HERE / "Patient-1-Data"
+_PLAYGROUND = HERE.parent
+DATA_DIR = _PLAYGROUND / "data" / "Patient-7"
 REPORT_DIR = HERE / "graph_outputs"
 OCR_DIR = REPORT_DIR / "ocr_cache"
 
@@ -77,6 +80,16 @@ OPENAI_LLM_INPUT_USD_PER_1M = env_float("OPENAI_LLM_INPUT_USD_PER_1M")
 OPENAI_LLM_OUTPUT_USD_PER_1M = env_float("OPENAI_LLM_OUTPUT_USD_PER_1M")
 OPENAI_EMBEDDING_USD_PER_1M = env_float("OPENAI_EMBEDDING_USD_PER_1M")
 GCP_DOCUMENT_AI_USD_PER_1000_PAGES = env_float("GCP_DOCUMENT_AI_USD_PER_1000_PAGES")
+
+
+def env_int(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
 
 GERMAN_MONTHS = {
     "januar": 1,
@@ -166,6 +179,34 @@ def parse_args() -> argparse.Namespace:
         "--force-ocr",
         action="store_true",
         help="Ignore cached GCP OCR JSON and call Document AI again.",
+    )
+    parser.add_argument(
+        "--add-episode-retries",
+        type=int,
+        default=env_int("GRAPHITI_ADD_EPISODE_RETRIES", 5),
+        help="Retries per Graphiti add_episode call after transient OpenAI/httpx failures.",
+    )
+    parser.add_argument(
+        "--retry-base-delay",
+        type=float,
+        default=env_float("GRAPHITI_RETRY_BASE_DELAY_SECONDS", 5.0),
+        help="Initial retry delay in seconds for add_episode failures.",
+    )
+    parser.add_argument(
+        "--retry-max-delay",
+        type=float,
+        default=env_float("GRAPHITI_RETRY_MAX_DELAY_SECONDS", 90.0),
+        help="Maximum retry delay in seconds for add_episode failures.",
+    )
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Do not skip episode names that already exist for the selected group_id.",
+    )
+    parser.add_argument(
+        "--continue-on-failure",
+        action="store_true",
+        help="After exhausting retries for one PDF, continue with the remaining PDFs.",
     )
     return parser.parse_args()
 
@@ -650,8 +691,103 @@ def build_episode_body(doc: PatientDoc, patient_name: str, patient_dob: str, gro
     )
 
 
+def existing_episode_names(group_id: str) -> set[str]:
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    try:
+        with driver.session() as session:
+            rows = session.run(
+                """
+                MATCH (ep:Episodic {group_id: $group_id})
+                WHERE ep.name IS NOT NULL
+                RETURN ep.name AS name
+                """,
+                group_id=group_id,
+            )
+            return {str(row["name"]) for row in rows if row.get("name")}
+    finally:
+        driver.close()
+
+
+def is_retryable_add_episode_error(exc: BaseException) -> bool:
+    retryable_names = (
+        "APITimeoutError",
+        "APIConnectionError",
+        "APIStatusError",
+        "ConnectTimeout",
+        "ConnectError",
+        "ReadTimeout",
+        "RemoteProtocolError",
+        "RateLimitError",
+        "TimeoutException",
+    )
+    for current in _exception_chain(exc):
+        name = current.__class__.__name__
+        if name in retryable_names or "timeout" in name.lower():
+            return True
+    return False
+
+
+def _exception_chain(exc: BaseException) -> list[BaseException]:
+    chain = []
+    current: BaseException | None = exc
+    while current is not None and current not in chain:
+        chain.append(current)
+        current = current.__cause__ or current.__context__
+    return chain
+
+
+async def add_episode_with_retry(
+    graphiti: Graphiti,
+    *,
+    episode_name: str,
+    episode_body: str,
+    source_description: str,
+    group_id: str,
+    reference_time: datetime,
+    max_retries: int,
+    base_delay: float,
+    max_delay: float,
+) -> None:
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            await graphiti.add_episode(
+                name=episode_name,
+                episode_body=episode_body,
+                source=EpisodeType.text,
+                source_description=source_description,
+                group_id=group_id,
+                reference_time=reference_time,
+                custom_extraction_instructions=EXTRACTION_RULES,
+            )
+            return
+        except Exception as exc:
+            if attempt > max_retries + 1 or not is_retryable_add_episode_error(exc):
+                raise
+
+            delay = min(max_delay, base_delay * (2 ** (attempt - 1)))
+            jitter = random.uniform(0, min(2.0, delay * 0.2))
+            sleep_seconds = delay + jitter
+            print(
+                "    transient add_episode failure "
+                f"({exc.__class__.__name__}: {exc}); "
+                f"retry {attempt}/{max_retries} in {sleep_seconds:.1f}s"
+            )
+            await asyncio.sleep(sleep_seconds)
+
+
 async def ingest_docs(
-    docs: list[PatientDoc], group_id: str, patient_name: str, patient_dob: str
+    docs: list[PatientDoc],
+    group_id: str,
+    patient_name: str,
+    patient_dob: str,
+    *,
+    add_episode_retries: int,
+    retry_base_delay: float,
+    retry_max_delay: float,
+    resume: bool,
+    continue_on_failure: bool,
 ) -> dict[str, Any]:
     llm_client = OpenAIClient(config=LLMConfig(api_key=OPENAI_API_KEY))
     embedder = OpenAIEmbedder(config=OpenAIEmbedderConfig(api_key=OPENAI_API_KEY))
@@ -664,21 +800,73 @@ async def ingest_docs(
     )
 
     graphiti_token_usage: dict[str, Any] = {}
+    skipped_existing: list[str] = []
+    succeeded: list[str] = []
+    failed: list[dict[str, str]] = []
+    existing_names = existing_episode_names(group_id) if resume else set()
+    if existing_names:
+        print(
+            f"Resume enabled: found {len(existing_names)} existing episodes "
+            f"for group_id={group_id}"
+        )
+
     try:
         await graphiti.build_indices_and_constraints()
         for index, doc in enumerate(docs, start=1):
             episode_name = f"{group_id}_{doc.path.stem}_{doc.doc_date:%Y%m%d}"
+            if episode_name in existing_names:
+                print(f"[{index}/{len(docs)}] skip existing episode {episode_name}")
+                skipped_existing.append(episode_name)
+                continue
+
             print(f"[{index}/{len(docs)}] add_episode {episode_name}")
-            await graphiti.add_episode(
-                name=episode_name,
-                episode_body=build_episode_body(doc, patient_name, patient_dob, group_id),
-                source=EpisodeType.text,
-                source_description=f"Patient-1 GCP OCR temporal PDF: {doc.path.name}",
-                group_id=group_id,
-                reference_time=doc.doc_date,
-                custom_extraction_instructions=EXTRACTION_RULES,
-            )
+            try:
+                await add_episode_with_retry(
+                    graphiti,
+                    episode_name=episode_name,
+                    episode_body=build_episode_body(
+                        doc,
+                        patient_name,
+                        patient_dob,
+                        group_id,
+                    ),
+                    source_description=f"Patient-1 GCP OCR temporal PDF: {doc.path.name}",
+                    group_id=group_id,
+                    reference_time=doc.doc_date,
+                    max_retries=add_episode_retries,
+                    base_delay=retry_base_delay,
+                    max_delay=retry_max_delay,
+                )
+                succeeded.append(episode_name)
+            except Exception as exc:
+                failed.append(
+                    {
+                        "episode_name": episode_name,
+                        "file": doc.path.name,
+                        "error_type": exc.__class__.__name__,
+                        "error": str(exc),
+                    }
+                )
+                print(
+                    f"    add_episode failed after retries for {episode_name}: "
+                    f"{exc.__class__.__name__}: {exc}"
+                )
+                if not continue_on_failure:
+                    raise
+
         graphiti_token_usage = serialize_token_tracker(graphiti)
+        graphiti_token_usage["ingestion"] = {
+            "resume": resume,
+            "add_episode_retries": add_episode_retries,
+            "retry_base_delay_seconds": retry_base_delay,
+            "retry_max_delay_seconds": retry_max_delay,
+            "skipped_existing_count": len(skipped_existing),
+            "succeeded_count": len(succeeded),
+            "failed_count": len(failed),
+            "skipped_existing": skipped_existing,
+            "succeeded": succeeded,
+            "failed": failed,
+        }
     finally:
         await graphiti.close()
     return graphiti_token_usage
@@ -846,10 +1034,22 @@ async def main() -> None:
     print(f"  group_id : {group_id}")
     print(f"  order    : {args.order}")
     print(f"  docs     : {len(docs)}")
+    print(f"  resume   : {not args.no_resume}")
+    print(f"  retries  : {max(0, args.add_episode_retries)}")
     for doc in docs:
         print(f"    {doc.doc_date.date().isoformat()}  {doc.path.name}")
 
-    graphiti_token_usage = await ingest_docs(docs, group_id, args.patient_name, args.patient_dob)
+    graphiti_token_usage = await ingest_docs(
+        docs,
+        group_id,
+        args.patient_name,
+        args.patient_dob,
+        add_episode_retries=max(0, args.add_episode_retries),
+        retry_base_delay=max(0.1, args.retry_base_delay),
+        retry_max_delay=max(0.1, args.retry_max_delay),
+        resume=not args.no_resume,
+        continue_on_failure=args.continue_on_failure,
+    )
 
     report = run_temporal_queries(group_id, docs, graphiti_token_usage)
     REPORT_DIR.mkdir(exist_ok=True)
@@ -872,6 +1072,12 @@ async def main() -> None:
     print(f"  estimated episode text : {estimated_tokens.get('graphiti_episode_text', 0)}")
     print(f"  estimated instructions : {estimated_tokens.get('graphiti_custom_instructions', 0)}")
     print(f"  actual Graphiti LLM    : {actual_graphiti.get('total_tokens', 0)}")
+    ingestion = report["token_usage"]["actual_graphiti_llm"].get("ingestion", {})
+    if ingestion:
+        print("\nIngestion")
+        print(f"  skipped existing       : {ingestion.get('skipped_existing_count', 0)}")
+        print(f"  succeeded this run     : {ingestion.get('succeeded_count', 0)}")
+        print(f"  failed this run        : {ingestion.get('failed_count', 0)}")
     cost = report["cost_estimate"]
     print("\nCost estimate")
     print(f"  rates configured       : {cost['rates_configured']}")
