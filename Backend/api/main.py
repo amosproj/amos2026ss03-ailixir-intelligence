@@ -91,11 +91,60 @@ _log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup: nothing needed — Graphiti initialises lazily on first request
+    """API lifespan: optional Graphiti warmup on startup, mandatory close on shutdown.
+
+    Without warmup the FIRST chat query of each container's lifetime pays
+    2-5 seconds for Graphiti init (Neo4j driver handshake + Vertex client
+    setup + index check) on the user's request clock. Set
+    `CHAT_GRAPHITI_WARMUP=true` to move that init to startup so the user
+    request hits a hot path.
+
+    Warmup is OPTIONAL because:
+      - The API also serves /documents endpoints that don't need Graphiti.
+        A misconfigured `NEO4J_URI` should NOT brick the whole API on cold-
+        start.
+      - Cloud Run autoscaling spins up new instances; warmup makes those
+        instances ready slightly slower but their first user request faster.
+
+    The warmup is best-effort: failures are logged but never raised, so a
+    Neo4j outage during startup degrades chat to "lazy init on first
+    request" (which would also fail, but with a clean 503 instead of a
+    container that can't accept any traffic).
+
+    Shutdown: always close the Graphiti / Neo4j driver. The container has
+    only ~10 seconds of SIGTERM grace, so we don't await anything other
+    than the close itself. Catching any exception here is critical —
+    raising during shutdown masks the real signal Cloud Run is sending.
+    """
+    import os
+
+    if os.environ.get("CHAT_GRAPHITI_WARMUP", "").lower() == "true":
+        try:
+            from api.chat_pipeline.graphiti_client import get_graphiti
+            await get_graphiti()
+            _log.info("chat_graphiti_warmup_ok")
+        except Exception as exc:
+            # Never let a Graphiti init failure brick the API. The /chat/query
+            # path will still try lazy init on first request and surface the
+            # error as a 503 to the user.
+            _log.warning(
+                "chat_graphiti_warmup_failed_nonfatal err_class=%s err=%s",
+                type(exc).__name__, exc,
+            )
+
     yield
-    # shutdown: close the Neo4j connection held by the chat pipeline
-    from api.chat_pipeline.graphiti_client import close_graphiti
-    await close_graphiti()
+
+    # Shutdown: best-effort close. Inline import keeps lifespan symbol-light
+    # on cold start and avoids triggering Graphiti imports for instances
+    # that never serve a chat request.
+    try:
+        from api.chat_pipeline.graphiti_client import close_graphiti
+        await close_graphiti()
+    except Exception as exc:
+        _log.warning(
+            "chat_graphiti_shutdown_failed err_class=%s err=%s",
+            type(exc).__name__, exc,
+        )
 
 
 app = FastAPI(

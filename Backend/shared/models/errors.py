@@ -44,9 +44,17 @@ class ErrorCode(str, Enum):
     INVALID_PAGINATION_CURSOR = "INVALID_PAGINATION_CURSOR"
 
     # Chat / knowledge graph query
-    CHAT_RETRIEVAL_FAILED = "CHAT_RETRIEVAL_FAILED"
-    CHAT_LLM_FAILED       = "CHAT_LLM_FAILED"
-    CHAT_LLM_TIMEOUT      = "CHAT_LLM_TIMEOUT"
+    #
+    # Granular enough that the iOS client can render distinct UX per failure
+    # mode (retry now vs back-off vs report-to-team), and the on-call runbook
+    # can route alerts correctly.
+    CHAT_RETRIEVAL_FAILED  = "CHAT_RETRIEVAL_FAILED"   # generic retrieval err
+    CHAT_RETRIEVAL_TIMEOUT = "CHAT_RETRIEVAL_TIMEOUT"  # search_ wait_for fired
+    CHAT_NEO4J_UNAVAILABLE = "CHAT_NEO4J_UNAVAILABLE"  # bolt/aura connect fail
+    CHAT_LLM_FAILED        = "CHAT_LLM_FAILED"         # generic Gemini err
+    CHAT_LLM_TIMEOUT       = "CHAT_LLM_TIMEOUT"        # answerer wait_for fired
+    CHAT_LLM_EMPTY         = "CHAT_LLM_EMPTY"          # answerer empty (SAFETY/MAX_TOKENS)
+    CHAT_RATE_LIMITED      = "CHAT_RATE_LIMITED"       # Vertex 429 surfaced
 
 
 class ErrorDetail(BaseModel):
