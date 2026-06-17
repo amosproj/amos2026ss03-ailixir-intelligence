@@ -23,7 +23,8 @@ export default function DocumentsScreen() {
 
   const onScanDocument = () => {
     // Placeholder for scan document functionality
-    alert('Scan document functionality is not implemented yet.');
+    // alert('Scan document functionality is not implemented yet.');
+    router.navigate('/documents/capture');
   };
 
   const onUploadDocument = () => {
