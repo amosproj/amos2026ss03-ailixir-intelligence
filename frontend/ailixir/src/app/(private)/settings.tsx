@@ -3,6 +3,7 @@ import { showOcrTextAtom } from '@/state/debug';
 import { useAtom } from 'jotai';
 import React, { useState, useEffect } from 'react';
 import { getAuth, signOut } from 'firebase/auth';
+import { Link } from 'expo-router';
 import { Switch, XStack, YStack } from 'tamagui';
 
 export default function SettingsScreen() {
@@ -66,6 +67,10 @@ export default function SettingsScreen() {
           </XStack>
         </YStack>
       </YStack>
+
+      <XStack justify="center" pb={8}>
+        <Link href="/chats/stt">STT Testpage</Link>
+      </XStack>
 
       <XStack justify="center" pb={8}>
         <CButton

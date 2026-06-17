@@ -54,6 +54,7 @@ export default function PrivateLayout() {
         }}
       />
       <Stack.Screen name="chats/[id]" options={{ title: 'Chat' }} />
+      <Stack.Screen name="chats/stt" options={{ title: 'Speech to Text' }} />
       <Stack.Screen name="documents/index" options={{ title: 'Documents' }} />
       <Stack.Screen name="documents/[id]" options={{ title: 'Document' }} />
       <Stack.Screen name="documents/capture" options={{ title: 'Capture' }} />
