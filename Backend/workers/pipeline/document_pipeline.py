@@ -45,6 +45,7 @@ from shared.models.extraction import Extraction
 from shared.repositories.documents import (
     find_document_for_user,
     update_cypher_uri,
+    update_graph_queries,
     update_processing_step,
     update_status,
 )
