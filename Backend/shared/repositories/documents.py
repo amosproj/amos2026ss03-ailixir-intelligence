@@ -154,6 +154,8 @@ def create_document_with_files(
         "idempotency_key": idempotency_key,
         "cypher_gcs_uri": None,      # set by worker when pipeline completes
         "processing_step": None,     # updated during processing for frontend polling
+        "graph_query": None,         # populated by worker at end of pipeline
+        "entities_query": None,      # populated by worker at end of pipeline
         "created_at": firebase_firestore.SERVER_TIMESTAMP,
         "updated_at": firebase_firestore.SERVER_TIMESTAMP,
         "finalized_at": None,
@@ -459,3 +461,27 @@ def update_cypher_uri(document_id: str, cypher_gcs_uri: str) -> None:
         }
     )
     _log.info("document_cypher_uri_set id=%s uri=%s", document_id, cypher_gcs_uri)
+
+
+def update_graph_queries(
+    document_id: str,
+    *,
+    graph_query: str,
+    entities_query: str,
+) -> None:
+    """Store the two Neo4j Cypher queries on the document once the pipeline finishes.
+
+    graph_query    — full entity graph for this patient (group_id-scoped, same
+                     for all documents belonging to the same user).
+    entities_query — entities linked to this specific document's Episodic node,
+                     filtered by episode name so the frontend can scope the view.
+    """
+    db = get_firestore()
+    db.collection(_COLLECTION).document(document_id).update(
+        {
+            "graph_query": graph_query,
+            "entities_query": entities_query,
+            "updated_at": firebase_firestore.SERVER_TIMESTAMP,
+        }
+    )
+    _log.info("document_graph_queries_set id=%s", document_id)

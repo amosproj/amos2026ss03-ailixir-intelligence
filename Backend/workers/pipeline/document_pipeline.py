@@ -45,6 +45,7 @@ from shared.models.extraction import Extraction
 from shared.repositories.documents import (
     find_document_for_user,
     update_cypher_uri,
+    update_graph_queries,
     update_processing_step,
     update_status,
 )
@@ -223,6 +224,27 @@ async def run(*, document_id: str, uid: str) -> None:
 
         # ── 9. Attach cypher link + mark complete ──────────────────────────────
         update_cypher_uri(document_id, cypher_gcs_uri)
+
+        # Store the two Cypher queries so the frontend can offer graph views
+        # without constructing Neo4j queries client-side.
+        # graph_query   — full entity graph for this patient (uid-scoped).
+        # entities_query — entities linked to this specific episode only.
+        update_graph_queries(
+            document_id,
+            graph_query=(
+                f"MATCH (n:Entity)-[r]-(m:Entity) "
+                f"WHERE n.group_id = '{uid}' "
+                f"RETURN n, r, m"
+            ),
+            entities_query=(
+                f"MATCH (ep:Episodic {{name: '{episode_name}', group_id: '{uid}'}})"
+                f"-[r]-(n:Entity) "
+                f"RETURN ep.name AS document, n.name AS entity, "
+                f"labels(n) AS entity_type "
+                f"ORDER BY ep.name"
+            ),
+        )
+
         update_status(document_id, DocumentStatus.EXTRACTED)
         _log.info(
             "pipeline_done document_id=%s cypher_gcs=%s",
