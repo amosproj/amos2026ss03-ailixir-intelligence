@@ -98,6 +98,12 @@ class Document(BaseModel):
     # Fine-grained progress written during processing for frontend polling.
     processing_step: str | None = None
 
+    # Cypher queries populated at end of pipeline. Null until processing completes.
+    # graph_query   — full entity graph for this patient (same across all their documents).
+    # entities_query — entities linked to this specific document's episode in Neo4j.
+    graph_query: str | None = None
+    entities_query: str | None = None
+
     created_at: datetime
     updated_at: datetime
     # Set when status transitions to UPLOADED.
