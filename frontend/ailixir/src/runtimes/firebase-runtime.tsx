@@ -1,16 +1,13 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-// @assistant-ui/react is in package.json + package-lock.json and resolves at
-// bundle time (Metro/Webpack), but the project's ESLint import-resolver can't
-// trace its subpath exports. Suppress on this one line rather than reshape
-// the package; CI lint shouldn't block PRs on a static-resolver limitation.
-// eslint-disable-next-line import/no-unresolved
 import { AssistantRuntimeProvider, useExternalStoreRuntime, type AppendMessage, type ThreadMessageLike } from '@assistant-ui/react';
-import { subscribeMessages, addUserMessage, addAssistantPlaceholder, resolveAssistantMessage } from '@/lib/chat-rtdb';
+import { subscribeMessages, addUserMessage, addAssistantPlaceholder, resolveAssistantMessage, removeMessage } from '@/lib/chat-rtdb';
+import { callChatApi, type ChatApiHistoryItem } from '@/lib/chat-api';
 import type { ChatMessageRecord } from '@/lib/chat-rtdb';
 import type { ChatMessage } from '@/components/organisms/';
 import { getAuth } from 'firebase/auth';
+import { AxiosError } from 'axios';
 
 const APPEND_TEXT = (msg: AppendMessage) => {
   const part = msg.content[0];
@@ -36,10 +33,25 @@ const chatMessageToThreadLike = (msg: ChatMessage): ThreadMessageLike => ({
   metadata: {},
 });
 
+function recordsToHistory(records: ChatMessageRecord[]): ChatApiHistoryItem[] {
+  return records.flatMap((record) => {
+    if (record.status !== 'sent') return [];
+    if (record.role !== 'user' && record.role !== 'assistant') return [];
+
+    return [
+      {
+        role: record.role,
+        content: record.content,
+      },
+    ];
+  });
+}
+
 interface FirebaseRuntimeContextValue {
   messages: ChatMessage[];
   isRunning: boolean;
   sendMessage: (text: string) => Promise<void>;
+  retryMessage: (messageId: string) => Promise<void>;
 }
 
 const FirebaseRuntimeContext = createContext<FirebaseRuntimeContextValue | null>(null);
@@ -78,24 +90,35 @@ export function FirebaseRuntimeProvider({ chatId, children }: FirebaseRuntimePro
       const text = APPEND_TEXT(msg);
       if (!text.trim()) return;
 
+      let assistantId: string | null = null;
       setIsRunning(true);
       try {
         await addUserMessage(uid, chatId, { content: text });
-        const assistantId = await addAssistantPlaceholder(uid, chatId);
+        assistantId = await addAssistantPlaceholder(uid, chatId);
 
-        const response = await simulateBackendCall(text);
+        const response = await callChatApi({
+          query: text,
+          history: recordsToHistory(records),
+        });
 
         await resolveAssistantMessage(uid, chatId, assistantId, {
-          content: response,
+          content: response.answer,
           status: 'sent',
         });
       } catch (err) {
         console.error('Failed to send message:', err);
+
+        const fallbackAssistantId = assistantId ?? (await addAssistantPlaceholder(uid, chatId));
+        const isGatewayTimeout = err instanceof AxiosError && err.response?.status === 504;
+        await resolveAssistantMessage(uid, chatId, fallbackAssistantId, {
+          content: isGatewayTimeout ? 'The assistant took too long to respond. Please try again.' : 'I could not reach the assistant service. Please try again.',
+          status: 'error',
+        });
       } finally {
         setIsRunning(false);
       }
     },
-    [uid, chatId],
+    [uid, chatId, records],
   );
 
   const runtime = useExternalStoreRuntime({
@@ -115,16 +138,56 @@ export function FirebaseRuntimeProvider({ chatId, children }: FirebaseRuntimePro
     [runtime],
   );
 
-  const ctxValue = useMemo(() => ({ messages, isRunning, sendMessage }), [messages, isRunning, sendMessage]);
+  const retryMessage = useCallback(
+    async (messageId: string) => {
+      if (!uid) return;
+
+      const selectedAssistantIndex = records.findIndex((record) => record.messageId === messageId);
+      if (selectedAssistantIndex < 0) return;
+
+      const selectedAssistant = records[selectedAssistantIndex];
+      if (selectedAssistant.role !== 'assistant') return;
+
+      const retryContextRecords = records.slice(0, selectedAssistantIndex);
+      const previousUserMessage = [...retryContextRecords].reverse().find((record) => record.role === 'user' && record.status === 'sent');
+      if (!previousUserMessage) return;
+
+      let assistantId: string | null = null;
+      setIsRunning(true);
+      try {
+        await removeMessage(uid, chatId, selectedAssistant.messageId);
+        assistantId = await addAssistantPlaceholder(uid, chatId);
+
+        const response = await callChatApi({
+          query: previousUserMessage.content,
+          history: recordsToHistory(retryContextRecords),
+        });
+
+        await resolveAssistantMessage(uid, chatId, assistantId, {
+          content: response.answer,
+          status: 'sent',
+        });
+      } catch (err) {
+        console.error('Failed to retry message:', err);
+
+        const fallbackAssistantId = assistantId ?? (await addAssistantPlaceholder(uid, chatId));
+        const isGatewayTimeout = err instanceof AxiosError && err.response?.status === 504;
+        await resolveAssistantMessage(uid, chatId, fallbackAssistantId, {
+          content: isGatewayTimeout ? 'The assistant took too long to respond. Please try again.' : 'I could not reach the assistant service. Please try again.',
+          status: 'error',
+        });
+      } finally {
+        setIsRunning(false);
+      }
+    },
+    [uid, chatId, records],
+  );
+
+  const ctxValue = useMemo(() => ({ messages, isRunning, sendMessage, retryMessage }), [messages, isRunning, sendMessage, retryMessage]);
 
   return (
     <FirebaseRuntimeContext.Provider value={ctxValue}>
       <AssistantRuntimeProvider runtime={runtime}>{children}</AssistantRuntimeProvider>
     </FirebaseRuntimeContext.Provider>
   );
-}
-
-async function simulateBackendCall(_input: string): Promise<string> {
-  await new Promise((r) => setTimeout(r, 1500));
-  return 'Simulated assistant response – backend integration pending.';
 }

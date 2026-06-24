@@ -9,12 +9,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { FirebaseRuntimeProvider, useFirebaseRuntime } from '@/runtimes/firebase-runtime';
 
 function ChatScreenContent() {
-  const { messages, isRunning, sendMessage } = useFirebaseRuntime();
+  const { messages, isRunning, sendMessage, retryMessage } = useFirebaseRuntime();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
 
-  const handleReloadMessage = (messageId: string) => {
-    console.log('Reload requested for:', messageId);
+  const handleReloadMessage = async (messageId: string) => {
+    await retryMessage(messageId);
   };
 
   return (

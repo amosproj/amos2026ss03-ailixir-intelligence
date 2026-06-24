@@ -11,6 +11,7 @@ interface ChatAssistantMessageProps {
 
 export const ChatAssistantMessage: React.FC<ChatAssistantMessageProps> = ({ text, onReload }) => {
   const [copied, setCopied] = useState(false);
+  const hasContent = text.trim().length > 0;
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(text);
@@ -32,13 +33,17 @@ export const ChatAssistantMessage: React.FC<ChatAssistantMessageProps> = ({ text
           flexDirection: 'row',
           justifyContent: 'flex-start',
         }}>
-        <CButton icon={RotateCcw} onPress={onReload} accessibilityLabel="Reload message" tone="muted" size={30}>
-          <CText variant="caption">Reload</CText>
-        </CButton>
+        {hasContent ? (
+          <>
+            <CButton icon={RotateCcw} onPress={onReload} accessibilityLabel="Reload message" tone="muted" size={30}>
+              <CText variant="caption">Reload</CText>
+            </CButton>
 
-        <CButton disabled={copied} opacity={copied ? 0.5 : 1} icon={Copy} onPress={handleCopy} accessibilityLabel="Copy message" tone="muted" size={30}>
-          <CText variant="caption">{copied ? 'Copied' : 'Copy'}</CText>
-        </CButton>
+            <CButton disabled={copied} opacity={copied ? 0.5 : 1} icon={Copy} onPress={handleCopy} accessibilityLabel="Copy message" tone="muted" size={30}>
+              <CText variant="caption">{copied ? 'Copied' : 'Copy'}</CText>
+            </CButton>
+          </>
+        ) : null}
       </View>
     </View>
   );
