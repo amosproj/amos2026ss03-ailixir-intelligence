@@ -364,6 +364,20 @@ class DocumentResponse(BaseModel):
     # diagnostic — display a generic failure UI and surface this only to
     # support, alongside the response's `X-Request-ID` header.
     error: str | None = None
+    # Worker-written Cypher templates for graph visualisation. Null until the
+    # pipeline writes them at status=extracted.
+    #
+    # `graph_query`    — full entity-relationship subgraph for the patient
+    #                    (group_id-scoped). Same query value for every
+    #                    document owned by the same user.
+    # `entities_query` — entities linked to THIS document's episode only.
+    #
+    # NOTE — known issue: these strings are built with f-string interpolation
+    # of values that ultimately come from the LLM extraction step. A future
+    # PR should replace them with parameterised server-side endpoints (see
+    # the design notes on PR #226 review).
+    graph_query: str | None = None
+    entities_query: str | None = None
 
 
 class DocumentListItem(BaseModel):
@@ -635,6 +649,8 @@ def _to_document_response(document: Document) -> DocumentResponse:
         cypher_download_expires_at=cypher_download_expires_at,
         processing_step=document.processing_step,
         error=document.error,
+        graph_query=document.graph_query,
+        entities_query=document.entities_query,
     )
 
 
