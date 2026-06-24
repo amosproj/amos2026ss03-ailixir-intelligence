@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.ailixir"
+      "bundleIdentifier": "com.anonymous.ailixir",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone."
+      }
     },
     "android": {
       "adaptiveIcon": {
