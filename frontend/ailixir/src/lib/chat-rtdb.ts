@@ -20,7 +20,6 @@ export interface ChatMessageRecord {
   content: string;
   createdAt: number;
   status: ChatMessageStatus;
-  requestId: string | null;
 }
 
 export interface CreateChatInput {
@@ -29,7 +28,6 @@ export interface CreateChatInput {
 
 export interface AddMessageInput {
   content: string;
-  requestId?: string | null;
 }
 
 const DEFAULT_CHAT_TITLE = 'New Chat';
@@ -100,7 +98,6 @@ export async function addUserMessage(uid: string, chatId: string, input: AddMess
     role: 'user',
     content: input.content,
     status: 'sent',
-    requestId: input.requestId ?? null,
   });
 }
 
@@ -109,7 +106,6 @@ export async function addAssistantPlaceholder(uid: string, chatId: string, input
     role: 'assistant',
     content: input.content,
     status: 'pending',
-    requestId: input.requestId ?? null,
   });
 }
 
@@ -122,7 +118,6 @@ export async function resolveAssistantMessage(uid: string, chatId: string, messa
   await update(ref(db), {
     [`${messagePath(uid, chatId, messageId)}/content`]: content,
     [`${messagePath(uid, chatId, messageId)}/status`]: status,
-    [`${messagePath(uid, chatId, messageId)}/requestId`]: input.requestId ?? null,
     [`${chatPath(uid, chatId)}/updatedAt`]: now,
     [`${chatPath(uid, chatId)}/lastMessageAt`]: now,
     [`${chatPath(uid, chatId)}/lastMessagePreview`]: preview,
@@ -176,7 +171,6 @@ export function subscribeMessages(uid: string, chatId: string, onNext: (messages
         content: message.content,
         createdAt: message.createdAt,
         status: message.status,
-        requestId: message.requestId,
       }));
 
       onNext(sortByCreatedAtAsc(messages));
@@ -187,7 +181,7 @@ export function subscribeMessages(uid: string, chatId: string, onNext: (messages
   );
 }
 
-async function addMessage(uid: string, chatId: string, input: { role: ChatMessageRole; content: string; status: ChatMessageStatus; requestId: string | null }) {
+async function addMessage(uid: string, chatId: string, input: { role: ChatMessageRole; content: string; status: ChatMessageStatus }) {
   const messageRef = push(child(ref(db), messagesPath(uid, chatId)));
   const messageId = messageRef.key;
 
@@ -204,7 +198,6 @@ async function addMessage(uid: string, chatId: string, input: { role: ChatMessag
       content: input.content,
       createdAt: now,
       status: input.status,
-      requestId: input.requestId,
     },
     [`${chatPath(uid, chatId)}/updatedAt`]: now,
     [`${chatPath(uid, chatId)}/lastMessageAt`]: now,
