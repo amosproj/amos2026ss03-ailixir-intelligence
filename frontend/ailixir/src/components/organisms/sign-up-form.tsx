@@ -50,7 +50,22 @@ export function SignUpForm({ width = '100%', onSubmit = (data) => console.log(da
             validate: (value) => value.includes('@') || 'Invalid email address',
           }}
           render={({ field: { onBlur, onChange, value } }) => (
-            <CInput placeholder="john.doe@example.com" theme="bright" width={width} value={value} onBlur={onBlur} onChangeText={onChange} autoCapitalize="none" keyboardType="email-address" />
+            <CInput
+              placeholder="john.doe@example.com"
+              theme="bright"
+              width={width}
+              value={value}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              // iOS Keychain hint — pairs with `textContentType="newPassword"`
+              // on the password field below so the system offers to save the
+              // credentials after a successful signup.
+              textContentType="emailAddress"
+              autoComplete="email"
+            />
           )}
         />
         {errors.email?.message ? (
@@ -114,6 +129,12 @@ export function SignUpForm({ width = '100%', onSubmit = (data) => console.log(da
                 secureTextEntry={!isPasswordVisible}
                 borderWidth={0}
                 backgroundColor="transparent"
+                // iOS hint: `newPassword` makes the system suggest a strong
+                // password and offer to save it to the Keychain on submit.
+                textContentType="newPassword"
+                autoComplete="new-password"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
               <CButton size="$3" chromeless onPress={() => setIsPasswordVisible(!isPasswordVisible)} icon={isPasswordVisible ? EyeOff : Eye} />
             </XStack>
