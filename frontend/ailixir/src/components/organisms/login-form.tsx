@@ -50,7 +50,12 @@ export function LoginForm({ width = '100%', onForgotPasswordPress, onSubmit = (d
               onBlur={onBlur}
               onChangeText={onChange}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              // iOS hints: enables Keychain saved-credential autofill and
+              // stops the system inserting whitespace on suggestion taps.
+              textContentType="emailAddress"
+              autoComplete="email"
             />
           )}
         />
@@ -81,6 +86,12 @@ export function LoginForm({ width = '100%', onForgotPasswordPress, onSubmit = (d
                 secureTextEntry={!isPasswordVisible}
                 borderWidth={0}
                 backgroundColor="transparent"
+                // iOS Keychain integration: lets the system offer the user's
+                // saved password for this app's bundle id via the QuickType bar.
+                textContentType="password"
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
               <CButton size="$3" chromeless onPress={() => setIsPasswordVisible(!isPasswordVisible)} icon={isPasswordVisible ? EyeOff : Eye} />
             </XStack>

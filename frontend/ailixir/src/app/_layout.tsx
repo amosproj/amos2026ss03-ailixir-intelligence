@@ -1,16 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Raleway_400Regular, Raleway_500Medium, Raleway_600SemiBold, Raleway_700Bold, useFonts } from '@expo-google-fonts/raleway';
 import { Stack } from 'expo-router';
-import React, { useEffect } from 'react';
+import React from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TamaguiProvider, useTheme } from '@tamagui/core';
 import { CText } from '@/components/atoms';
 import { Circle, Spinner } from 'tamagui';
-import { auth } from '@/lib/firebase';
-import { authLoadingAtom, isLoggedInAtom, userAtom } from '@/lib/authAtoms';
-import { onAuthStateChanged } from 'firebase/auth';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { authLoadingAtom, isLoggedInAtom } from '@/lib/authAtoms';
+import { useFirebaseAuthListener } from '@/hooks/useAuth';
+import { useAtomValue } from 'jotai';
 import { View } from 'react-native';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native'; // 1. Navigation-Theme-Imports hinzufügen
 
@@ -64,16 +63,10 @@ function RootStackContent() {
 }
 
 export default function RootStackNavigator() {
-  const setUser = useSetAtom(userAtom);
-  const setAuthLoading = useSetAtom(authLoadingAtom);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setAuthLoading(false);
-    });
-    return unsubscribe;
-  }, [setUser, setAuthLoading]);
+  // Single root subscription to Firebase auth state — mounting this hook
+  // here means every other component reads from atoms instead of
+  // subscribing itself, eliminating duplicate listeners.
+  useFirebaseAuthListener();
 
   const [fontsLoaded] = useFonts({
     Raleway_400Regular,
