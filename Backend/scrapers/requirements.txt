@@ -1,0 +1,13 @@
+# Scraper subsystem deps — separate from api/ and workers/ requirements.
+# Aligned with the langchain 0.3.x line already used by the rest of the repo
+# (graphiti / workers), so installing these does NOT downgrade langchain.
+biopython>=1.83
+paperscraper>=0.2.11
+pypdf>=4.2.0
+langchain>=0.3,<0.4
+langchain-core>=0.3.74,<0.4
+langchain-text-splitters>=0.3,<0.4
+langchain-astradb>=0.5,<1.0
+langchain-openai>=0.2,<0.4
+neo4j>=5.0.0
+python-dotenv>=1.0.1
