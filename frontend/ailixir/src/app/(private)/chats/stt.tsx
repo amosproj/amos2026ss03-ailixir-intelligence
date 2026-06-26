@@ -67,7 +67,6 @@ function STTContent() {
   return (
     <ScrollView flex={1} bg="$background">
       <YStack flex={1} px={16} pt={16} pb={18} gap={24}>
-
         <YStack bg="$lightgray" p={16} gap={12} style={{ borderRadius: 24 }}>
           <XStack items="center" justify="space-between">
             <CText variant="caption" color="$gray">

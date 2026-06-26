@@ -96,7 +96,7 @@ export default function RootStackNavigator() {
   return (
     <QueryClientProvider client={queryClient}>
       <TamaguiProvider config={config} defaultTheme="light">
-          <RootStackContent />
+        <RootStackContent />
       </TamaguiProvider>
     </QueryClientProvider>
   );
