@@ -20,7 +20,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 2. Build the native app (first time only, or after adding native dependencies)
 
    ```bash
-   npx expo run:ios
+   npm run ios # or npm run android
    ```
 
    This compiles the native iOS project and installs the dev build on the simulator. The project switched from Expo Go to a [development build](https://docs.expo.dev/develop/development-builds/introduction/), so a native build step is required before running the bundler.
