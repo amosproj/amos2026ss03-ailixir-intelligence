@@ -51,7 +51,15 @@
         }
       ],
       "expo-sharing",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset",
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "Allow AiLixir to access your microphone"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
