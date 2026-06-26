@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo run:ios",
+    "start": "echo '⚠️ Deprecated: use development builds instead - run `npm run ios` or `npm run android`'",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
