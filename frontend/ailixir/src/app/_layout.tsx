@@ -1,3 +1,5 @@
+import '@/lib/polyfills';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Raleway_400Regular, Raleway_500Medium, Raleway_600SemiBold, Raleway_700Bold, useFonts } from '@expo-google-fonts/raleway';
 import { Stack } from 'expo-router';

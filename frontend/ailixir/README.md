@@ -17,7 +17,15 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm --version
    ```
 
-2. Start the app
+2. Build the native app (first time only, or after adding native dependencies)
+
+   ```bash
+   npm run ios # or npm run android
+   ```
+
+   This compiles the native iOS project and installs the dev build on the simulator. The project switched from Expo Go to a [development build](https://docs.expo.dev/develop/development-builds/introduction/), so a native build step is required before running the bundler.
+
+3. Start the app
 
    ```bash
    npx expo start
@@ -28,7 +36,6 @@ In the output, you'll find options to open the app in a
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 

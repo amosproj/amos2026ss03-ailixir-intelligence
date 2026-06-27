@@ -1,108 +1,127 @@
 import { CButton, CText } from '@/components/atoms';
-import { useScribe } from '@elevenlabs/react';
-import { useQuery } from '@tanstack/react-query';
-import { requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
-import React, { useEffect } from 'react';
-import { XStack, YStack } from 'tamagui';
+import { ELEVENLABS_AGENT_ID } from '@/lib/elevenlabs-config';
+import { ConversationProvider, useConversationControls, useConversationStatus, useConversationMode } from '@elevenlabs/react-native';
+import React, { useState } from 'react';
+import { Alert, Platform, PermissionsAndroid } from 'react-native';
+import { ScrollView, XStack, YStack } from 'tamagui';
 
-/**
- * During Development: make sure that the scribe token provider is running!
- * It's shipped in the /poc/elvenlabs-token-service directory. run with `npm run dev`.
- */
-const SCRIBE_TOKEN_URL = 'http://localhost:3000/scribe-token';
+const STATUS_LABELS: Record<string, string> = {
+  disconnected: 'Disconnected',
+  connecting: 'Connecting...',
+  connected: 'Connected',
+  disconnecting: 'Disconnecting...',
+};
 
-export default function STTScreen() {
-  const scribe = useScribe({
-    modelId: 'scribe_v2_realtime',
-    onSessionStarted: () => console.log('Session started'),
-    onPartialTranscript: (data) => {
-      console.log('Partial:', data.text);
-    },
-    onCommittedTranscript: (data) => {
-      console.log('Committed:', data.text);
-    },
-    onCommittedTranscriptWithTimestamps: (data) => {
-      console.log('Committed with timestamps:', data.text);
-      console.log('Timestamps:', data.words);
-    },
-    onError: (error) => {
-      console.error('Scribe error:', error);
-    },
-  });
+function STTContent() {
+  const { startSession, endSession } = useConversationControls();
+  const { status, message } = useConversationStatus();
+  const { isSpeaking, isListening } = useConversationMode();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { refetch: getToken, isFetching: isTokenLoading } = useQuery({
-    queryKey: ['scribe-token'],
-    queryFn: async () => {
-      const res = await fetch(SCRIBE_TOKEN_URL);
-      if (!res.ok) throw new Error('Failed to fetch scribe token');
-      return res.json() as Promise<{ token: string }>;
-    },
-    enabled: false,
-  });
-
-  useEffect(() => {
-    return () => {
-      if (scribe.isConnected) scribe.disconnect();
-    };
-  }, [scribe]);
-
-  const handleStart = async () => {
-    try {
-      // Request Microphone Permissions
-      const { granted } = await requestRecordingPermissionsAsync();
-      if (!granted) {
-        console.warn('Microphone permission denied');
-        return;
+  const requestMicrophonePermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, {
+          title: 'Microphone Permission',
+          message: 'This app needs microphone access to enable voice conversations.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        });
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch {
+        return false;
       }
+    }
+    return true;
+  };
 
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
+  const handleToggle = async () => {
+    setError(null);
 
-      const result = await getToken();
-      const token = result.data?.token;
-      if (!token) throw new Error('No token received');
+    if (status === 'connected' || status === 'connecting') {
+      endSession();
+      return;
+    }
 
-      await scribe.connect({
-        token,
-        microphone: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
+    const hasPermission = await requestMicrophonePermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Microphone permission is required for voice conversations.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await startSession({ agentId: ELEVENLABS_AGENT_ID });
     } catch (err) {
-      console.error('Failed to start:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to start conversation';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleStop = () => {
-    scribe.disconnect();
-  };
-
-  const isBusy = isTokenLoading || scribe.status === 'connecting';
-  const isActive = scribe.isConnected;
+  const isActive = status === 'connected' || status === 'connecting';
 
   return (
-    <YStack flex={1} bg="$background">
-      <CText variant="caption" mb={16}>
-        Status: {scribe.status}
-      </CText>
+    <ScrollView flex={1} bg="$background">
+      <YStack flex={1} px={16} pt={16} pb={18} gap={24}>
+        <YStack bg="$lightgray" p={16} gap={12} style={{ borderRadius: 24 }}>
+          <XStack items="center" justify="space-between">
+            <CText variant="caption" color="$gray">
+              Status
+            </CText>
+            <CText variant="body" bold color="$black">
+              {STATUS_LABELS[status] || status}
+            </CText>
+          </XStack>
 
-      {scribe.error && (
-        <CText variant="body" color="$red10" mb={16}>
-          Error: {scribe.error}
-        </CText>
-      )}
+          {status === 'connected' && (
+            <XStack items="center" justify="space-between">
+              <CText variant="caption" color="$gray">
+                Mode
+              </CText>
+              <CText variant="body" bold color="$black">
+                {isSpeaking ? 'Speaking' : isListening ? 'Listening' : 'Idle'}
+              </CText>
+            </XStack>
+          )}
 
-      <XStack gap={12} mb={24}>
-        <CButton emphasis="high" onPress={handleStart} disabled={isBusy || isActive}>
-          {isTokenLoading ? 'Connecting...' : 'Start Recording'}
-        </CButton>
-        <CButton emphasis="medium" onPress={handleStop} disabled={!isActive}>
-          Stop
-        </CButton>
-      </XStack>
-    </YStack>
+          {message ? (
+            <YStack gap={4}>
+              <CText variant="caption" color="$gray">
+                Last message
+              </CText>
+              <CText variant="body" color="$black" numberOfLines={2}>
+                {message}
+              </CText>
+            </YStack>
+          ) : null}
+        </YStack>
+
+        <XStack justify="center" pt={20}>
+          <CButton emphasis="high" onPress={handleToggle} disabled={isLoading} opacity={isLoading ? 0.6 : 1} px={28} py={14} style={{ minWidth: 220 }}>
+            {isLoading ? 'Starting...' : isActive ? 'End Conversation' : 'Start Conversation'}
+          </CButton>
+        </XStack>
+
+        {error ? (
+          <XStack bg="#FEE2E2" p={12} style={{ borderRadius: 12 }} justify="center">
+            <CText variant="body" color="#DC2626">
+              {error}
+            </CText>
+          </XStack>
+        ) : null}
+      </YStack>
+    </ScrollView>
+  );
+}
+
+export default function STTScreen() {
+  return (
+    <ConversationProvider>
+      <STTContent />
+    </ConversationProvider>
   );
 }
