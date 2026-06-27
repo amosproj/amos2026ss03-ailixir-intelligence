@@ -76,4 +76,4 @@ jobs:
 
       - name: Build on EAS
         working-directory: ${{ env.PROJECT_DIR }}
-        run: eas build --platform all --non-interactive --no-wait
+        run: eas build --platform android --non-interactive --no-wait
