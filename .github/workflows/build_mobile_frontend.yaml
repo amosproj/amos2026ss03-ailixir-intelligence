@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - "**"
-    paths: ##only triggered on the change of front-end files 
-      - "frontend/**"
+    paths: ##only triggered on the change of front-end files
+      - "frontend/ailixir/**"
       - ".github/workflows/buildmobile_frontend.yaml"
       # - main
   workflow_dispatch:
@@ -28,8 +28,29 @@ env:
   JAVA_VERSION: "17"
 
 jobs:
+  lint-and-test:
+    name: Lint & Prettier
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: npm ci
+
+      - name: Run Lint
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: npm run lint
+
   android-build:
     name: Android Build
+    needs: lint-and-test
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
