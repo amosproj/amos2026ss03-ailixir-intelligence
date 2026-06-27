@@ -1,0 +1,43 @@
+name: Mobile Frontend Lint
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "frontend/ailixir/**"
+      - ".github/workflows/lint_frontend.yaml"
+      - ".github/workflows/build_mobile_frontend.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_DIR: frontend/ailixir
+  NODE_VERSION: "lts/krypton"
+  JAVA_VERSION: "17"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: npm ci
+
+      - name: Run Lint
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: npm run lint

@@ -1,13 +1,6 @@
-name: Build Mobile Frontend
+name: Manual Mobile Frontend Build
 
 on:
-  push:
-    branches:
-      - "**"
-    paths: ##only triggered on the change of front-end files
-      - "frontend/ailixir/**"
-      - ".github/workflows/buildmobile_frontend.yaml"
-      # - main
   workflow_dispatch:
   # release:
   #   types:
@@ -33,10 +26,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -51,14 +44,13 @@ jobs:
   build:
     name: Install and build
     needs: lint
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
