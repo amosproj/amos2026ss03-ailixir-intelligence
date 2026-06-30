@@ -250,6 +250,16 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "NEO4J_DATABASE"
         value = var.neo4j_database
       }
+
+      # ── ElevenLabs (voice — Custom LLM integration, see api/voice.py) ───────
+      env {
+        name  = "ELEVENLABS_CUSTOM_LLM_SECRET"
+        value = var.elevenlabs_custom_llm_secret
+      }
+      env {
+        name  = "ELEVENLABS_USER_ID_HEADER"
+        value = var.elevenlabs_user_id_header
+      }
     }
   }
 

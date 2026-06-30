@@ -54,3 +54,17 @@ variable "vertex_llm_model" {
   type        = string
   default     = "gemini-2.5-flash"
 }
+
+# ── ElevenLabs (voice — Custom LLM integration, see api/voice.py) ─────────────
+
+variable "elevenlabs_custom_llm_secret" {
+  description = "Shared secret ElevenLabs presents as `Authorization: Bearer <value>`; must match the agent's Custom LLM \"API key\" field in the ElevenLabs dashboard"
+  type        = string
+  sensitive   = true
+}
+
+variable "elevenlabs_user_id_header" {
+  description = "Request header name ElevenLabs sends the patient's Firebase UID in (configured as a secret__ dynamic variable on the agent's Custom LLM)"
+  type        = string
+  default     = "X-User-Id"
+}

@@ -46,6 +46,7 @@ from api.errors import (
     validation_error_handler,
 )
 from api.middleware import RequestIDLogFilter, RequestIDMiddleware
+from api.voice import router as voice_router
 from shared import gcs, pubsub
 from shared.models.document import (
     ALLOWED_FILE_CONTENT_TYPES,
@@ -181,6 +182,7 @@ app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.include_router(chat_router, prefix="/chat", tags=["Chat"])
+app.include_router(voice_router, prefix="/voice", tags=["Voice (ElevenLabs Custom LLM)"])
 
 
 # ──────────────────────────────────────────────────────────────────────────────
