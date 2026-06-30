@@ -106,16 +106,17 @@ jobs:
                 -var="neo4j_user=${{ secrets.NEO4J_USER }}" \
                 -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
                 -var="neo4j_database=${{ secrets.NEO4J_DATABASE }}" \
+                -var="elevenlabs_custom_llm_secret=${{ secrets.ELEVENLABS_CUSTOM_LLM_SECRET }}" \
                 google_cloud_run_v2_service.backend \
                 projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-backend
 
       - name: Terraform Plan
         working-directory: Backend/api/terraform
-        # NEO4J_* secrets are required by api/terraform/variables.tf
-        # (added in PR #200 for the /chat/query knowledge-graph retrieval).
-        # Without them Terraform prompts interactively for `neo4j_password`
-        # and the CI runner hangs until GitHub Actions kills the job at 6h.
-        # Keep this in sync with workers/.github/workflows/worker-ci-cd.yml.
+        # NEO4J_* and ELEVENLABS_CUSTOM_LLM_SECRET are required by
+        # api/terraform/variables.tf (no defaults). Without them Terraform
+        # prompts interactively and the CI runner hangs until GitHub Actions
+        # kills the job at 6h. Keep this in sync with the import step above
+        # and with workers/.github/workflows/worker-ci-cd.yml.
         run: |
           terraform plan -no-color \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
@@ -124,6 +125,7 @@ jobs:
             -var="neo4j_user=${{ secrets.NEO4J_USER }}" \
             -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
             -var="neo4j_database=${{ secrets.NEO4J_DATABASE }}" \
+            -var="elevenlabs_custom_llm_secret=${{ secrets.ELEVENLABS_CUSTOM_LLM_SECRET }}" \
             -out=tfplan
 
       - name: Terraform Apply
