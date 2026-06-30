@@ -316,6 +316,7 @@ async def _run_pipeline(uid: str, query: str, history: list[dict[str, str]]) -> 
 
 @router.post(
     "/v1/chat/completions",
+    response_model=None,
     summary="ElevenLabs Custom LLM endpoint (OpenAI-compatible)",
     description=(
         "Server-to-server endpoint called by ElevenLabs Conversational AI "
