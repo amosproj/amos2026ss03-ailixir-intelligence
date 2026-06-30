@@ -38,7 +38,8 @@ from api.auth import (
     get_current_user,
 )
 from api.chat import router as chat_router
-from api.errors import (
+from api.voice import router as voice_router
+from api.errors import (  # noqa: E402 — see import group below for related symbols
     APIError,
     api_error_handler,
     http_exception_handler,

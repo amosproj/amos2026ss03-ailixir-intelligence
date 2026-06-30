@@ -56,6 +56,11 @@ class ErrorCode(str, Enum):
     CHAT_LLM_EMPTY         = "CHAT_LLM_EMPTY"          # answerer empty (SAFETY/MAX_TOKENS)
     CHAT_RATE_LIMITED      = "CHAT_RATE_LIMITED"       # Vertex 429 surfaced
 
+    # Voice / ElevenLabs Custom LLM integration
+    VOICE_UNAUTHORIZED     = "VOICE_UNAUTHORIZED"      # bad/missing shared secret
+    VOICE_USER_ID_MISSING  = "VOICE_USER_ID_MISSING"   # no uid in header or body
+    VOICE_NOT_CONFIGURED   = "VOICE_NOT_CONFIGURED"    # server missing shared secret
+
 
 class ErrorDetail(BaseModel):
     code: ErrorCode
