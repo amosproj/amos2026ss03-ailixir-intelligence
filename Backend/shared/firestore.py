@@ -29,6 +29,15 @@ _KEY_RELATIVE_PATH = os.getenv(
 )
 _KEY_PATH = BACKEND_ROOT / _KEY_RELATIVE_PATH
 
+# Realtime Database URL. Required for the Admin SDK's `db` module (chat title
+# writes land in RTDB at users/{uid}/chats/{chatId}). Defaults to the project's
+# europe-west1 instance — the same URL the mobile client reads in
+# frontend/.../firebase.config.ts. Override via env for emulator / other envs.
+_DATABASE_URL = os.getenv(
+    "FIREBASE_DATABASE_URL",
+    "https://amos26-default-rtdb.europe-west1.firebasedatabase.app/",
+)
+
 _init_lock = threading.Lock()
 _db: Client | None = None
 
@@ -47,15 +56,20 @@ def ensure_firebase_app() -> None:
         # Re-check inside the lock — another thread may have completed init while we waited.
         if firebase_admin._apps:
             return
+
+        # `databaseURL` is required for the RTDB `db` module (chat title writes).
+        # It's safe to set on every init path: Firestore/Auth ignore it.
+        options = {"databaseURL": _DATABASE_URL}
+
         if _emulator_mode():
-            firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
+            firebase_admin.initialize_app(options={**options, "projectId": _PROJECT_ID})
             return
 
         # Empty env var is the explicit opt-in to Application Default
         # Credentials — the production / Cloud Run path, where the metadata
         # server supplies the runtime service account.
         if not _KEY_RELATIVE_PATH:
-            firebase_admin.initialize_app(options={"projectId": _PROJECT_ID})
+            firebase_admin.initialize_app(options={**options, "projectId": _PROJECT_ID})
             return
 
         # Env var set but pointing at nothing is almost always a typo. Fail
@@ -69,7 +83,7 @@ def ensure_firebase_app() -> None:
             )
 
         cred = credentials.Certificate(str(_KEY_PATH))
-        firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred, options=options)
 
 
 def get_firestore() -> Client:

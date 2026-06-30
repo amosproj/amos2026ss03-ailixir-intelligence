@@ -40,13 +40,14 @@ import asyncio
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel, Field
 
 from api.auth import get_current_user
 from api.chat_pipeline.answerer import generate_answer
 from api.chat_pipeline.contextualizer import contextualize_query
 from api.chat_pipeline.retriever import retrieve
+from api.chat_pipeline.titler import generate_and_store_title
 from api.errors import APIError
 from shared.models.errors import ErrorCode
 from shared.retryable_errors import (
@@ -88,6 +89,11 @@ class ChatQueryRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=2000)
     history: list[ChatMessage] = Field(default_factory=list, max_length=20)
+    # Opaque Realtime-DB chat id. Optional: when present AND this is the first
+    # turn (empty history), the endpoint schedules background title generation
+    # for users/{uid}/chats/{chat_id}. Absent for callers that don't persist a
+    # chat session (e.g. one-off / voice flows).
+    chat_id: str | None = Field(default=None, max_length=128)
 
 
 class ChatQueryResponse(BaseModel):
@@ -107,6 +113,38 @@ class ChatQueryResponse(BaseModel):
     query_changed: bool
     facts_used: int
     entities_used: int
+    # True when a background title-generation task was scheduled for this chat
+    # (first turn + chat_id present). The title itself lands in RTDB a moment
+    # later; the client observes it via its chat-list subscription. Purely
+    # informational — clients don't need to act on it.
+    title_generation_scheduled: bool = False
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _maybe_schedule_title(
+    background: BackgroundTasks,
+    payload: ChatQueryRequest,
+    uid: str,
+) -> bool:
+    """Schedule best-effort title generation for the first turn of a chat.
+
+    Returns True if a task was scheduled. Empty history is the cheap
+    "this is message #1" signal; the titler's RTDB transaction is the
+    correctness backstop (idempotent + rename-safe), so a missed or extra
+    trigger can never double-title. The task runs after the response is sent,
+    adding zero latency. The original `payload.query` is used (not the
+    contextualized form) so the title reflects what the user actually typed.
+    """
+    if not payload.chat_id or payload.history:
+        return False
+    background.add_task(
+        generate_and_store_title,
+        uid=uid,
+        chat_id=payload.chat_id,
+        query=payload.query,
+    )
+    return True
 
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
@@ -138,6 +176,7 @@ natural-language answer. Facts are clearly marked as current or historical.
 )
 async def chat_query(
     payload: ChatQueryRequest,
+    background: BackgroundTasks,
     user: dict = Depends(get_current_user),
 ) -> ChatQueryResponse:
     uid = user["uid"]
@@ -262,9 +301,14 @@ async def chat_query(
             message="Failed to generate an answer. Please try again.",
         )
 
+    # Best-effort title generation for the first turn (see helper). Runs after
+    # the response is sent, so it adds no latency to the answer.
+    title_generation_scheduled = _maybe_schedule_title(background, payload, uid)
+
     _log.info(
-        "chat_query_done uid=%s query_changed=%s facts=%d entities=%d answer_len=%d",
-        uid, ctx.changed, retrieval.total_edges, retrieval.total_nodes, len(answer),
+        "chat_query_done uid=%s query_changed=%s facts=%d entities=%d answer_len=%d title_scheduled=%s",
+        uid, ctx.changed, retrieval.total_edges, retrieval.total_nodes,
+        len(answer), title_generation_scheduled,
     )
 
     return ChatQueryResponse(
@@ -273,4 +317,5 @@ async def chat_query(
         query_changed=ctx.changed,
         facts_used=retrieval.total_edges,
         entities_used=retrieval.total_nodes,
+        title_generation_scheduled=title_generation_scheduled,
     )

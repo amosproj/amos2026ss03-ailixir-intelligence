@@ -99,6 +99,10 @@ export function FirebaseRuntimeProvider({ chatId, children }: FirebaseRuntimePro
         const response = await callChatApi({
           query: text,
           history: recordsToHistory(records),
+          // Sent so the backend can auto-title this chat from the first
+          // message. It only acts when history is empty (first turn); the
+          // generated title arrives via the chat-list subscription.
+          chat_id: chatId,
         });
 
         await resolveAssistantMessage(uid, chatId, assistantId, {
