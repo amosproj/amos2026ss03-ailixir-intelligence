@@ -37,7 +37,13 @@ export function ListItemContent({ href, icon, title, subtitle, meta, contentAcce
           <CText variant="lead" numberOfLines={1}>
             {title}
           </CText>
-          {subtitle && <CText variant="body">{subtitle}</CText>}
+          {/* Secondary text (chat preview, document metadata): muted and
+              clipped to one line so long values never wrap the row. */}
+          {subtitle && (
+            <CText variant="body" color="$accent5" numberOfLines={1}>
+              {subtitle}
+            </CText>
+          )}
           {meta}
         </YStack>
         {contentAccessory}

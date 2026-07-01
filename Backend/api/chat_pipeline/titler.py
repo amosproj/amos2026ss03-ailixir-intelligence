@@ -164,6 +164,10 @@ async def _generate_title(query: str) -> str:
                 # Slight creativity reads more natural than temp 0 here; the
                 # RTDB transaction makes the write idempotent regardless.
                 temperature=0.3,
+                # Disable "thinking" — a 3-6 word title needs no reasoning
+                # budget, and thinking adds seconds of latency. Off makes the
+                # title land fast enough to appear with the answer, not after.
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         ),
         timeout=_TIMEOUT_S,

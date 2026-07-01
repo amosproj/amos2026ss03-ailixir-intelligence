@@ -166,6 +166,24 @@ export function subscribeChats(uid: string, onNext: (chats: ChatSummary[]) => vo
   );
 }
 
+// Live subscription to a single chat's title. Used by the chat detail screen
+// to show the (possibly auto-generated) title in its header instead of a
+// static "Chat". Subscribes to the `/title` child only, so an updated title
+// (e.g. backend auto-titling landing) reflects without pulling the whole node.
+export function subscribeChatTitle(uid: string, chatId: string, onNext: (title: string) => void, onError?: (error: Error) => void): Unsubscribe {
+  const titleRef = ref(db, `${chatPath(uid, chatId)}/title`);
+  return onValue(
+    titleRef,
+    (snapshot) => {
+      const value = snapshot.val() as string | null;
+      onNext(value ?? '');
+    },
+    (error) => {
+      onError?.(error as Error);
+    },
+  );
+}
+
 export function subscribeMessages(uid: string, chatId: string, onNext: (messages: ChatMessageRecord[]) => void, onError?: (error: Error) => void): Unsubscribe {
   const messagesRef = ref(db, messagesPath(uid, chatId));
   return onValue(

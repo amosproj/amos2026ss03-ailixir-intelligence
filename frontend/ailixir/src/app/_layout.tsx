@@ -6,6 +6,7 @@ import { Stack } from 'expo-router';
 import React from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { TamaguiProvider, useTheme } from '@tamagui/core';
 import { CText } from '@/components/atoms';
 import { Circle, Spinner } from 'tamagui';
@@ -94,10 +95,15 @@ export default function RootStackNavigator() {
   });
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TamaguiProvider config={config} defaultTheme="light">
-        <RootStackContent />
-      </TamaguiProvider>
-    </QueryClientProvider>
+    // Root host for react-native-gesture-handler. Required for any gesture
+    // component (e.g. the swipe-to-delete rows in the chat list) to receive
+    // touches; without it gestures silently no-op, especially on Android.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <TamaguiProvider config={config} defaultTheme="light">
+          <RootStackContent />
+        </TamaguiProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

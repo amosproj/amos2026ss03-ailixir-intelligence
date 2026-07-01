@@ -19,7 +19,11 @@ export type QuickAction = {
 export type RecentChat = {
   id: string;
   title: string;
-  timeAgo: string;
+  // Preview of the last message, shown under the title in the chat row.
+  preview: string;
+  // Short relative timestamp shown on the right (e.g. "4:05 PM", "Yesterday",
+  // "May 21"). Built from the chat's last-activity time.
+  timeLabel: string;
 };
 
 export const quickActions: QuickAction[] = [
@@ -41,11 +45,4 @@ export const quickActions: QuickAction[] = [
     iconStrokeWidth: 2.2,
     iconBackground: '$blue',
   },
-];
-
-export const recentChats: RecentChat[] = [
-  { id: 'lab-reports', title: 'Lab Reports Summary', timeAgo: '2d ago' },
-  { id: 'blood-results', title: 'Blood Results Review', timeAgo: '3d ago' },
-  { id: 'invoices', title: 'Invoice Reconciliation', timeAgo: '5d ago' },
-  { id: 'timesheets-expenses', title: 'Timesheets and Expenses', timeAgo: '1w ago' },
 ];
