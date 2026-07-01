@@ -1,6 +1,6 @@
 // Barrel file for molecules components
 export * from './camera-button';
-
+export * from './orb';
 export * from './auxiliary-overview';
 export * from './chat-assistant-message';
 export * from './chat-input';
