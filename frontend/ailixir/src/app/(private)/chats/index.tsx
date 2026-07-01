@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
 
-import { CText } from '@/components/atoms';
 import { RecentChatItem } from '@/components/molecules';
 import type { RecentChat } from '@/data/home';
 import { subscribeChats } from '@/lib/chat-rtdb';
@@ -25,15 +24,13 @@ export default function ChatsScreen() {
   }, [uid]);
 
   return (
+    // The navigation header already shows "Chats"; no in-body heading so the
+    // screen matches the design's single-title layout.
     <ScrollView flex={1} bg="$background">
-      <YStack gap={14} px={16} py={16}>
-        <CText variant="h2">Chats</CText>
-
-        <YStack gap={10}>
-          {chats.map((chat) => (
-            <RecentChatItem key={chat.id} chat={chat} deletable />
-          ))}
-        </YStack>
+      <YStack gap={10} px={16} py={16}>
+        {chats.map((chat) => (
+          <RecentChatItem key={chat.id} chat={chat} deletable />
+        ))}
       </YStack>
     </ScrollView>
   );

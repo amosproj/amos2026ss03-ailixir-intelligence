@@ -1,12 +1,19 @@
 import { ChatMessages } from '@/components/organisms/';
 import { ChatInput } from '@/components/molecules';
 import { CText } from '@/components/atoms';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { getAuth } from 'firebase/auth';
 import { FirebaseRuntimeProvider, useFirebaseRuntime } from '@/runtimes/firebase-runtime';
+import { subscribeChatTitle } from '@/lib/chat-rtdb';
+
+// Fallback while the title loads or for a chat that has none yet.
+const DEFAULT_HEADER_TITLE = 'Chat';
+// Keep a long title from colliding with the back button / running off-screen.
+const HEADER_TITLE_MAX_WIDTH = 260;
 
 function ChatScreenContent() {
   const { messages, isRunning, sendMessage, retryMessage } = useFirebaseRuntime();
@@ -42,11 +49,29 @@ function ChatScreenContent() {
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [title, setTitle] = useState(DEFAULT_HEADER_TITLE);
+
+  // Mirror the chat's title into the header, live — so a title that's still
+  // being auto-generated updates here the moment it lands, matching the list.
+  useEffect(() => {
+    const uid = getAuth().currentUser?.uid;
+    if (!uid || !id) return;
+    return subscribeChatTitle(uid, id, (next) => setTitle(next.trim() || DEFAULT_HEADER_TITLE));
+  }, [id]);
 
   if (!id) return null;
 
   return (
     <FirebaseRuntimeProvider chatId={id}>
+      <Stack.Screen
+        options={{
+          headerTitle: () => (
+            <CText variant="lead" bold numberOfLines={1} style={{ maxWidth: HEADER_TITLE_MAX_WIDTH }}>
+              {title}
+            </CText>
+          ),
+        }}
+      />
       <ChatScreenContent />
     </FirebaseRuntimeProvider>
   );

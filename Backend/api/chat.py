@@ -40,7 +40,7 @@ import asyncio
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 
 from api.auth import get_current_user
@@ -122,28 +122,35 @@ class ChatQueryResponse(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _maybe_schedule_title(
-    background: BackgroundTasks,
-    payload: ChatQueryRequest,
-    uid: str,
-) -> bool:
-    """Schedule best-effort title generation for the first turn of a chat.
+# Strong references to in-flight title tasks. asyncio only holds a weak
+# reference to a bare create_task, so without this a task can be garbage
+# collected mid-flight. We add on launch and discard on completion.
+_title_tasks: set[asyncio.Task] = set()
 
-    Returns True if a task was scheduled. Empty history is the cheap
-    "this is message #1" signal; the titler's RTDB transaction is the
-    correctness backstop (idempotent + rename-safe), so a missed or extra
-    trigger can never double-title. The task runs after the response is sent,
-    adding zero latency. The original `payload.query` is used (not the
-    contextualized form) so the title reflects what the user actually typed.
+
+def _maybe_start_title(payload: ChatQueryRequest, uid: str) -> bool:
+    """Kick off best-effort title generation for the first turn of a chat.
+
+    Returns True if a task was launched. Empty history is the cheap "this is
+    message #1" signal; the titler's RTDB transaction is the correctness
+    backstop (idempotent + rename-safe), so a missed or extra trigger can never
+    double-title. The original `payload.query` is used (not the contextualized
+    form) so the title reflects what the user actually typed.
+
+    Launched with `create_task` (not a post-response BackgroundTask) so the
+    title's Gemini call runs CONCURRENTLY with retrieve+answer. It's a short,
+    thinking-disabled call, so it typically finishes before the answer does —
+    the title is already in RTDB when the client renders the answer, instead of
+    popping in several seconds later. `generate_and_store_title` never raises,
+    so the orphaned task can't surface an unhandled exception.
     """
     if not payload.chat_id or payload.history:
         return False
-    background.add_task(
-        generate_and_store_title,
-        uid=uid,
-        chat_id=payload.chat_id,
-        query=payload.query,
+    task = asyncio.create_task(
+        generate_and_store_title(uid=uid, chat_id=payload.chat_id, query=payload.query)
     )
+    _title_tasks.add(task)
+    task.add_done_callback(_title_tasks.discard)
     return True
 
 
@@ -176,7 +183,6 @@ natural-language answer. Facts are clearly marked as current or historical.
 )
 async def chat_query(
     payload: ChatQueryRequest,
-    background: BackgroundTasks,
     user: dict = Depends(get_current_user),
 ) -> ChatQueryResponse:
     uid = user["uid"]
@@ -185,6 +191,13 @@ async def chat_query(
         "chat_query_start uid=%s query_chars=%d history_turns=%d",
         uid, len(payload.query), len(payload.history),
     )
+
+    # Kick off title generation up front so it runs concurrently with the
+    # retrieve+answer pipeline below. It depends only on the raw query, so
+    # starting here (rather than after the answer) means the title is usually
+    # written to RTDB before the answer is even ready — the client sees them
+    # appear together instead of the title lagging by seconds.
+    title_generation_scheduled = _maybe_start_title(payload, uid)
 
     # Step 1 — Contextualize
     # `contextualize_query` is designed to never raise — it returns the
@@ -300,10 +313,6 @@ async def chat_query(
             code=ErrorCode.CHAT_LLM_FAILED,
             message="Failed to generate an answer. Please try again.",
         )
-
-    # Best-effort title generation for the first turn (see helper). Runs after
-    # the response is sent, so it adds no latency to the answer.
-    title_generation_scheduled = _maybe_schedule_title(background, payload, uid)
 
     _log.info(
         "chat_query_done uid=%s query_changed=%s facts=%d entities=%d answer_len=%d title_scheduled=%s",
