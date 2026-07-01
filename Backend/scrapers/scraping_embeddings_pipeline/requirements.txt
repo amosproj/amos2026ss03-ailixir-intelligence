@@ -1,0 +1,13 @@
+arxiv>=2.1.0
+beautifulsoup4>=4.12.0
+biopython>=1.83
+langchain>=0.2.6
+langchain-astradb>=0.3.3
+langchain-openai>=0.1.14
+paperscraper>=0.2.11
+pydub>=0.25.1
+pypdf>=4.2.0
+python-dotenv>=1.0.1
+requests>=2.31.0
+selenium>=4.21.0
+vosk>=0.3.45
