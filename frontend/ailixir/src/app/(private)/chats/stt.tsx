@@ -1,7 +1,7 @@
 import { CButton, CText } from '@/components/atoms';
 import { ConversationProvider, useConversationControls, useConversationStatus, useConversationMode } from '@elevenlabs/react-native';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
 
@@ -18,6 +18,10 @@ function STTContent() {
   const { isSpeaking, isListening } = useConversationMode();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    console.log(`[STT] Status changed: ${status}`);
+  }, [status]);
 
   const requestMicrophonePermission = async () => {
     if (Platform.OS === 'android') {
@@ -41,6 +45,7 @@ function STTContent() {
     setError(null);
 
     if (status === 'connected' || status === 'connecting') {
+      console.log('[STT] Ending session');
       endSession();
       return;
     }
@@ -53,14 +58,19 @@ function STTContent() {
 
     setIsLoading(true);
     try {
+      console.log('[STT] Fetching signed URL...');
       const functions = getFunctions();
       const getSignedUrlFn = httpsCallable(functions, 'signedUrl');
       const result = await getSignedUrlFn();
       const { signedUrl } = result.data as { signedUrl: string };
+      console.log('[STT] Signed URL retrieved successfully');
 
+      console.log('[STT] Starting session...');
       await startSession({ signedUrl });
+      console.log('[STT] Session started');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to start conversation';
+      console.error('[STT] Error:', msg);
       setError(msg);
     } finally {
       setIsLoading(false);
