@@ -90,6 +90,7 @@ Each chunk is stored in AstraDB with the following metadata structure:
 ### Deterministic Vector IDs
 
 Vector store IDs are generated deterministically from:
+
 ```
 SHA256({scraper_class}:{element_id}:{chunk_index})
 ```
@@ -98,28 +99,32 @@ This ensures idempotent upserts—retries update existing vectors rather than cr
 
 ## Supported Sources
 
-| Source | Type | Key Metadata | Deduplication |
-|--------|------|--------------|----------------|
-| **AllRecipes** | Recipe | subTitle, rating, recipeDetails, ingredients, steps, nutritionFacts, nutritionInfo | By element_id + chunk |
-| **arXiv** | Academic Paper | DOI, title, authors, abstract, published_date | By DOI (primary) or title fingerprint |
-| **NutritionFacts** | Health Video/Article | Transcript, keyPoints, content_section | By element_id + chunk |
-| **PubMed** | Medical Paper | DOI, title, authors, abstract, published_date | By DOI (primary) or title fingerprint |
-| **YouTube** | Video/Transcript | Video metadata, transcript sections | By video_id + chunk |
-| **Archive/Podcast** | Audio/Transcript | Transcript, timestamps | By element_id + chunk |
+| Source              | Type                 | Key Metadata                                                                       | Deduplication                         |
+| ------------------- | -------------------- | ---------------------------------------------------------------------------------- | ------------------------------------- |
+| **AllRecipes**      | Recipe               | subTitle, rating, recipeDetails, ingredients, steps, nutritionFacts, nutritionInfo | By element_id + chunk                 |
+| **arXiv**           | Academic Paper       | DOI, title, authors, abstract, published_date                                      | By DOI (primary) or title fingerprint |
+| **NutritionFacts**  | Health Video/Article | Transcript, keyPoints, content_section                                             | By element_id + chunk                 |
+| **PubMed**          | Medical Paper        | DOI, title, authors, abstract, published_date                                      | By DOI (primary) or title fingerprint |
+| **YouTube**         | Video/Transcript     | Video metadata, transcript sections                                                | By video_id + chunk                   |
+| **Archive/Podcast** | Audio/Transcript     | Transcript, timestamps                                                             | By element_id + chunk                 |
 
 ### Source-Specific Metadata
 
 **AllRecipes recipes** additionally store:
+
 - `subTitle`, `rating`, `recipeDetails` (prep time, cook time, servings)
 - `ingredients`, `steps`, `nutritionFacts`, `nutritionInfo`
 
 **PubMed & arXiv papers** additionally store:
+
 - `doi`, `authors`, `abstract`, `journal` (PubMed only)
 - Shared registry: `data/papers/index.json` for cross-source deduplication
 
 **NutritionFacts & Podcasts** additionally store:
+
 - `type`: 'transcript' or 'keyPoints'
 - `content_section`: 'transcript' or 'keyPoints'
 
 **YouTube** additionally store:
+
 - Video metadata and transcript with timestamps
