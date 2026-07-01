@@ -1,6 +1,6 @@
 import { CButton, CText } from '@/components/atoms';
-import { ELEVENLABS_AGENT_ID } from '@/lib/elevenlabs-config';
 import { ConversationProvider, useConversationControls, useConversationStatus, useConversationMode } from '@elevenlabs/react-native';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import React, { useState } from 'react';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
@@ -53,7 +53,12 @@ function STTContent() {
 
     setIsLoading(true);
     try {
-      await startSession({ agentId: ELEVENLABS_AGENT_ID });
+      const functions = getFunctions();
+      const getSignedUrlFn = httpsCallable(functions, 'signedUrl');
+      const result = await getSignedUrlFn();
+      const { signedUrl } = result.data as { signedUrl: string };
+
+      await startSession({ signedUrl });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to start conversation';
       setError(msg);
