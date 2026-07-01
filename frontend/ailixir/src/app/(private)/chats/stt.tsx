@@ -58,19 +58,19 @@ function STTContent() {
 
     setIsLoading(true);
     try {
-      console.log('[STT] Fetching signed URL...');
+      console.log('[STT] Fetching conversation token...');
       const functions = getFunctions();
-      const getSignedUrlFn = httpsCallable(functions, 'signedUrl');
-      const result = await getSignedUrlFn();
-      const { signedUrl } = result.data as { signedUrl: string };
-      console.log('[STT] Signed URL retrieved successfully');
+      const getConversationTokenFn = httpsCallable(functions, 'getWebrtcToken');
+      const result = await getConversationTokenFn();
+      const { token } = result.data as { token: string };
+      console.log('[STT] Conversation token retrieved successfully');
 
       console.log('[STT] Starting session...');
-      await startSession({ signedUrl });
+      await startSession({ conversationToken: token });
       console.log('[STT] Session started');
     } catch (err) {
+      console.error('[STT] Error:', err);
       const msg = err instanceof Error ? err.message : 'Failed to start conversation';
-      console.error('[STT] Error:', msg);
       setError(msg);
     } finally {
       setIsLoading(false);
