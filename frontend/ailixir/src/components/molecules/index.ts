@@ -21,3 +21,4 @@ export * from './recent-chat-item';
 export * from './screen-header';
 export * from './upload-actions';
 export * from './upload-files-panel';
+export * from './voice-pulse-circle';
