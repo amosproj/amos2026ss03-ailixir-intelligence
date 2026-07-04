@@ -23,3 +23,16 @@ export const getSignedUrl = async () => {
     throw error;
   }
 };
+
+export const getConversationToken = async () => {
+  try {
+    const response =
+      await elevenlabs.conversationalAi.conversations.getWebrtcToken({
+        agentId: agentId.value(),
+      });
+    return response.token;
+  } catch (error) {
+    console.error("Error getting conversation token:", error);
+    throw error;
+  }
+};
