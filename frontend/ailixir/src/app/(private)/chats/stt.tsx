@@ -1,5 +1,7 @@
 import { CButton, CText } from '@/components/atoms';
 import { ConversationProvider, useConversationControls, useConversationStatus, useConversationMode } from '@elevenlabs/react-native';
+import { AudioSession } from '@livekit/react-native';
+import { requestRecordingPermissionsAsync } from 'expo-audio';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import React, { useEffect, useState } from 'react';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
@@ -23,6 +25,17 @@ function STTContent() {
     console.log(`[STT] Status changed: ${status}`);
   }, [status]);
 
+  useEffect(() => {
+    return () => {
+      console.log('[STT] Unmounting: ensuring AudioSession is stopped');
+      try {
+        AudioSession.stopAudioSession();
+      } catch (err) {
+        console.error('[STT] Error stopping AudioSession on unmount:', err);
+      }
+    };
+  }, []);
+
   const requestMicrophonePermission = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -38,6 +51,17 @@ function STTContent() {
         return false;
       }
     }
+
+    if (Platform.OS === 'ios') {
+      try {
+        const { granted } = await requestRecordingPermissionsAsync();
+        return granted;
+      } catch (err) {
+        console.error('[STT] Failed to request iOS microphone permission:', err);
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -47,6 +71,11 @@ function STTContent() {
     if (status === 'connected' || status === 'connecting') {
       console.log('[STT] Ending session');
       endSession();
+      try {
+        AudioSession.stopAudioSession();
+      } catch (err) {
+        console.error('[STT] Error stopping AudioSession:', err);
+      }
       return;
     }
 
@@ -58,6 +87,18 @@ function STTContent() {
 
     setIsLoading(true);
     try {
+      console.log('[STT] Configuring and starting AudioSession...');
+      await AudioSession.configureAudio({
+        android: {
+          preferredOutputList: ['speaker'],
+        },
+        ios: {
+          defaultOutput: 'speaker',
+        },
+      });
+      await AudioSession.startAudioSession();
+      console.log('[STT] AudioSession started successfully');
+
       console.log('[STT] Fetching conversation token...');
       const functions = getFunctions();
       const getConversationTokenFn = httpsCallable(functions, 'getWebrtcToken');
@@ -66,12 +107,18 @@ function STTContent() {
       console.log('[STT] Conversation token retrieved successfully');
 
       console.log('[STT] Starting session...');
-      await startSession({ conversationToken: token });
+      startSession({ conversationToken: token });
       console.log('[STT] Session started');
     } catch (err) {
       console.error('[STT] Error:', err);
       const msg = err instanceof Error ? err.message : 'Failed to start conversation';
       setError(msg);
+      // Clean up audio session if conv start failed
+      try {
+        AudioSession.stopAudioSession();
+      } catch (stopErr) {
+        console.error('[STT] Error cleaning up AudioSession after failure:', stopErr);
+      }
     } finally {
       setIsLoading(false);
     }
