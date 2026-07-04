@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { getAuth } from 'firebase/auth';
 import { FirebaseRuntimeProvider, useFirebaseRuntime } from '@/runtimes/firebase-runtime';
 import { subscribeChatTitle } from '@/lib/chat-rtdb';
@@ -37,7 +37,7 @@ function ChatScreenContent() {
             borderTopWidth: 1,
             borderTopColor: '#e0e0e0',
           }}>
-          <ChatInput onStartVoiceMode={() => alert('Voice mode not available')} onSendMessage={sendMessage} />
+          <ChatInput onStartVoiceMode={() => router.push('/chats/stt')} onSendMessage={sendMessage} />
           <CText variant="caption" style={{ marginTop: 8, textAlign: 'center' }}>
             {isRunning ? 'AI is thinking...' : 'AI can make mistakes.'}
           </CText>
