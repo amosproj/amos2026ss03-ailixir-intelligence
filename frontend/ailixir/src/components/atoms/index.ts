@@ -3,3 +3,4 @@
 export * from './cbutton';
 export * from './ctext';
 export * from './cinput';
+export * from './cmarkdown';
