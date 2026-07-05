@@ -5,6 +5,7 @@ export * from './auxiliary-overview';
 export * from './chat-assistant-message';
 export * from './chat-input';
 export * from './chat-user-message';
+export * from './thinking-indicator';
 export * from './action-pair';
 export * from './auth-footer-link';
 export * from './document-detail-actions';
