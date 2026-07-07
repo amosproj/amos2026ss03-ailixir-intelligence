@@ -15,7 +15,11 @@ const DEFAULT_HEADER_TITLE = 'Chat';
 // Keep a long title from colliding with the back button / running off-screen.
 const HEADER_TITLE_MAX_WIDTH = 260;
 
-function ChatScreenContent() {
+interface ChatScreenContentProps {
+  chatId: string;
+}
+
+function ChatScreenContent({ chatId }: ChatScreenContentProps) {
   const { messages, isRunning, sendMessage, retryMessage } = useFirebaseRuntime();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
@@ -37,7 +41,7 @@ function ChatScreenContent() {
             borderTopWidth: 1,
             borderTopColor: '#e0e0e0',
           }}>
-          <ChatInput onStartVoiceMode={() => router.push('/chats/stt')} onSendMessage={sendMessage} />
+          <ChatInput onStartVoiceMode={() => router.push({ pathname: '/chats/stt', params: { chatId } })} onSendMessage={sendMessage} />
           <CText variant="caption" style={{ marginTop: 8, textAlign: 'center' }}>
             {isRunning ? 'AI is thinking...' : 'AI can make mistakes.'}
           </CText>
@@ -72,7 +76,7 @@ export default function ChatScreen() {
           ),
         }}
       />
-      <ChatScreenContent />
+      <ChatScreenContent chatId={id} />
     </FirebaseRuntimeProvider>
   );
 }

@@ -113,6 +113,14 @@ export async function addUserMessage(uid: string, chatId: string, input: AddMess
   });
 }
 
+export async function addAssistantMessage(uid: string, chatId: string, input: AddMessageInput) {
+  return addMessage(uid, chatId, {
+    role: 'assistant',
+    content: input.content,
+    status: 'sent',
+  });
+}
+
 export async function addAssistantPlaceholder(uid: string, chatId: string, input: AddMessageInput = { content: '' }) {
   return addMessage(uid, chatId, {
     role: 'assistant',

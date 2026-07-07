@@ -3,10 +3,13 @@ import { VoicePulseCircle } from '@/components/molecules';
 import { ConversationProvider, useConversationControls, useConversationStatus, useConversationMode } from '@elevenlabs/react-native';
 import { AudioSession } from '@livekit/react-native';
 import { requestRecordingPermissionsAsync } from 'expo-audio';
+import { useLocalSearchParams } from 'expo-router';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import React, { useEffect, useState } from 'react';
+import { getAuth } from 'firebase/auth';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, PermissionsAndroid, View } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
+import { addAssistantMessage, addUserMessage } from '@/lib/chat-rtdb';
 
 const STATUS_LABELS: Record<string, string> = {
   disconnected: 'Disconnected',
@@ -19,8 +22,10 @@ function STTContent() {
   const { startSession, endSession } = useConversationControls();
   const { status, message } = useConversationStatus();
   const { isSpeaking, isListening } = useConversationMode();
+  const { chatId } = useLocalSearchParams<{ chatId?: string }>();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const processedEventIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     return () => {
@@ -60,6 +65,27 @@ function STTContent() {
     return true;
   };
 
+  const persistVoiceTurn = useCallback(
+    async (payload: { role: 'user' | 'agent'; message: string; event_id?: number }) => {
+      const uid = getAuth().currentUser?.uid;
+      const text = payload.message.trim();
+      if (!uid || !chatId || !text) return;
+
+      if (typeof payload.event_id === 'number') {
+        if (processedEventIdsRef.current.has(payload.event_id)) return;
+        processedEventIdsRef.current.add(payload.event_id);
+      }
+
+      if (payload.role === 'user') {
+        await addUserMessage(uid, chatId, { content: text });
+        return;
+      }
+
+      await addAssistantMessage(uid, chatId, { content: text });
+    },
+    [chatId],
+  );
+
   const handleToggle = async () => {
     setError(null);
 
@@ -96,7 +122,12 @@ function STTContent() {
       const result = await getConversationTokenFn();
       const { token } = result.data as { token: string };
 
-      startSession({ conversationToken: token });
+      startSession({
+        conversationToken: token,
+        onMessage: (payload) => {
+          void persistVoiceTurn(payload);
+        },
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to start conversation';
       setError(msg);
@@ -158,6 +189,14 @@ function STTContent() {
         </YStack>
 
         <YStack gap={16} items="center" width="100%">
+          {!chatId && (
+            <XStack bg="#FEF3C7" p={12} style={{ borderRadius: 12 }} justify="center" width="100%">
+              <CText variant="body" color="#92400E" style={{ textAlign: 'center' }}>
+                Voice chat is not linked to a chat thread from this screen. Open Voice Mode from inside a chat to save transcript messages.
+              </CText>
+            </XStack>
+          )}
+
           {message ? (
             <YStack bg="$lightgray" p={16} gap={6} style={{ borderRadius: 20, width: '100%' }}>
               <CText variant="caption" color="$gray">
