@@ -36,7 +36,7 @@
     "expo-audio": "~55.0.14",
     "expo-clipboard": "~55.0.13",
     "expo-constants": "~55.0.14",
-    "expo-dev-client": "~55.0.35",
+    "expo-dev-client": "~55.0.36",
     "expo-device": "~55.0.15",
     "expo-document-picker": "~55.0.13",
     "expo-file-system": "~55.0.21",
