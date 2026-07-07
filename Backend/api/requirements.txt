@@ -12,3 +12,11 @@ google-cloud-pubsub==2.27.1
 graphiti-core[google-genai]>=0.3.17
 google-genai>=1.0.0
 neo4j>=5.0.0
+
+# Chat pipeline — hybrid retrieval, paper arm (see api/chat_pipeline/paper_retriever.py).
+# langchain-astradb/-openai match the versions the scrapers subsystem ingests
+# with (scrapers/scraping_embeddings_pipeline/requirements.txt) — the query
+# embedding model MUST match the ingestion embedding model.
+langchain-astradb>=0.3.3
+langchain-openai>=0.1.14
+google-cloud-discoveryengine>=0.13.0
