@@ -24,6 +24,7 @@ locals {
     "iamcredentials.googleapis.com",    # v4 signed URLs without a private key
     "aiplatform.googleapis.com",        # Vertex AI — Gemini LLM + embeddings in workers
     "documentai.googleapis.com",        # Document AI — PDF OCR in workers
+    "discoveryengine.googleapis.com",   # Vertex AI Ranking API — reranks paper retrieval hits
   ]
 }
 
@@ -176,6 +177,17 @@ resource "google_project_iam_member" "api_vertex_ai_user" {
   member  = "serviceAccount:${google_service_account.api.email}"
 }
 
+# Vertex AI Ranking API — required for the chat pipeline's research-paper
+# retrieval arm (api/chat_pipeline/paper_retriever.py). `viewer` is the
+# minimal role that grants `discoveryengine.rankingConfigs.rank`; it does
+# NOT grant write/index access, which this service never needs (paper
+# ingestion is owned entirely by the standalone scrapers/ subsystem).
+resource "google_project_iam_member" "api_discoveryengine_viewer" {
+  project = var.project_id
+  role    = "roles/discoveryengine.viewer"
+  member  = "serviceAccount:${google_service_account.api.email}"
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Cloud Run API service.
@@ -260,6 +272,55 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "ELEVENLABS_USER_ID_HEADER"
         value = var.elevenlabs_user_id_header
       }
+
+      # ── AstraDB + OpenAI (chat pipeline — hybrid retrieval, paper arm) ──────
+      # Same collection scrapers/ ingests into; the embedding model here MUST
+      # match what scrapers used, so OPENAI_API_KEY and the Astra creds are
+      # shared across both subsystems. See api/chat_pipeline/paper_retriever.py.
+      env {
+        name  = "ASTRA_DB_API_ENDPOINT"
+        value = var.astra_db_api_endpoint
+      }
+      env {
+        name  = "ASTRA_DB_TOKEN"
+        value = var.astra_db_token
+      }
+      env {
+        name  = "ASTRA_DB_NAMESPACE"
+        value = var.astra_db_namespace
+      }
+      env {
+        name  = "ASTRA_DB_COLLECTION"
+        value = var.astra_db_collection
+      }
+      env {
+        name  = "OPEN_AI_API"
+        value = var.openai_api_key
+      }
+
+      # ── Vertex AI Ranking API (reranks paper vector-search hits) ────────────
+      env {
+        name  = "VERTEX_RANKING_LOCATION"
+        value = var.vertex_ranking_location
+      }
+      env {
+        name  = "VERTEX_RANKING_CONFIG_ID"
+        value = var.vertex_ranking_config_id
+      }
+      env {
+        name  = "CHAT_PAPER_RERANK_MODEL"
+        value = var.chat_paper_rerank_model
+      }
+
+      # ── Paper retrieval domain scoping — hardcoded (see variables.tf) ───────
+      env {
+        name  = "CHAT_PAPER_DOMAIN"
+        value = var.chat_paper_domain
+      }
+      env {
+        name  = "CHAT_PAPER_SUB_DOMAIN"
+        value = var.chat_paper_sub_domain
+      }
     }
   }
 
@@ -271,6 +332,7 @@ resource "google_cloud_run_v2_service" "backend" {
     google_project_iam_member.api_firestore_user,
     google_project_iam_member.api_firebase_auth_admin,
     google_project_iam_member.api_vertex_ai_user,
+    google_project_iam_member.api_discoveryengine_viewer,
   ]
 }
 

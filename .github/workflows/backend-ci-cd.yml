@@ -107,6 +107,10 @@ jobs:
                 -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
                 -var="neo4j_database=${{ secrets.NEO4J_DATABASE }}" \
                 -var="elevenlabs_custom_llm_secret=${{ secrets.ELEVENLABS_CUSTOM_LLM_SECRET }}" \
+                -var="astra_db_api_endpoint=${{ secrets.ASTRA_DB_API_ENDPOINT }}" \
+                -var="astra_db_token=${{ secrets.ASTRA_DB_TOKEN }}" \
+                -var="astra_db_collection=${{ secrets.ASTRA_DB_COLLECTION }}" \
+                -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
                 google_cloud_run_v2_service.backend \
                 projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-east1/services/ailixir-backend
 
@@ -126,6 +130,10 @@ jobs:
             -var="neo4j_password=${{ secrets.NEO4J_PASSWORD }}" \
             -var="neo4j_database=${{ secrets.NEO4J_DATABASE }}" \
             -var="elevenlabs_custom_llm_secret=${{ secrets.ELEVENLABS_CUSTOM_LLM_SECRET }}" \
+            -var="astra_db_api_endpoint=${{ secrets.ASTRA_DB_API_ENDPOINT }}" \
+            -var="astra_db_token=${{ secrets.ASTRA_DB_TOKEN }}" \
+            -var="astra_db_collection=${{ secrets.ASTRA_DB_COLLECTION }}" \
+            -var="openai_api_key=${{ secrets.OPENAI_API_KEY }}" \
             -out=tfplan
 
       - name: Terraform Apply
