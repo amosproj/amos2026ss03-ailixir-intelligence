@@ -54,6 +54,7 @@ from pydantic import BaseModel, Field
 from api.auth import get_current_user
 from api.chat_pipeline.answerer import generate_answer
 from api.chat_pipeline.contextualizer import contextualize_query
+from api.chat_pipeline.paper_retriever import PaperRetrievalResult, retrieve_papers
 from api.chat_pipeline.retriever import retrieve
 from api.chat_pipeline.titler import generate_and_store_title
 from api.errors import APIError
@@ -114,6 +115,9 @@ class ChatQueryResponse(BaseModel):
     `query_changed`        — True if the contextualizer rewrote the query.
     `facts_used`           — number of knowledge graph facts retrieved.
     `entities_used`        — number of knowledge graph entities retrieved.
+    `papers_used`          — number of reranked research-paper chunks used
+                             (0 if the paper corpus was unavailable/empty —
+                             the answer still comes from the knowledge graph).
     """
 
     answer: str
@@ -121,6 +125,7 @@ class ChatQueryResponse(BaseModel):
     query_changed: bool
     facts_used: int
     entities_used: int
+    papers_used: int = 0
     # True when a background title-generation task was scheduled for this chat
     # (first turn + chat_id present). The title itself lands in RTDB a moment
     # later; the client observes it via its chat-list subscription. Purely
@@ -134,6 +139,12 @@ class ChatQueryResponse(BaseModel):
 # reference to a bare create_task, so without this a task can be garbage
 # collected mid-flight. We add on launch and discard on completion.
 _title_tasks: set[asyncio.Task] = set()
+
+# Same pattern for in-flight paper-retrieval tasks (see `retrieve_papers`
+# call site below). Needed because when the KG retrieval arm fails, we don't
+# await the paper task before raising — it keeps running in the background
+# via this strong reference instead of being garbage-collected mid-flight.
+_paper_tasks: set[asyncio.Task] = set()
 
 
 def _maybe_start_title(payload: ChatQueryRequest, uid: str) -> bool:
