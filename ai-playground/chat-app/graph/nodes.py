@@ -8,7 +8,9 @@ Pipeline order (called by main.py):
   1. run_guardrail    — block bad questions before any heavy LLM work
   2. classify_intent  — NEW_QUESTION or FOLLOWUP?
   3. rewrite_question — FOLLOWUP only: resolve pronouns into a full query
-  4. retrieve_context — keyword search over documents.json
+  4. retrieve_context — vector RAG search over documents.json (see
+                         graph/vector_store.py), falling back to keyword
+                         search if the embedding call fails
   5. generate_answer  — Gemini produces the final answer
 """
 
@@ -21,6 +23,8 @@ from pathlib import Path
 import vertexai
 from dotenv import load_dotenv
 from vertexai.preview.generative_models import GenerationConfig, GenerativeModel
+
+from graph import vector_store
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -312,13 +316,46 @@ def _load_documents() -> list[dict]:
 
 def retrieve_context(query: str, top_k: int = 3) -> tuple[str, str]:
     """
-    Keyword search over documents.json.
+    Vector RAG retrieval over documents.json (see graph/vector_store.py).
 
-    Scores each document by how many query words appear in its content,
-    returns the top-k as a single context string.
+    Embeds the (rewritten) query and runs a cosine-similarity search over
+    pre-computed chunk embeddings — real semantic search rather than
+    literal word overlap, so e.g. "how much should someone take" can match
+    a chunk about "dosage" even without a shared keyword.
+
+    If the embedding call fails for any reason (no network, no Vertex AI
+    quota, model misconfigured, etc.) this falls back to the original
+    keyword-overlap search over full documents, so a single embedding
+    outage never breaks the whole chat pipeline.
 
     Returns (context_text, source_label).
-    Replace only this function when swapping in a knowledge graph (issue #75).
+    source_label is "vector_rag" (normal path) or "keyword_fallback".
+    This is the seam to extend for the knowledge-graph hybrid (issue #187):
+    add a kg_store.search() call alongside vector_store.search() here and
+    merge the two result sets — the (context, source) contract downstream
+    doesn't need to change.
+    """
+    try:
+        hits = vector_store.search(query, top_k=top_k)
+        if not hits:
+            raise ValueError("vector index is empty")
+
+        context_text = "\n\n---\n\n".join(
+            f"[{hit['title']}]\n{hit['text']}" for hit in hits
+        )
+        scores = [round(hit["score"], 3) for hit in hits]
+        print(f"[retrieve] query: {query!r} → {len(hits)} chunk(s) via vector_rag (scores: {scores})")
+        return context_text, "vector_rag"
+
+    except Exception as exc:
+        print(f"[retrieve] vector search failed ({exc}), falling back to keyword search")
+        return _retrieve_context_keyword_fallback(query, top_k)
+
+
+def _retrieve_context_keyword_fallback(query: str, top_k: int = 3) -> tuple[str, str]:
+    """
+    Original keyword-overlap retrieval, kept as a safety-net fallback for
+    retrieve_context() when embedding-based search is unavailable.
     """
     documents  = _load_documents()
     query_words = set(query.lower().split())
@@ -335,8 +372,8 @@ def retrieve_context(query: str, top_k: int = 3) -> tuple[str, str]:
     context_text = "\n\n---\n\n".join(
         f"[{doc['title']}]\n{doc['content']}" for doc in top_docs
     )
-    print(f"[retrieve] query: {query!r} → {len(top_docs)} docs")
-    return context_text, "documents.json"
+    print(f"[retrieve] query: {query!r} → {len(top_docs)} doc(s) via keyword_fallback")
+    return context_text, "keyword_fallback"
 
 
 # ---------------------------------------------------------------------------

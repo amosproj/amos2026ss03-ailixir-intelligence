@@ -63,3 +63,9 @@ bin/
 .DS_Store
 .env
 ai-playground/.env
+ai-playground/chat-app/.env
+ai-playground/chat-app/graph/state.py
+ai-playground/chat-app/graph/builder.py
+ai-playground/chat-app/embeddings_cache.json
+__pycache__/
+.env
