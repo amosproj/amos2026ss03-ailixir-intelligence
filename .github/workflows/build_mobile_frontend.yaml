@@ -66,6 +66,19 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: npm ci
 
-      - name: Build on EAS
+      - name: Build Android App via EAS
         working-directory: ${{ env.PROJECT_DIR }}
-        run: eas build --platform android --non-interactive --no-wait
+        run: npx eas-cli build --profile preview --platform android --non-interactive --local
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-preview-apk
+          path: |
+            *.apk
+            app-release.apk
+            android/app/build/outputs/apk/**/*.apk
+            ${{ env.PROJECT_DIR }}/*.apk
+            ${{ env.PROJECT_DIR }}/app-release.apk
+            ${{ env.PROJECT_DIR }}/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
