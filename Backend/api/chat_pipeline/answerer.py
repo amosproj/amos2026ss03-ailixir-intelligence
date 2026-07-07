@@ -229,13 +229,18 @@ def _extract_finish_reason(response: object) -> str | None:
 async def generate_answer(
     query: str,
     result: RetrievalResult,
+    paper_result: PaperRetrievalResult | None = None,
 ) -> str:
     """
     Call Gemini with the retrieved graph context and return a natural-language answer.
 
     Args:
-        query:  The (already contextualized) user question.
-        result: RetrievalResult from `retrieve()` containing edges + nodes.
+        query:        The (already contextualized) user question.
+        result:       RetrievalResult from `retrieve()` containing edges + nodes.
+        paper_result: Optional PaperRetrievalResult from `paper_retriever.retrieve_papers()`
+                      containing reranked research-paper chunks. Absent or empty
+                      (paper retrieval degraded or found nothing) is handled
+                      transparently — the prompt falls back to graph-only.
 
     Returns:
         Natural-language answer string.
@@ -262,7 +267,8 @@ async def generate_answer(
         query = query[:_MAX_QUERY_CHARS]
 
     context = _build_llm_context(result)
-    prompt = _QA_PROMPT.format(context=context, query=query)
+    papers = _build_paper_context(paper_result)
+    prompt = _QA_PROMPT.format(context=context, papers=papers, query=query)
 
     # Final cap on the assembled prompt before paying Vertex tokens.
     if len(prompt) > _MAX_PROMPT_CHARS:
@@ -273,8 +279,9 @@ async def generate_answer(
         prompt = prompt[:_MAX_PROMPT_CHARS]
 
     _log.info(
-        "generate_answer user_id=%s model=%s facts=%d entities=%d prompt_chars=%d",
-        result.user_id, model, result.total_edges, result.total_nodes, len(prompt),
+        "generate_answer user_id=%s model=%s facts=%d entities=%d papers=%d prompt_chars=%d",
+        result.user_id, model, result.total_edges, result.total_nodes,
+        paper_result.total_chunks if paper_result else 0, len(prompt),
     )
 
     client = await get_gemini_client()

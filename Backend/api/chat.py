@@ -1,10 +1,18 @@
 """
 Chat endpoints — POST /chat/query
 
-Three-step graph-RAG pipeline:
+Three-step hybrid graph+paper-RAG pipeline:
   1. Contextualize: LLM rewrites query if it references conversation history
-  2. Retrieve:      Graphiti searches the patient's knowledge graph (group_id=uid)
-  3. Answer:        LLM synthesises graph facts into a natural-language response
+  2. Retrieve:      TWO retrieval arms run concurrently —
+                       (a) Graphiti searches the patient's knowledge graph
+                           (group_id=uid) — the primary, patient-specific source.
+                       (b) `paper_retriever` vector-searches the scraped
+                           research-paper AstraDB collection and reranks via
+                           Vertex AI's Ranking API — supplementary general
+                           reference material. Never fails the request; a
+                           degraded paper corpus falls back to graph-only.
+  3. Answer:        LLM synthesises graph facts (+ paper excerpts, if any)
+                     into a natural-language response.
 
 The endpoint is async throughout. Graphiti (Neo4j + Vertex AI) is initialised
 lazily on first request (or eagerly on lifespan startup if
