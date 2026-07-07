@@ -116,11 +116,11 @@ jobs:
 
       - name: Terraform Plan
         working-directory: Backend/api/terraform
-        # NEO4J_* and ELEVENLABS_CUSTOM_LLM_SECRET are required by
-        # api/terraform/variables.tf (no defaults). Without them Terraform
-        # prompts interactively and the CI runner hangs until GitHub Actions
-        # kills the job at 6h. Keep this in sync with the import step above
-        # and with workers/.github/workflows/worker-ci-cd.yml.
+        # NEO4J_*, ELEVENLABS_CUSTOM_LLM_SECRET, ASTRA_DB_*, and OPENAI_API_KEY
+        # are required by api/terraform/variables.tf (no defaults). Without
+        # them Terraform prompts interactively and the CI runner hangs until
+        # GitHub Actions kills the job at 6h. Keep this in sync with the
+        # import step above and with workers/.github/workflows/worker-ci-cd.yml.
         run: |
           terraform plan -no-color \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \

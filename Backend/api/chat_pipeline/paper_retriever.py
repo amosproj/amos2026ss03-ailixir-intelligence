@@ -109,9 +109,13 @@ async def _vector_search(query: str) -> list:
     )
 
 
-async def _rerank(query: str, documents: list) -> list[PaperChunk]:
-    """Cross-encoder rerank via Vertex AI Ranking API; returns top `_RERANK_TOP_N`."""
-    client = await get_reranker_client()
+def _rank_sync(query: str, documents: list) -> discoveryengine.RankResponse:
+    """Blocking Ranking API call — always invoked via `asyncio.to_thread`.
+
+    Uses the sync `RankServiceClient` (see reranker_client.py docstring for
+    why: the gapic-generated async client has an open event-loop bug).
+    """
+    client = get_reranker_client()
     records = [
         discoveryengine.RankingRecord(
             id=str(i),
@@ -126,8 +130,13 @@ async def _rerank(query: str, documents: list) -> list[PaperChunk]:
         records=records,
         top_n=_RERANK_TOP_N,
     )
+    return client.rank(request=request)
+
+
+async def _rerank(query: str, documents: list) -> list[PaperChunk]:
+    """Cross-encoder rerank via Vertex AI Ranking API; returns top `_RERANK_TOP_N`."""
     response = await asyncio.wait_for(
-        client.rank(request=request), timeout=_RERANK_TIMEOUT_S
+        asyncio.to_thread(_rank_sync, query, documents), timeout=_RERANK_TIMEOUT_S
     )
 
     by_id = {str(i): doc for i, doc in enumerate(documents)}
