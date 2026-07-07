@@ -37,6 +37,7 @@ from google.genai import types
 
 from api.chat_pipeline.gemini_client import get_gemini_client
 from api.chat_pipeline.pacer import pace_gemini_call
+from api.chat_pipeline.paper_retriever import PaperRetrievalResult
 from api.chat_pipeline.retriever import RetrievalResult
 
 _log = logging.getLogger(__name__)
