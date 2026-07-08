@@ -101,6 +101,12 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
+variable "openai_embedding_model" {
+  description = "OpenAI embedding model for query embeddings — MUST exactly match scrapers/src/backend/Scrapers/BaseScraper/base_scraper.py's ingestion model. Mismatched models produce near-zero cosine similarity between query and stored vectors (verified: ~0.02 instead of ~1.0), which silently degrades to garbage retrieval rather than an error."
+  type        = string
+  default     = "text-embedding-3-small"
+}
+
 # ── Vertex AI Ranking API (chat pipeline — reranks paper vector-search hits) ──
 
 variable "vertex_ranking_location" {
