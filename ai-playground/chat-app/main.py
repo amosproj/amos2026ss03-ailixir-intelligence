@@ -15,7 +15,9 @@ Pipeline (lives in graph/nodes.py)
   1. guardrail  — blocks injection attempts and off-topic questions
   2. intent     — classifies as NEW_QUESTION or FOLLOWUP
   3. rewrite    — if FOLLOWUP, rewrites into a self-contained query
-  4. retrieve   — keyword search over documents.json
+  4. retrieve   — vector RAG search over documents.json (embeddings via
+                   Vertex AI, cosine similarity; falls back to keyword
+                   search on embedding failure)
   5. answer     — Gemini 2.5 Flash generates the response
 
 Request format

@@ -16,3 +16,4 @@ psycopg[binary]>=3.1.0
 
 # Environment variables
 python-dotenv>=1.0.0
+numpy

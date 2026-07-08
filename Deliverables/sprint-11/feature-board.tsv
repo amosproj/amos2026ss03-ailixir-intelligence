@@ -1,0 +1,43 @@
+Title	URL	Assignees	Status	Estimated size	Real size	Labels
+Connect Elevenlabs voice call with Backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/242		Product Backlog			Backend, Frontend, high priority
+Connect Voice Call Mode with App UI	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/215		Product Backlog			Frontend, medium priority
+Voice Call Transcription	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/183		Product Backlog			Frontend, medium priority
+Formatting of chat messages	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/232		Product Backlog			Frontend, medium priority
+Displaying sources in LLM answers	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/214		Product Backlog			Frontend, medium priority
+Integrate full Research Paper Knowledge Base into RAG contextualisation	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/243		Product Backlog			Backend, high priority
+Visualise Knowledge Graph	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/244		Product Backlog			Backend, Frontend, high priority
+Ensure Knowledge Graph Correctness	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/145		Product Backlog			Backend, medium priority
+Sources for an LLM Answer	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/213		Product Backlog			Backend, medium priority
+Add Chat Message Thinking States	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/196		Sprint Backlog	2		Frontend, low priority
+Knowledge Graph Context + Research Paper RAG Hybrid LLM Approach	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/187	hasnatahmed331, MuhammadZeeshan2	Sprint Backlog	8		Backend, high priority
+AI Voice Call using ElevenLabs	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/182	hannes-v	In Progress	8		Frontend, high priority
+Voice Call Indicator	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/125	andrewluka	In Progress	3		Frontend, medium priority, visual
+Expo Build Pipeline	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/234	hannes-v	Awaiting Review			Frontend
+Chat Naming function	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/236	AbdulHaseeb-SE	Awaiting Review	5		Backend, Frontend, medium priority
+Downloading all Research Papers	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/233	Hossam-Amer	Awaiting Review	5		Backend, high priority
+Custom LLM API for Elevenlabs Voice Chat Agents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/188	hasnatahmed331, MuhammadZeeshan2	Awaiting Review	8		Backend, medium priority
+Rate Limiting on document upload	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/210	hasnatahmed331, MuhammadZeeshan2	Feature Archive	3		Backend, low priority
+Scraping Research Papers	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/186	Hossam-Amer	Feature Archive	8	8	Backend, high priority
+Fix: Authentication	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/208	AbdulHaseeb-SE	Feature Archive	3	3	Backend, Frontend, high priority
+Connect Chat Screen with LLM Chat Agent	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/152	VogtIndustries	Feature Archive	3	3	Frontend, high priority
+Fix: Retrieving the Knowledge Graph	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/73	AbdulHaseeb-SE, hasnatahmed331	Feature Archive	2	2	Backend, Frontend, high priority
+Deploy Neo4j Graph Database	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/185	hasnatahmed331, MuhammadZeeshan2	Feature Archive	5	5	Backend, high priority
+Deployment of Knowledge Graph Context Chat on Backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/179	AbdulHaseeb-SE, hasnatahmed331	Feature Archive	5	8	Backend, high priority
+Integrate Camera Scanning	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/156	andrewluka	Feature Archive	5	5	Frontend, low priority
+Password show/hide button	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/163	andrewluka	Feature Archive	1	1	Frontend, low priority
+Knowledge Graph Context into LLM Prompts	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/75	AbdulHaseeb-SE, hasnatahmed331, Hossam-Amer	Feature Archive	8	8	Backend, medium priority
+Deleting Chats	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/177	VogtIndustries	Feature Archive	3	3	Frontend, medium priority
+Connect Voice Call Mode to Backend LLM	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/184		Feature Archive			Backend, Blocked, Frontend, medium priority
+Show Sources and References in Chat Answers	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/195		Feature Archive			Frontend, low priority
+Dictate Chat Function	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/116	hannes-v	Feature Archive	8	5	Frontend, medium priority
+Chat Agent User History	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/167	hasnatahmed331, MuhammadZeeshan2	Feature Archive	3	3	Backend, high priority
+Update Neo4j / GCP License for Knowledge Extraction	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/178		Feature Archive	1		Backend, high priority
+User Guide for Visualising Knowledge Graphs using Neo4j	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/166		Feature Archive			Frontend, low priority
+Componentisation - Technical Debt - Beautify	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/97	hannes-v	Feature Archive	5	5	Frontend, medium priority
+Chat Database	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/162	hannes-v	Feature Archive	5	5	Frontend, urgent
+Persistent Chat History 	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/146	hannes-v	Feature Archive	5	3	Frontend, high priority
+Creating Chats	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/151	hannes-v	Feature Archive	1	3	Frontend, high priority
+Preview of Uploaded Documents	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/12	VogtIndustries	Feature Archive	2	2	Frontend, low priority
+Chat Overview	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/114	VogtIndustries	Feature Archive	3	1	Frontend, medium priority
+Combining all document sub-graphs into one	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/126	hasnatahmed331	Feature Archive	5	5	Backend, high priority
+Deploy user knowledge graph in backend	https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/161	AbdulHaseeb-SE, hasnatahmed331	Feature Archive	3	3	Backend, high priority

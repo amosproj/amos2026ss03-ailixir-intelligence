@@ -1,8 +1,11 @@
 import { CButton, CText } from '@/components/atoms';
-import { ELEVENLABS_AGENT_ID } from '@/lib/elevenlabs-config';
+import { VoicePulseCircle } from '@/components/molecules';
 import { ConversationProvider, useConversationControls, useConversationStatus, useConversationMode } from '@elevenlabs/react-native';
-import React, { useState } from 'react';
-import { Alert, Platform, PermissionsAndroid } from 'react-native';
+import { AudioSession } from '@livekit/react-native';
+import { requestRecordingPermissionsAsync } from 'expo-audio';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import React, { useEffect, useState } from 'react';
+import { Alert, Platform, PermissionsAndroid, View } from 'react-native';
 import { ScrollView, XStack, YStack } from 'tamagui';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -19,6 +22,16 @@ function STTContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      try {
+        AudioSession.stopAudioSession();
+      } catch (err) {
+        console.error(err);
+      }
+    };
+  }, []);
+
   const requestMicrophonePermission = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -34,6 +47,16 @@ function STTContent() {
         return false;
       }
     }
+
+    if (Platform.OS === 'ios') {
+      try {
+        const { granted } = await requestRecordingPermissionsAsync();
+        return granted;
+      } catch {
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -42,6 +65,11 @@ function STTContent() {
 
     if (status === 'connected' || status === 'connecting') {
       endSession();
+      try {
+        AudioSession.stopAudioSession();
+      } catch (err) {
+        console.error(err);
+      }
       return;
     }
 
@@ -53,10 +81,30 @@ function STTContent() {
 
     setIsLoading(true);
     try {
-      await startSession({ agentId: ELEVENLABS_AGENT_ID });
+      await AudioSession.configureAudio({
+        android: {
+          preferredOutputList: ['speaker'],
+        },
+        ios: {
+          defaultOutput: 'speaker',
+        },
+      });
+      await AudioSession.startAudioSession();
+
+      const functions = getFunctions();
+      const getConversationTokenFn = httpsCallable(functions, 'getWebrtcToken');
+      const result = await getConversationTokenFn();
+      const { token } = result.data as { token: string };
+
+      startSession({ conversationToken: token });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to start conversation';
       setError(msg);
+      try {
+        AudioSession.stopAudioSession();
+      } catch (stopErr) {
+        console.error(stopErr);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -65,22 +113,32 @@ function STTContent() {
   const isActive = status === 'connected' || status === 'connecting';
 
   return (
-    <ScrollView flex={1} bg="$background">
-      <YStack flex={1} px={16} pt={16} pb={18} gap={24}>
-        <YStack bg="$lightgray" p={16} gap={12} style={{ borderRadius: 24 }}>
+    <ScrollView flex={1} bg="$background" contentContainerStyle={{ flexGrow: 1 }}>
+      <YStack flex={1} px={16} pt={16} pb={18} justify="space-between">
+        <YStack bg="$lightgray" p={20} gap={16} style={{ borderRadius: 24 }}>
           <XStack items="center" justify="space-between">
-            <CText variant="caption" color="$gray">
-              Status
-            </CText>
-            <CText variant="body" bold color="$black">
-              {STATUS_LABELS[status] || status}
-            </CText>
+            <YStack gap={2}>
+              <CText variant="caption" color="$gray">
+                Voice Assistant Status
+              </CText>
+              <CText variant="body" bold color="$black">
+                {STATUS_LABELS[status] || status}
+              </CText>
+            </YStack>
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 6,
+                backgroundColor: status === 'connected' ? '#10B981' : status === 'connecting' ? '#F59E0B' : '#9CA3AF',
+              }}
+            />
           </XStack>
 
           {status === 'connected' && (
             <XStack items="center" justify="space-between">
               <CText variant="caption" color="$gray">
-                Mode
+                Current Mode
               </CText>
               <CText variant="body" bold color="$black">
                 {isSpeaking ? 'Speaking' : isListening ? 'Listening' : 'Idle'}
@@ -88,31 +146,64 @@ function STTContent() {
             </XStack>
           )}
 
-          {message ? (
-            <YStack gap={4}>
-              <CText variant="caption" color="$gray">
-                Last message
-              </CText>
-              <CText variant="body" color="$black" numberOfLines={2}>
-                {message}
-              </CText>
-            </YStack>
-          ) : null}
+          {!isActive && (
+            <CText variant="caption" color="$gray">
+              Start a voice session to begin speaking with the AI assistant.
+            </CText>
+          )}
         </YStack>
 
-        <XStack justify="center" pt={20}>
-          <CButton emphasis="high" onPress={handleToggle} disabled={isLoading} opacity={isLoading ? 0.6 : 1} px={28} py={14} style={{ minWidth: 220 }}>
-            {isLoading ? 'Starting...' : isActive ? 'End Conversation' : 'Start Conversation'}
-          </CButton>
-        </XStack>
+        <YStack flex={1} items="center" justify="center" py={30}>
+          <VoicePulseCircle status={status} isSpeaking={isSpeaking} isListening={isListening} isLoading={isLoading} onPress={handleToggle} />
+        </YStack>
 
-        {error ? (
-          <XStack bg="#FEE2E2" p={12} style={{ borderRadius: 12 }} justify="center">
-            <CText variant="body" color="#DC2626">
-              {error}
+        <YStack gap={16} items="center" width="100%">
+          {message ? (
+            <YStack bg="$lightgray" p={16} gap={6} style={{ borderRadius: 20, width: '100%' }}>
+              <CText variant="caption" color="$gray">
+                Last Message
+              </CText>
+              <CText variant="body" color="$black" numberOfLines={4}>
+                &quot;{message}&quot;
+              </CText>
+            </YStack>
+          ) : isActive ? (
+            <CText variant="body" color="$gray" style={{ textAlign: 'center', fontStyle: 'italic' }}>
+              {isSpeaking ? 'AI is speaking...' : isListening ? 'Listening to you...' : 'Listening...'}
             </CText>
+          ) : null}
+
+          {error && (
+            <XStack bg="#FEE2E2" p={12} style={{ borderRadius: 12 }} justify="center" width="100%">
+              <CText variant="body" color="#DC2626" style={{ textAlign: 'center' }}>
+                {error}
+              </CText>
+            </XStack>
+          )}
+
+          <XStack justify="center" width="100%">
+            <CButton
+              emphasis="high"
+              onPress={handleToggle}
+              disabled={isLoading}
+              opacity={isLoading ? 0.6 : 1}
+              px={28}
+              py={14}
+              backgroundColor={isActive ? '#EF4444' : '$accent9'}
+              style={{
+                minWidth: 220,
+                maxWidth: 320,
+                width: '75%',
+                shadowColor: isActive ? '#EF4444' : '#00000020',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.2,
+                shadowRadius: 14,
+                elevation: 6,
+              }}>
+              {isLoading ? 'Starting...' : isActive ? 'End Conversation' : 'Start Conversation'}
+            </CButton>
           </XStack>
-        ) : null}
+        </YStack>
       </YStack>
     </ScrollView>
   );

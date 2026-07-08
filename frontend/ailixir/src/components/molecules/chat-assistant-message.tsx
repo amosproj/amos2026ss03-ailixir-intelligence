@@ -1,8 +1,9 @@
-import { CText, CButton } from '@/components/atoms';
+import { CText, CButton, CMarkdown } from '@/components/atoms';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Copy, RotateCcw } from '@tamagui/lucide-icons-2';
 import * as Clipboard from 'expo-clipboard';
+import { ThinkingIndicator } from './thinking-indicator';
 
 interface ChatAssistantMessageProps {
   text: string;
@@ -27,11 +28,12 @@ export const ChatAssistantMessage: React.FC<ChatAssistantMessageProps> = ({ text
         borderRadius: 8,
         padding: 12,
       }}>
-      <CText variant="body">{text}</CText>
+      {hasContent ? <CMarkdown>{text}</CMarkdown> : <ThinkingIndicator />}
       <View
         style={{
           flexDirection: 'row',
           justifyContent: 'flex-start',
+          marginTop: hasContent ? 6 : 0,
         }}>
         {hasContent ? (
           <>
