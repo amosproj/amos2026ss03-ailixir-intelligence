@@ -297,6 +297,10 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "OPEN_AI_API"
         value = var.openai_api_key
       }
+      env {
+        name  = "OPENAI_EMBEDDING_MODEL"
+        value = var.openai_embedding_model
+      }
 
       # ── Vertex AI Ranking API (reranks paper vector-search hits) ────────────
       env {

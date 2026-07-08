@@ -15,8 +15,11 @@ neo4j>=5.0.0
 
 # Chat pipeline — hybrid retrieval, paper arm (see api/chat_pipeline/paper_retriever.py).
 # langchain-astradb/-openai match the versions the scrapers subsystem ingests
-# with (scrapers/scraping_embeddings_pipeline/requirements.txt) — the query
-# embedding model MUST match the ingestion embedding model.
+# with (scrapers/requirements.txt) — the query embedding model (see
+# astra_client.py, OPENAI_EMBEDDING_MODEL) MUST match the ingestion model
+# (scrapers/src/backend/Scrapers/BaseScraper/base_scraper.py: text-embedding-3-small).
 langchain-astradb>=0.3.3
 langchain-openai>=0.1.14
 google-cloud-discoveryengine>=0.13.0
+
+
