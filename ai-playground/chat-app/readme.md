@@ -42,7 +42,7 @@ FOLLOWUP   NEW_QUESTION
 Rewrite     │
  └────┬─────┘
       ▼
-[3] Retrieval
+[3] Retrieval (vector RAG, keyword fallback)
       │
       ▼
 [4] Gemini Answer Generation
@@ -60,13 +60,17 @@ ai-playground/
 └── chat-app/
     ├── main.py
     ├── documents.json
+    ├── embeddings_cache.json   # generated at runtime, gitignored
     ├── requirements.txt
     ├── .env
     ├── .env.example
     └── graph/
         ├── __init__.py
-        └── nodes.py
+        ├── nodes.py
+        └── vector_store.py
 ```
+
+`embeddings_cache.json` is created automatically the first time retrieval runs — it caches chunk embeddings by content hash so restarts don't re-embed unchanged documents. It's build output, not source.
 
 ---
 
@@ -140,7 +144,7 @@ Returns the complete answer synchronously.
   "answer": "The recommended starting dose of Metformin is 500 mg twice daily.",
   "intent": "FOLLOWUP",
   "rewritten_question": "What is the recommended dosage for Metformin?",
-  "source": "documents.json"
+  "source": "vector_rag"
 }
 ```
 
@@ -151,7 +155,20 @@ Returns the complete answer synchronously.
 | answer | Grounded answer |
 | intent | NEW_QUESTION, FOLLOWUP, or BLOCKED |
 | rewritten_question | Query used for retrieval |
-| source | Retrieval source |
+| source | Retrieval source: `vector_rag` (default) or `keyword_fallback` (used automatically if the embedding call fails) |
+
+---
+
+## Retrieval (RAG)
+
+Retrieval is embedding-based semantic search, not keyword matching:
+
+1. **Chunk** — each document in `documents.json` is split into ~400-character chunks with 80-character overlap, breaking on whitespace so words are never cut in half.
+2. **Embed** — every chunk is embedded with Vertex AI's `text-embedding-004`. Embeddings are cached on disk (`embeddings_cache.json`, keyed by a hash of the chunk text), so restarting the app doesn't re-embed documents that haven't changed.
+3. **Search** — the incoming (rewritten) query is embedded the same way, and the top-k chunks are returned by cosine similarity.
+4. **Fallback** — if the embedding call fails for any reason (no network, no Vertex AI quota, etc.), retrieval automatically falls back to the original keyword-overlap search over full documents, so one embedding outage never breaks `/chat`.
+
+All of this lives in `graph/vector_store.py`. `documents.json` is still a placeholder corpus — pointing this at a real research-paper dataset later is a data change only, the chunking/embedding/search code doesn't need to change.
 
 ---
 
@@ -227,19 +244,9 @@ http://localhost:8000/docs
 
 ## Extending Retrieval
 
-To integrate another retrieval backend (for example a Knowledge Graph), replace:
+Retrieval is vector RAG by default (`graph/vector_store.py`), with an automatic keyword fallback — see [Retrieval (RAG)](#retrieval-rag) above.
 
-```python
-retrieve_context()
-```
-
-inside:
-
-```text
-graph/nodes.py
-```
-
-The return signature must remain:
+To add another retrieval source — for example the knowledge graph in [#187](https://github.com/amosproj/amos2026ss03-ailixir-intelligence/issues/187) — extend `retrieve_context()` in `graph/nodes.py` to query the new source alongside `vector_store.search()` and merge the results. The return signature must stay:
 
 ```python
 (context_text, source_label)
@@ -249,11 +256,11 @@ Example:
 
 ```python
 def retrieve_context(query: str, top_k: int = 3):
-
-    results = kg_client.query(query)
+    vector_hits = vector_store.search(query, top_k=top_k)
+    kg_hits = kg_client.query(query)
 
     return (
-        format_kg_results(results),
-        "knowledge_graph"
+        merge_contexts(vector_hits, kg_hits),
+        "hybrid"
     )
 ```
