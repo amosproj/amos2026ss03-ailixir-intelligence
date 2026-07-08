@@ -1,0 +1,64 @@
+{
+  "all_recipes_targets": [
+    {
+      "domain": "medical",
+      "limit": 2,
+      "sub_domain": "prostate_cancer",
+      "url": "https://www.allrecipes.com/"
+    }
+  ],
+  "archive_targets": [
+    {
+      "domain": "medical",
+      "keywords": [
+        "prostate",
+        "cancer",
+        "diet",
+        "nutrition"
+      ],
+      "max_results": 5,
+      "query_mode": "or",
+      "sub_domain": "prostate_cancer"
+    }
+  ],
+  "nutrition_targets": [
+    {
+      "domain": "medical",
+      "max_pages": 1,
+      "sub_domain": "prostate_cancer",
+      "url": "https://nutritionfacts.org/blog/"
+    }
+  ],
+  "podcast_targets": [
+    {
+      "domain": "medical",
+      "model": "vosk-model-small-en-us-0.15",
+      "model_download": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+      "num_podcasts": 1,
+      "sub_domain": "prostate_cancer",
+      "url": "https://peterattiamd.com/podcast/archive/",
+      "use_audio_fallback": false
+    }
+  ],
+  "pubmed_targets": [
+    {
+      "domain": "medical",
+      "keywords": [
+        "prostate",
+        "cancer",
+        "diet",
+        "nutrition"
+      ],
+      "max_results": 5,
+      "sub_domain": "prostate_cancer"
+    }
+  ],
+  "youtube_targets": [
+    {
+      "domain": "medical",
+      "limit": 2,
+      "sub_domain": "prostate_cancer",
+      "url": "https://www.youtube.com/@NutritionFactsOrg"
+    }
+  ]
+}
