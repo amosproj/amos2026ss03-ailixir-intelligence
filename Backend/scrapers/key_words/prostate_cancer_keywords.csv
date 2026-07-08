@@ -1,0 +1,49 @@
+category,keyword
+Disease,prostate cancer
+Disease,prostatic neoplasm
+Disease,prostatic carcinoma
+Disease,adenocarcinoma of the prostate
+Disease,localized prostate cancer
+Disease,advanced prostate cancer
+Disease,metastatic prostate cancer
+Disease,castration-sensitive prostate cancer
+Disease,castration-resistant prostate cancer
+Disease,mCRPC
+Disease,nmCRPC
+Disease,high-risk prostate cancer
+Disease,low-risk prostate cancer
+Disease,biochemical recurrence
+Disease,PSA recurrence
+Diagnosis & Screening,PSA
+Diagnosis & Screening,prostate specific antigen
+Diagnosis & Screening,PSMA PET
+Diagnosis & Screening,MRI prostate
+Diagnosis & Screening,multiparametric MRI
+Diagnosis & Screening,biopsy
+Diagnosis & Screening,Gleason score
+Diagnosis & Screening,ISUP grade
+Diagnosis & Screening,active surveillance
+Diagnosis & Screening,risk stratification
+Diagnosis & Screening,genomic testing
+Treatment,radical prostatectomy
+Treatment,robotic prostatectomy
+Treatment,radiation therapy
+Treatment,brachytherapy
+Treatment,SBRT
+Treatment,androgen deprivation therapy
+Treatment,ADT
+Treatment,hormone therapy
+Treatment,enzalutamide
+Treatment,abiraterone
+Treatment,apalutamide
+Treatment,darolutamide
+Treatment,chemotherapy
+Treatment,docetaxel
+Treatment,cabazitaxel
+Treatment,PARP inhibitor
+Treatment,olaparib
+Treatment,rucaparib
+Treatment,radioligand therapy
+Treatment,Lu177 PSMA
+Treatment,immunotherapy
+Treatment,clinical trial

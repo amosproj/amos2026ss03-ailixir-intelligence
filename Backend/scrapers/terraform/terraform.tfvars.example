@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored by
+# convention — never commit real secrets.
+
+project_id = "amos26"
+region     = "us-east1"
+image_tag  = "latest" # set to the image tag you built + pushed
+
+# Secrets
+open_ai_api           = "sk-..."
+astra_db_api_endpoint = "https://<db-id>-<region>.apps.astra.datastax.com"
+astra_db_token        = "AstraCS:..."
+astra_db_namespace    = "default_keyspace"
+astra_db_collection   = "ailixir_vectors"
+youtube_data_api_v3   = "" # leave empty and set run_youtube = "0" to skip YouTube
+ncbi_api_key          = "" # optional: raises PubMed rate limit 3->10 req/s
+
+# Optional overrides
+# schedule      = "0 3 1 * *"
+# max_results   = "5"
+# youtube_limit = "25"
+# sub_domain    = "oncology"
