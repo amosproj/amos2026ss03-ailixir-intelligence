@@ -1,590 +1,238 @@
-# Backend Scrapers Documentation
+# Scraping and embedding pipeline
 
-`Backend/scrapers` is a standalone literature-ingestion subsystem. It scrapes
-external public medical literature, converts article text into chunks, embeds those
-chunks with OpenAI embeddings, and stores them in an AstraDB vector collection.
+Standalone pipeline that scrapes **arXiv**, **PubMed**, and **YouTube**, chunks the
+text, embeds it with OpenAI **`text-embedding-3-small`** (1536-dim), and upserts the
+vectors into **AstraDB**. It runs locally for ad-hoc scrapes and in production as a
+monthly **Cloud Run Job**.
 
-The scraper corpus is global reference knowledge. It is intentionally separate from
-the app's per-user document pipeline and from the Neo4j / Graphiti patient knowledge
-graph.
+## Architecture at a glance
 
-At the moment, the only implemented source is PubMed.
-
-## High-Level Purpose
-
-The main backend app extracts a patient's own medical documents into a per-user
-knowledge graph. The scraper subsystem solves a different problem: it builds a
-shared background literature corpus that can later be retrieved by disease/topic.
-
-That means:
-
-- Patient uploads do not call this package.
-- `api/`, `workers/`, and `shared/` do not depend on scraper execution.
-- Scraper output is stored in AstraDB, not Neo4j.
-- Deduplication is global, so the same paper is not embedded repeatedly.
-- Disease tags such as `prostate_cancer` are stored as metadata on chunks for later
-  retrieval filtering.
-
-## Architecture Illustration
-
-```mermaid
-flowchart LR
-    CLI[CLI runner\nrun_pubmed.py / run_topics.py]
-    Target[PubMedTarget\nkeywords + max_results + optional disease]
-    Search[PubMed Entrez search\nfree full text filter]
-    LedgerCheck[Dedup ledger\nFirestore or local JSON]
-    Scraper[PubMedScraper]
-    Metadata[Entrez metadata\nPMID, DOI, title, authors,\ndate, abstract]
-    PDF[paperscraper PDF download]
-    Text[pypdf text extraction]
-    Fallback[Abstract fallback\nwhen PDF text unavailable]
-    Splitter[RecursiveCharacterTextSplitter\n512 chars, 25 overlap]
-    Embeddings[OpenAIEmbeddings]
-    Astra[AstraDB vector store]
-    LedgerWrite[Record ingested paper\nPMID, diseases, chunk count]
-    Raw[Raw JSON archive\nscrapers/data/pubmed/raw]
-    Logs[Log file\nscrapers/data/log/log.txt]
-
-    CLI --> Target
-    Target --> Search
-    Search --> LedgerCheck
-    LedgerCheck -->|new PMIDs only| Scraper
-    Scraper --> Metadata
-    Metadata --> PDF
-    PDF --> Text
-    Text -->|if full text exists| Splitter
-    Metadata --> Fallback
-    Fallback -->|if PDF missing/empty| Splitter
-    Scraper --> Raw
-    Splitter --> Embeddings
-    Embeddings --> Astra
-    Astra --> LedgerWrite
-    Scraper --> Logs
+```
+keywords CSV ─┐
+              ├─► Config ─► Orchestrator ─► Scrapers ─► chunk ─► OpenAI ─► AstraDB
+channels CSV ─┘  (config.json)  (per target)  (arXiv/PubMed/    split   embeddings   vectors
+                                               YouTube)
+                                        dedup: data/*/index.json + data/papers/index.json
 ```
 
-## Runtime Sequence
+- **Config** (`src/backend/Config`) turns CLI args — targets, keywords, dates,
+  metadata — into `data/config.json`.
+- **Orchestrator** (`src/backend/Orchestrator`) runs each configured target and
+  isolates per-item failures so one bad paper/video can't abort the run.
+- **Scrapers** (`src/backend/Scrapers`) fetch and normalize content; the shared
+  **BaseScraper** handles chunking, embedding, and the deterministic AstraDB upsert.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant User
-    participant Runner as CLI runner
-    participant Target as PubMedTarget
-    participant PubMed as PubMed / Entrez
-    participant Ledger as Dedup ledger
-    participant Scraper as PubMedScraper
-    participant Store as AstraDB
+## Setup
 
-    User->>Runner: python -m scrapers.run_pubmed --keywords ... --max-results ...
-    Runner->>Target: create target
-    Target->>PubMed: search_free_fulltext(query)
-    PubMed-->>Target: candidate PMIDs
-    Target->>Ledger: filter_new(candidate PMIDs)
-    Ledger-->>Target: PMIDs not yet embedded
-    Target-->>Runner: PubMedScraper instances
-    loop each new PMID
-        Runner->>Scraper: scrape_and_save()
-        Scraper->>PubMed: fetch_details(PMID)
-        PubMed-->>Scraper: XML metadata
-        Scraper->>Scraper: derive DOI/title/authors/date/abstract
-        Scraper->>Scraper: download PDF and extract text
-        Scraper->>Scraper: chunk full text or abstract fallback
-        Scraper->>Store: add_documents(chunks + metadata)
-        Scraper->>Ledger: record(PMID, disease, chunks, full_text)
-    end
+Python 3.11 (matches the Docker image and CI).
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.template .env
 ```
 
-## Package Map
+Fill in the OpenAI and AstraDB values in `.env`. `YOUTUBE_DATA_API_V3` is only
+needed for YouTube scraping.
 
-| File | Responsibility |
-| --- | --- |
-| `__init__.py` | Package bootstrap. Loads `Backend/.env`, defines package-local data directories, creates the PubMed index file when missing. |
-| `base_target.py` | Abstract target contract. A target describes what should be scraped and returns scraper instances. |
-| `pubmed_target.py` | PubMed-specific target containing search keywords, max result count, and optional disease metadata tag. |
-| `base_scraper.py` | Abstract scraper workflow: scrape, save raw JSON, convert to LangChain documents, save vectors, record dedup status. |
-| `pubmed.py` | PubMed implementation. Searches PubMed, fetches metadata, downloads PDFs, extracts text, chunks content, builds document metadata. |
-| `splitter.py` | Text splitting helper using LangChain's `RecursiveCharacterTextSplitter`. |
-| `ledger.py` | Dedup adapter. Uses Firestore `literature_papers` when available, otherwise falls back to local `data/pubmed/index.json`. |
-| `patient_topics.py` | Reads a patient's Graphiti/Neo4j Diagnosis nodes and maps them to curated disease topics. |
-| `topics.py` | Curated disease/topic list and helper functions for mapping ICD codes or diagnosis text to disease tags. |
-| `run_pubmed.py` | One-off PubMed scraping CLI for arbitrary keyword searches. |
-| `run_patient.py` | Patient-driven PubMed scraping CLI. Resolves disease topics from a user's extracted graph diagnoses. |
-| `run_topics.py` | Batch scraping CLI for the curated disease list in `topics.py`. |
-| `types.py` | TypedDict contracts for scraped raw records. |
-| `log.py` | Simple file logger for scraper warnings/errors. |
-| `requirements.txt` | Isolated dependency set for the scraper subsystem. |
+## Configure and run
 
-## Data Flow Details
+Generate `data/config.json`:
 
-### 1. Target creation
-
-Targets describe the desired scrape, not the scraping mechanics.
-
-`PubMedTarget` accepts:
-
-- `keywords`: list of PubMed search terms.
-- `max_results`: maximum search results returned by Entrez.
-- `disease`: optional stable disease tag stored in each vector chunk's metadata.
-
-Example:
-
-```python
-target = PubMedTarget(
-    keywords=["prostate cancer", "prostate adenocarcinoma"],
-    max_results=10,
-    disease="prostate_cancer",
-)
+```powershell
+python -m src.backend.Config.main `
+  --targets pubmed archive `
+  --keywords prostate cancer `
+  --since-date 2026-01-01 `
+  --max-results 10
 ```
 
-### 2. PubMed search
+Then run the configured targets:
 
-`PubMedScraper.search_free_fulltext()` calls `Entrez.esearch()` with:
-
-- `db="pubmed"`
-- `sort="relevance"`
-- `retmode="xml"`
-- `retmax=max_results`
-- `term="<keywords> AND free full text[sb]"`
-
-The free-full-text filter reduces the chance of finding papers that cannot provide
-usable content, although full PDF downloads can still fail depending on the publisher.
-
-### 3. Dedup filtering
-
-Before any download or embedding work, `PubMedScraper.get_all_possible_elements()`
-passes candidate PMIDs to `ledger.filter_new()`.
-
-The ledger chooses one backend per Python process:
-
-- Firestore when `shared.firestore.get_firestore()` works.
-- Local JSON fallback when Firebase credentials/configuration are missing or
-  unavailable.
-
-```mermaid
-flowchart TD
-    PMIDs[Candidate PMIDs from PubMed] --> BackendChoice{Can Firestore initialize?}
-    BackendChoice -->|yes| Firestore[literature_papers collection]
-    BackendChoice -->|no| Local[data/pubmed/index.json]
-    Firestore --> Diff[Return PMIDs not present]
-    Local --> Diff
-    Diff --> Scrape[Only new PMIDs are scraped]
+```powershell
+python -m src.backend.Orchestrator.main
 ```
 
-Firestore is the intended backend for deployed/cloud usage because local filesystem
-state is ephemeral in Cloud Run. The local JSON index is useful for development.
+Run commands from this folder's root because data paths are relative to it.
 
-### 4. Scraping one article
+## Embeddings
 
-For each new PMID, `scrape_and_save()` runs the template workflow from
-`BaseScraper`:
+- **Model:** OpenAI `text-embedding-3-small` — **1536 dimensions**
+  ([`base_scraper.py`](src/backend/Scrapers/BaseScraper/base_scraper.py)).
+- The AstraDB collection is created lazily at this dimension on first write.
+  Switching model or dimension therefore requires a **new collection** — the
+  stored vectors and any query-side embedding must use the same model to be
+  comparable.
 
-1. `_scrape()` fetches metadata and article text.
-2. `_save()` writes the raw scraped dictionary to `data/pubmed/raw/<pmid>.json`.
-3. `get_documents()` converts the raw dictionary to LangChain `Document` chunks.
-4. `_save_vector_docs()` embeds and writes chunks to AstraDB.
-5. `_record_scraped()` records the PMID in the ledger.
+## Duplicate protection
 
-### 5. Metadata extraction
+The `data/<source>/index.json` files contain IDs already processed by the current
+project and are intentionally included. Keep these files in persistent storage
+when moving or deploying the pipeline. Every vector also receives a deterministic
+ID, so retries update the same AstraDB record rather than inserting another copy.
 
-`PubMedScraper._scrape()` calls `Entrez.efetch()` and derives:
+PubMed and arXiv additionally share `data/papers/index.json`. Before embedding,
+the pipeline checks it by DOI and then by an exact normalized-title fingerprint.
+Keep this registry persistent together with the source indexes.
 
-- `title`
-- `authors`
-- `publicationDate`
-- `ref` as DOI URL
-- `abstract`
-- `transcript` from downloaded PDF text, when available
+The `raw` directories start empty; previously scraped documents and model files
+were deliberately excluded from this portable folder.
 
-The raw saved JSON has this shape:
+## Vector Ingestion Metadata Schema
+
+Each chunk is stored in AstraDB with the following metadata structure:
 
 ```json
 {
-  "abstract": "Article abstract text...",
-  "authors": "Author One, Author Two",
-  "publicationDate": "2024",
-  "ref": "https://doi.org/...",
-  "title": "Article title",
-  "transcript": "Extracted PDF full text..."
+  "domain": "medical | financial | other",
+  "sub_domain": "e.g. oncology | nutrition",
+  "category": "optional free-form tag for filtering (e.g. Disease | Diagnosis | Treatment)",
+  "query_keywords": ["keyword1", "keyword2"],
+  "document_keywords": ["keyword1", "keyword2"],
+  "source": "archive | pubmed | youtube",
+  "source_type": "paper | video",
+  "published_date": "ISO-8601 date string",
+  "ingested_at": "ISO-8601 timestamp",
+  "source_id": "unique element identifier",
+  "chunk_index": "integer index of chunk within document",
+  "content_section": "optional section (e.g. captions, description)",
+  "type": "optional content type indicator"
 }
 ```
 
-### 6. PDF download and extraction
+### Common Metadata Fields
 
-`get_paper_from_doi()` uses `paperscraper.pdf.save_pdf()` to download a PDF into
-`scrapers/data/papers/`.
+- **domain**: Broad classification (medical, financial, etc.) set during pipeline configuration
+- **sub_domain**: Finer classification (e.g. oncology, nutrition) set during pipeline configuration
+- **category**: Optional free-form tag (`--category`) for filtering, e.g. the keyword CSV's category column (Disease, Diagnosis & Screening, Treatment); empty string when unset
+- **query_keywords**: Search keywords used to discover the source
+- **document_keywords**: Keywords extracted from document content
+- **source**: The scraper that extracted the data
+- **source_type**: The type of content (paper, video)
+- **published_date**: Original publication date from source (if available)
+- **ingested_at**: ISO-8601 timestamp when the chunk was processed
+- **source_id**: Unique identifier for deduplication and retrieval
+- **chunk_index**: Sequential index of this chunk within its source document
 
-`get_txt_from_pdf()` uses `pypdf.PdfReader` to concatenate text from all pages.
-By default, the temporary PDF is deleted after text extraction.
+### Deterministic Vector IDs
 
-If text extraction fails, the scraper logs a warning and continues.
+Vector store IDs are generated deterministically from:
 
-### 7. Abstract fallback
-
-`get_documents()` prefers full PDF text:
-
-```python
-content = transcript or abstract
+```
+SHA256({scraper_class}:{element_id}:{chunk_index})
 ```
 
-If full text is unavailable, the abstract is still chunked and embedded. This keeps
-the corpus useful even when publisher PDF access fails.
+This ensures idempotent upserts—retries update existing vectors rather than creating duplicates.
 
-The chunk metadata includes:
+## Supported Sources
 
-```python
-{
-    "abstract": "...",
-    "authors": "...",
-    "publicationDate": "...",
-    "title": "...",
-    "ref": "https://doi.org/...",
-    "source": "pubmed",
-    "pmid": "...",
-    "disease": "prostate_cancer",
-    "full_text": True
-}
-```
+| Source      | Type           | Key Metadata                                  | Deduplication                         |
+| ----------- | -------------- | --------------------------------------------- | ------------------------------------- |
+| **arXiv**   | Academic Paper | DOI, title, authors, abstract, published_date | By DOI (primary) or title fingerprint |
+| **PubMed**  | Medical Paper  | DOI, title, authors, abstract, published_date | By DOI (primary) or title fingerprint |
+| **YouTube** | Video          | Video metadata, transcript sections           | By video_id + chunk                   |
 
-### 8. Chunking
+### Source-Specific Metadata
 
-`splitter.py` uses:
+**PubMed & arXiv papers** additionally store:
 
-- `chunk_size=512`
-- `chunk_overlap=25`
-- `length_function=len`
-- `is_separator_regex=False`
+- `doi`, `authors`, `abstract`, `journal` (PubMed only)
+- Shared registry: `data/papers/index.json` for cross-source deduplication
 
-Each chunk becomes one LangChain `Document` with identical article-level metadata.
+**YouTube** additionally stores:
 
-### 9. Vector storage
+- `title`, `author`, `viewCount`, `keywords`, and `content_section` (captions or description)
 
-`BaseScraper._save_vector_docs()` creates an `AstraDBVectorStore` with:
+## Deploy to GCP (monthly Cloud Run Job)
 
-- `OpenAIEmbeddings(api_key=os.getenv("OPEN_AI_API"))`
-- `ASTRA_DB_API_ENDPOINT`
-- `ASTRA_DB_TOKEN`
-- `ASTRA_DB_NAMESPACE`
-- `ASTRA_DB_COLLECTION`
+The pipeline is packaged as a **Cloud Run Job** (run-to-completion batch, not a
+service) triggered by **Cloud Scheduler** once a month. Terraform for it lives in
+[`terraform/`](terraform/) and mirrors the `Backend/workers` stack (same TF-state
+bucket, provider, and secrets-as-`-var` convention).
 
-Then it calls:
+### Moving parts
 
-```python
-vector_store.add_documents(documents=documents)
-```
+| File                                  | Role                                                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dockerfile` / `.dockerignore`        | Slim image (no Chrome/ffmpeg — papers + YouTube transcripts only).                                                                                                    |
+| `run_monthly.py`                      | Entrypoint: GCS state sync ⇄, computes last-month `--since-date`, then loops the keyword CSVs (PubMed + arXiv per phrase) and the channels CSV (YouTube per channel). |
+| `terraform/`                          | Cloud Run Job, Cloud Scheduler (`0 3 1 * *`), GCS state bucket, service accounts + IAM.                                                                               |
 
-The Astra collection embedding dimension must match the embedding model used by
-LangChain's default `OpenAIEmbeddings` configuration.
+### State persistence (important)
 
-### 10. Ledger write
+The Job syncs the whole `data/` tree to `gs://ailixir-scraper-state-<project>`
+before and after each run. Those `data/*/index.json` files + `data/papers/index.json`
+are how the pipeline avoids re-scraping — **keep the bucket**; deleting it makes
+every run start from scratch (AstraDB's deterministic IDs still prevent duplicate
+vectors, but you re-pay for embeddings). YouTube in particular has no date filter,
+so its "latest" depends entirely on the persisted `data/youtube/index.json`.
 
-`PubMedScraper._record_scraped()` calls:
+### One-time setup
 
-```python
-ledger.record(
-    pmid,
-    doi=...,
-    title=...,
-    disease=...,
-    chunk_count=len(documents),
-    full_text=...,
-    source="pubmed",
-)
-```
+1. Copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars` and
+   fill in the OpenAI + AstraDB (and optional YouTube/NCBI) values. This file is
+   gitignored — never commit real secrets.
+2. For YouTube, `key_words/cancer_youtube_channels.csv` ships with a `url`
+   column of resolvable channel URLs, so it works out of the box. When adding
+   rows, include a `url`, `channel_url`, or `handle` (e.g. `@PCRI`) — rows
+   without one are skipped. To skip YouTube entirely, set `run_youtube = "0"`.
 
-With Firestore enabled, this writes to the global `literature_papers` collection.
-With the local fallback, it appends the PMID to `data/pubmed/index.json`.
-
-## Storage Illustration
-
-```mermaid
-flowchart TB
-    subgraph LocalFiles["scrapers/data/ (gitignored local artifacts)"]
-        RawJson["pubmed/raw/<pmid>.json\nraw scraped metadata + transcript"]
-        IndexJson["pubmed/index.json\nlocal fallback dedup index"]
-        TempPdf["papers/<title>.pdf\ntemporary during extraction"]
-        LogTxt["log/log.txt\nwarnings and failures"]
-    end
-
-    subgraph Firestore["Firestore"]
-        Literature["literature_papers/<pmid>\nlightweight global dedup ledger"]
-    end
-
-    subgraph Astra["AstraDB"]
-        Vectors["ASTRA_DB_COLLECTION\nchunk text + embeddings + metadata"]
-    end
-
-    RawJson --> Vectors
-    TempPdf --> RawJson
-    Literature -.preferred dedup.-> Vectors
-    IndexJson -.fallback dedup.-> Vectors
-```
-
-## Environment Configuration
-
-Add these values to `Backend/.env` or another environment loaded before execution.
-The package loads `Backend/.env` automatically from `scrapers/__init__.py`.
+### Deploy manually
 
 ```bash
-OPEN_AI_API=sk-...
-ASTRA_DB_API_ENDPOINT=https://<db-id>-<region>.apps.astra.datastax.com
-ASTRA_DB_TOKEN=AstraCS:...
-ASTRA_DB_NAMESPACE=default_keyspace
-ASTRA_DB_COLLECTION=health_ai
+cd Backend/scrapers
+TAG=$(git rev-parse --short HEAD)
 
-# Optional, but recommended by NCBI.
-NCBI_ENTREZ_EMAIL=you@example.com
-NCBI_API_KEY=...
+# 1. build + push the image
+#    a) with local Docker:
+docker build -t gcr.io/<project>/ailixir-scraper:$TAG .
+docker push  gcr.io/<project>/ailixir-scraper:$TAG
+#    b) or without local Docker, build remotely on Cloud Build:
+gcloud builds submit --tag gcr.io/<project>/ailixir-scraper:$TAG .
 
-# Required only for patient-driven scraping.
-NEO4J_URI=neo4j+s://...
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=...
-NEO4J_DATABASE=neo4j
+# 2. apply the infra (secrets via terraform.tfvars — see terraform.tfvars.example)
+cd terraform
+terraform init
+terraform apply -var="image_tag=$TAG"
+
+# 3. (optional) run it once now instead of waiting for the 1st of the month
+gcloud run jobs execute ailixir-scraper --region us-east1
 ```
 
-Important naming note: this package currently uses `OPEN_AI_API`, not
-`OPENAI_API_KEY`. The name mirrors the original project it was ported from.
+Tunables (`schedule`, `max_results`, `youtube_limit`, `task_timeout`, `cpu`,
+`memory`, `sub_domain`, `scraper_targets`, `run_youtube`) are Terraform variables —
+see [`terraform/variables.tf`](terraform/variables.tf). `max_results` (results per
+keyword per source) defaults to **25**; raising it multiplies run time, so keep it
+comfortably under `task_timeout` (6h) or split the job per keyword file.
 
-## Installation
-
-Install scraper dependencies from the `Backend/` directory into your active Python
-environment:
+### Monitoring & logs
 
 ```bash
-pip install -r scrapers/requirements.txt
+# tail live (needs: gcloud components install beta)
+gcloud beta logging tail \
+  'resource.type="cloud_run_job" AND resource.labels.job_name="ailixir-scraper"' \
+  --project <project> --format="value(textPayload)"
+
+# recent logs, newest first
+gcloud logging read \
+  'resource.type="cloud_run_job" AND resource.labels.job_name="ailixir-scraper"' \
+  --project <project> --limit 50 --order desc --format="value(textPayload)"
+
+# list executions (find the latest name / running state)
+gcloud run jobs executions list --job ailixir-scraper \
+  --region us-east1 --project <project> --limit 5
 ```
 
-These dependencies are intentionally separate from the rest of the backend.
+Each run ends with a `[summary] success=… failed=… skipped=…` line. A run where
+everything is **skipped** usually means the dedup state already covers those
+items — expected on a re-run without new papers. Cloud Monitoring emails
+`alert_email` if a Job execution fails.
 
-## Running the Scrapers
+### Troubleshooting
 
-Run commands from `Backend/` so `scrapers` and `shared` are importable as packages.
-
-### One-off keyword scrape
-
-```bash
-python -m scrapers.run_pubmed --keywords nutrition health --max-results 3
-```
-
-This searches PubMed for `nutrition health`, filters out already-ingested PMIDs,
-then embeds up to three new papers.
-
-### Curated disease scrape
-
-```bash
-python -m scrapers.run_topics --max-results 5
-```
-
-This iterates every topic in `topics.DISEASE_TOPICS`.
-
-To scrape one disease:
-
-```bash
-python -m scrapers.run_topics --disease prostate_cancer --max-results 10
-```
-
-Known disease tags currently include:
-
-- `prostate_cancer`
-- `breast_cancer`
-- `type2_diabetes`
-- `hypertension`
-
-## Curated Disease Topics
-
-`topics.py` stores the corpus taxonomy in code so changes are reviewable in git.
-
-Each topic contains:
-
-| Field | Meaning |
-| --- | --- |
-| `disease` | Stable slug used in vector metadata and later retrieval filters. Do not rename casually. |
-| `label` | Human-readable disease name. |
-| `icd_prefixes` | ICD-10 prefixes for mapping structured diagnoses. |
-| `aliases` | Lowercase free-text diagnosis substrings, including German terms. |
-| `keywords` | PubMed query terms used during scraping. |
-
-The helper functions are:
-
-- `disease_for_icd(icd_code)`: maps ICD-10 prefixes to a disease tag.
-- `disease_for_text(text)`: maps diagnosis text to a disease tag using aliases.
-- `diseases_for_diagnosis(name, icd_code)`: prefers ICD mapping, then text mapping.
-
-## Patient-Driven Scraping
-
-The patient-driven flow uses the existing Graphiti patient graph to decide which
-PubMed topics to scrape.
-
-The backend ingestion worker stores patient facts in Neo4j through Graphiti with:
-
-```text
-group_id = uid
-```
-
-For that reason, the first supported patient-driven runner accepts a Firebase
-`uid`, not a raw hospital patient number.
-
-```mermaid
-flowchart LR
-    UID[Firebase UID\nGraphiti group_id]
-    Neo4j[Neo4j / Graphiti graph]
-    Diagnoses[Diagnosis nodes\nname + icd_code + properties]
-    Mapping[topics.py mapping\nICD prefixes + aliases]
-    Topics[Curated disease topics]
-    Keywords[Safe PubMed keywords]
-    PubMed[PubMed scrape]
-    Astra[AstraDB corpus]
-
-    UID --> Neo4j
-    Neo4j --> Diagnoses
-    Diagnoses --> Mapping
-    Mapping --> Topics
-    Topics --> Keywords
-    Keywords --> PubMed
-    PubMed --> Astra
-```
-
-Dry-run first to see what the graph resolves to:
-
-```bash
-python -m scrapers.run_patient --uid <firebase_uid> --dry-run
-```
-
-Then scrape the matching PubMed topics:
-
-```bash
-python -m scrapers.run_patient --uid <firebase_uid> --max-results 5
-```
-
-The runner does not send the patient's narrative, documents, or private details to
-PubMed. It only sends generic curated keywords such as `prostate cancer` after the
-local graph diagnosis has been mapped to a disease topic.
-
-If no disease is resolved, update `topics.py` with additional aliases or ICD
-prefixes that match the diagnosis terms found in the graph.
-
-## Dedup Ledger Details
-
-The Firestore ledger document is represented by `shared.models.literature_paper`.
-One document is stored per unique PMID.
-
-```mermaid
-classDiagram
-    class LiteraturePaper {
-        string pmid
-        string doi
-        string title
-        list~string~ diseases
-        int chunk_count
-        bool full_text
-        string source
-        datetime embedded_at
-        datetime updated_at
-    }
-```
-
-When a paper is discovered again under a different disease:
-
-- The scraper does not re-download the paper.
-- The scraper does not re-embed its chunks.
-- Firestore appends the new disease tag with `ArrayUnion`.
-
-This keeps the vector store from filling with duplicate chunks while preserving the
-fact that one paper may be relevant to multiple disease topics.
-
-## Error Handling
-
-The scraper is resilient to common PubMed/PDF issues:
-
-- Missing DOI, title, authors, date, or abstract return empty strings rather than
-  crashing the whole run.
-- PDF download or extraction failure is logged and the scraper falls back to the
-  abstract when possible.
-- If `_scrape()` returns an empty dictionary, `scrape_and_save()` logs that no data
-  was found and skips vector insertion.
-- If Firestore is unavailable, the ledger falls back to `data/pubmed/index.json`.
-
-Errors and warnings are appended to:
-
-```text
-Backend/scrapers/data/log/log.txt
-```
-
-## Local Artifacts
-
-All runtime artifacts are under `Backend/scrapers/data/` and are gitignored:
-
-```text
-scrapers/data/
-  pubmed/
-    index.json
-    raw/
-      <pmid>.json
-  papers/
-    <temporary downloaded PDFs>
-  log/
-    log.txt
-```
-
-## Extension Guide
-
-To add another literature source, follow the existing target/scraper pattern:
-
-1. Create a target class that extends `BaseTarget`.
-2. Create a scraper class that extends `BaseScraper`.
-3. Implement `index_file()`, `base_dir()`, `_scrape()`,
-   `get_all_possible_elements()`, and `get_documents()`.
-4. Reuse `get_text_chunks()` unless the source needs a different chunking policy.
-5. Reuse or extend `ledger.py` if deduplication should remain global.
-6. Add a small CLI runner like `run_pubmed.py`.
-7. Add source-specific metadata fields while preserving the common fields:
-   `source`, `ref`, and an external stable ID.
-
-## Troubleshooting
-
-| Symptom | Likely cause | What to check |
-| --- | --- | --- |
-| `ModuleNotFoundError: scrapers` | Command was not run from `Backend/`. | Run `python -m scrapers.run_pubmed ...` inside `Backend/`. |
-| `ModuleNotFoundError: shared` | Same import-path issue, or backend root not on Python path. | Run from `Backend/`. |
-| `ModuleNotFoundError: neo4j` | Patient-driven scraping dependencies are not installed. | Run `pip install -r scrapers/requirements.txt`. |
-| `run_patient` finds no diagnoses | The user has no extracted Graphiti Diagnosis nodes, or the wrong UID was used. | Confirm the patient's documents reached `EXTRACTED` and use the Firebase UID. |
-| `run_patient` finds diagnoses but no topics | The diagnosis terms do not match the curated aliases/ICD prefixes. | Add aliases or ICD prefixes in `scrapers/topics.py`. |
-| AstraDB authentication error | Missing or invalid Astra env vars. | Check `ASTRA_DB_API_ENDPOINT`, `ASTRA_DB_TOKEN`, `ASTRA_DB_NAMESPACE`, `ASTRA_DB_COLLECTION`. |
-| OpenAI embedding error | Missing `OPEN_AI_API` or incompatible embedding configuration. | Verify the key and the Astra collection vector dimension. |
-| Firestore warning followed by local fallback | Firebase credentials are unavailable locally. | Accept the fallback for local runs, or configure Firebase admin credentials. |
-| Few or no PDFs extracted | PubMed free-full-text does not guarantee publisher PDF access. | Confirm abstracts are still being embedded through the fallback path. |
-| Duplicate papers in searches | Expected PubMed overlap across topics. | Firestore/local ledger should prevent duplicate embedding. |
-
-## Current Limitations
-
-- Only PubMed is implemented.
-- Retrieval from the scraped AstraDB corpus is not yet wired into `api/chat.py`.
-- PDF extraction quality depends on publisher formatting and `pypdf`.
-- The local JSON ledger is not suitable for concurrent or distributed production
-  scraping.
-- The embedding model is implicit through LangChain's `OpenAIEmbeddings` default.
-
-## Quick Reference
-
-```bash
-# From repository root
-cd Backend
-
-# Install isolated scraper dependencies
-pip install -r scrapers/requirements.txt
-
-# Scrape arbitrary PubMed keywords
-python -m scrapers.run_pubmed --keywords nutrition health --max-results 3
-
-# Scrape all curated disease topics
-python -m scrapers.run_topics --max-results 5
-
-# Scrape one curated disease topic
-python -m scrapers.run_topics --disease prostate_cancer --max-results 10
-
-# Resolve a patient's diagnoses to topics without scraping
-python -m scrapers.run_patient --uid <firebase_uid> --dry-run
-
-# Scrape PubMed topics relevant to one patient graph
-python -m scrapers.run_patient --uid <firebase_uid> --max-results 5
-```
+- **arXiv `HTTP 503`** — transient export-API throttling; that keyword's arXiv
+  results are skipped for the run and picked up next time. Non-fatal.
+- **`Could not retrieve text data from pdf` / paperscraper Elsevier/PMC errors** —
+  full-text PDF wasn't reachable (often paywalled), so the **abstract** is embedded
+  instead. Non-fatal.

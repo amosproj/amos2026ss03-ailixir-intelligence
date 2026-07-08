@@ -1,10 +1,18 @@
 """
 Chat endpoints — POST /chat/query
 
-Three-step graph-RAG pipeline:
+Three-step hybrid graph+paper-RAG pipeline:
   1. Contextualize: LLM rewrites query if it references conversation history
-  2. Retrieve:      Graphiti searches the patient's knowledge graph (group_id=uid)
-  3. Answer:        LLM synthesises graph facts into a natural-language response
+  2. Retrieve:      TWO retrieval arms run concurrently —
+                       (a) Graphiti searches the patient's knowledge graph
+                           (group_id=uid) — the primary, patient-specific source.
+                       (b) `paper_retriever` vector-searches the scraped
+                           research-paper AstraDB collection and reranks via
+                           Vertex AI's Ranking API — supplementary general
+                           reference material. Never fails the request; a
+                           degraded paper corpus falls back to graph-only.
+  3. Answer:        LLM synthesises graph facts (+ paper excerpts, if any)
+                     into a natural-language response.
 
 The endpoint is async throughout. Graphiti (Neo4j + Vertex AI) is initialised
 lazily on first request (or eagerly on lifespan startup if
@@ -46,6 +54,7 @@ from pydantic import BaseModel, Field
 from api.auth import get_current_user
 from api.chat_pipeline.answerer import generate_answer
 from api.chat_pipeline.contextualizer import contextualize_query
+from api.chat_pipeline.paper_retriever import PaperRetrievalResult, retrieve_papers
 from api.chat_pipeline.retriever import retrieve
 from api.chat_pipeline.titler import generate_and_store_title
 from api.errors import APIError
@@ -106,6 +115,9 @@ class ChatQueryResponse(BaseModel):
     `query_changed`        — True if the contextualizer rewrote the query.
     `facts_used`           — number of knowledge graph facts retrieved.
     `entities_used`        — number of knowledge graph entities retrieved.
+    `papers_used`          — number of reranked research-paper chunks used
+                             (0 if the paper corpus was unavailable/empty —
+                             the answer still comes from the knowledge graph).
     """
 
     answer: str
@@ -113,6 +125,7 @@ class ChatQueryResponse(BaseModel):
     query_changed: bool
     facts_used: int
     entities_used: int
+    papers_used: int = 0
     # True when a background title-generation task was scheduled for this chat
     # (first turn + chat_id present). The title itself lands in RTDB a moment
     # later; the client observes it via its chat-list subscription. Purely
@@ -126,6 +139,12 @@ class ChatQueryResponse(BaseModel):
 # reference to a bare create_task, so without this a task can be garbage
 # collected mid-flight. We add on launch and discard on completion.
 _title_tasks: set[asyncio.Task] = set()
+
+# Same pattern for in-flight paper-retrieval tasks (see `retrieve_papers`
+# call site below). Needed because when the KG retrieval arm fails, we don't
+# await the paper task before raising — it keeps running in the background
+# via this strong reference instead of being garbage-collected mid-flight.
+_paper_tasks: set[asyncio.Task] = set()
 
 
 def _maybe_start_title(payload: ChatQueryRequest, uid: str) -> bool:
@@ -162,8 +181,9 @@ def _maybe_start_title(payload: ChatQueryRequest, uid: str) -> bool:
     status_code=status.HTTP_200_OK,
     summary="Query the patient's knowledge graph and get an AI answer",
     description="""
-Run a three-step graph-RAG pipeline against the authenticated patient's
-medical knowledge graph stored in Neo4j (via Graphiti).
+Run a three-step hybrid graph+paper-RAG pipeline against the authenticated
+patient's medical knowledge graph (Neo4j via Graphiti) and a corpus of
+scraped medical research papers (AstraDB).
 
 **Step 1 — Contextualize**
 If the query implicitly references prior conversation (pronouns, follow-up
@@ -171,14 +191,20 @@ phrasing), it is rewritten into a self-contained question.
 *Example:* "Tell me its drawbacks" after discussing Tamoxifen
 → "What are the drawbacks of Tamoxifen?"
 
-**Step 2 — Retrieve**
-Hybrid semantic + keyword search on the patient's knowledge graph
-(`group_id = uid`). Returns up to 4 relevant medical facts (relationship
-edges with temporal metadata) and entity nodes.
+**Step 2 — Retrieve (two arms, concurrent)**
+- *Knowledge graph:* Hybrid semantic + keyword search on the patient's
+  knowledge graph (`group_id = uid`). Returns up to 4 relevant medical
+  facts (relationship edges with temporal metadata) and entity nodes.
+- *Research papers:* Vector search on the scraped research-paper corpus
+  (filtered to the medical/oncology domain), reranked by Vertex AI's
+  Ranking API down to the top 2 most relevant excerpts. Best-effort —
+  if unavailable, the answer falls back to the knowledge graph alone.
 
 **Step 3 — Answer**
-Gemini synthesises the retrieved facts into a precise, temporally-aware
-natural-language answer. Facts are clearly marked as current or historical.
+Gemini synthesises the retrieved facts (and any research paper excerpts)
+into a precise, temporally-aware natural-language answer. Facts are clearly
+marked as current or historical; paper excerpts are clearly marked as
+general reference, not patient-specific.
     """,
 )
 async def chat_query(
@@ -209,7 +235,17 @@ async def chat_query(
     )
     contextualized = ctx.query
 
-    # Step 2 — Retrieve
+    # Step 2 — Retrieve (two arms, concurrent)
+    # The paper-retrieval arm is launched first and never raises (see its
+    # module docstring), so it's safe to let it run unguarded while the KG
+    # arm's try/except below handles its own failure modes. If KG retrieval
+    # fails, we deliberately do NOT await/cancel the paper task — it keeps
+    # running via the `_paper_tasks` strong reference and its result is
+    # simply discarded once the request has already failed.
+    paper_task = asyncio.create_task(retrieve_papers(query=contextualized))
+    _paper_tasks.add(paper_task)
+    paper_task.add_done_callback(_paper_tasks.discard)
+
     try:
         retrieval = await retrieve(
             query=contextualized,
@@ -261,11 +297,17 @@ async def chat_query(
             message="Knowledge graph retrieval failed. Please try again.",
         )
 
+    # KG retrieval succeeded — collect the concurrently-running paper arm.
+    # `retrieve_papers` never raises, so this is a plain await, not a
+    # try/except; a degraded paper corpus simply yields an empty result.
+    paper_result: PaperRetrievalResult = await paper_task
+
     # Step 3 — Generate answer
     try:
         answer = await generate_answer(
             query=contextualized,
             result=retrieval,
+            paper_result=paper_result,
         )
     except TimeoutError:
         _log.warning("chat_query answer_timeout uid=%s", uid)
@@ -315,9 +357,10 @@ async def chat_query(
         )
 
     _log.info(
-        "chat_query_done uid=%s query_changed=%s facts=%d entities=%d answer_len=%d title_scheduled=%s",
+        "chat_query_done uid=%s query_changed=%s facts=%d entities=%d papers=%d "
+        "answer_len=%d title_scheduled=%s",
         uid, ctx.changed, retrieval.total_edges, retrieval.total_nodes,
-        len(answer), title_generation_scheduled,
+        paper_result.total_chunks, len(answer), title_generation_scheduled,
     )
 
     return ChatQueryResponse(
@@ -326,5 +369,6 @@ async def chat_query(
         query_changed=ctx.changed,
         facts_used=retrieval.total_edges,
         entities_used=retrieval.total_nodes,
+        papers_used=paper_result.total_chunks,
         title_generation_scheduled=title_generation_scheduled,
     )

@@ -1,2 +1,9 @@
-# Scraped artefacts: raw JSON, temp PDFs, dedup index, logs.
-data/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+papers/
+audios/
+data/*/raw/*
+data/podcast/vosk_model/
+data/log/*

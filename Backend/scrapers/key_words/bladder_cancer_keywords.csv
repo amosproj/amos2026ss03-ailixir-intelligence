@@ -1,0 +1,41 @@
+category,keyword
+Disease,bladder cancer
+Disease,urothelial carcinoma
+Disease,transitional cell carcinoma
+Disease,muscle invasive bladder cancer
+Disease,MIBC
+Disease,non muscle invasive bladder cancer
+Disease,NMIBC
+Disease,high-grade bladder cancer
+Disease,metastatic bladder cancer
+Disease,upper tract urothelial carcinoma
+Disease,UTUC
+Diagnosis & Screening,hematuria
+Diagnosis & Screening,cystoscopy
+Diagnosis & Screening,urine cytology
+Diagnosis & Screening,TURBT
+Diagnosis & Screening,CT urography
+Diagnosis & Screening,MRI bladder
+Diagnosis & Screening,molecular biomarkers
+Diagnosis & Screening,urinary biomarkers
+Treatment,BCG therapy
+Treatment,intravesical therapy
+Treatment,gemcitabine
+Treatment,mitomycin C
+Treatment,radical cystectomy
+Treatment,partial cystectomy
+Treatment,urinary diversion
+Treatment,ileal conduit
+Treatment,neobladder
+Treatment,continent diversion
+Treatment,chemotherapy
+Treatment,cisplatin
+Treatment,immunotherapy
+Treatment,checkpoint inhibitor
+Treatment,pembrolizumab
+Treatment,nivolumab
+Treatment,avelumab
+Treatment,enfortumab vedotin
+Treatment,erdafitinib
+Treatment,FGFR inhibitor
+Treatment,clinical trial

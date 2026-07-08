@@ -1,0 +1,8 @@
+# Never commit real secrets or local TF state/plans.
+terraform.tfvars
+*.auto.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+tfplan

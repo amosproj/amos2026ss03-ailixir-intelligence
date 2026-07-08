@@ -1,0 +1,18 @@
+# Secrets — never bake credentials into the image (Cloud Run injects env vars).
+.env
+.env.template
+
+# Local dev / caches.
+.venv/
+__pycache__/
+*.py[cod]
+
+# Large or ephemeral runtime artifacts. The committed data/*/index.json seeds
+# ARE kept (not matched below); only the bulky raw/PDF/log contents are cut.
+papers/
+data/*/raw/
+data/log/
+
+# Infra — not needed inside the container.
+terraform/
+.git/

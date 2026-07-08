@@ -68,3 +68,77 @@ variable "elevenlabs_user_id_header" {
   type        = string
   default     = "X-User-Id"
 }
+
+# ── AstraDB + OpenAI (chat pipeline — hybrid retrieval, research-paper arm) ───
+# Same AstraDB collection scrapers/ ingests into; see
+# api/chat_pipeline/paper_retriever.py and scrapers/README.md.
+
+variable "astra_db_api_endpoint" {
+  description = "AstraDB API endpoint (https://<db-id>-<region>.apps.astra.datastax.com)"
+  type        = string
+}
+
+variable "astra_db_token" {
+  description = "AstraDB application token (AstraCS:...)"
+  type        = string
+  sensitive   = true
+}
+
+variable "astra_db_namespace" {
+  description = "AstraDB keyspace/namespace"
+  type        = string
+  default     = "default_keyspace"
+}
+
+variable "astra_db_collection" {
+  description = "AstraDB collection name holding scraped research-paper chunks"
+  type        = string
+}
+
+variable "openai_api_key" {
+  description = "OpenAI API key for query embeddings — MUST match the embedding model scrapers/ used to ingest the collection (same key as scrapers' OPEN_AI_API)"
+  type        = string
+  sensitive   = true
+}
+
+variable "openai_embedding_model" {
+  description = "OpenAI embedding model for query embeddings — MUST exactly match scrapers/src/backend/Scrapers/BaseScraper/base_scraper.py's ingestion model. Mismatched models produce near-zero cosine similarity between query and stored vectors (verified: ~0.02 instead of ~1.0), which silently degrades to garbage retrieval rather than an error."
+  type        = string
+  default     = "text-embedding-3-small"
+}
+
+# ── Vertex AI Ranking API (chat pipeline — reranks paper vector-search hits) ──
+
+variable "vertex_ranking_location" {
+  description = "Vertex AI Ranking API location (rankingConfigs only exist at \"global\")"
+  type        = string
+  default     = "global"
+}
+
+variable "vertex_ranking_config_id" {
+  description = "Vertex AI ranking config ID (every project gets \"default_ranking_config\" for free)"
+  type        = string
+  default     = "default_ranking_config"
+}
+
+variable "chat_paper_rerank_model" {
+  description = "Vertex AI Ranking API model"
+  type        = string
+  default     = "semantic-ranker-default@latest"
+}
+
+# ── Paper retrieval domain scoping ────────────────────────────────────────────
+# Hardcoded today — all current users are oncology patients. See
+# api/chat_pipeline/paper_retriever.py module docstring.
+
+variable "chat_paper_domain" {
+  description = "Metadata pre-filter: domain field on scraped paper chunks"
+  type        = string
+  default     = "medical"
+}
+
+variable "chat_paper_sub_domain" {
+  description = "Metadata pre-filter: sub_domain field on scraped paper chunks"
+  type        = string
+  default     = "oncology"
+}
