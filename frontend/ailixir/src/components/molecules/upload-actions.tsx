@@ -21,11 +21,9 @@ export function UploadActions({ isBusy, hasFiles, onStartUpload }: UploadActions
         </XStack>
       )}
 
-      {hasFiles && (
-        <CButton emphasis="high" fullWidth onPress={onStartUpload} disabled={isBusy}>
-          {isBusy ? 'Uploading... ' : 'Start upload'}
-        </CButton>
-      )}
+      <CButton emphasis="high" fullWidth onPress={onStartUpload} disabled={isBusy || !hasFiles} opacity={isBusy || !hasFiles ? 0.6 : 1}>
+        {isBusy ? 'Uploading... ' : 'Start upload'}
+      </CButton>
     </YStack>
   );
 }
