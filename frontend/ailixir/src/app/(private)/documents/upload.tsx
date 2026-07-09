@@ -99,7 +99,11 @@ export default function UploadScreen() {
   return (
     <YStack flex={1} px={20} py={24} gap={20}>
       <ScreenHeader title="Upload documents" subtitle="Select PDFs or images and upload them securely to your workspace." />
-      <UploadFilesPanel files={selectedFiles} isBusy={isBusy} onPickFiles={handlePickFiles} onRemoveFile={handleRemoveFile} />
+
+      <YStack flex={1} bg="$accent12">
+        <UploadFilesPanel files={selectedFiles} isBusy={isBusy} onPickFiles={handlePickFiles} onRemoveFile={handleRemoveFile} />
+      </YStack>
+
       <UploadActions isBusy={isBusy} hasFiles={selectedFiles.length > 0} onStartUpload={handleStartUpload} />
     </YStack>
   );
