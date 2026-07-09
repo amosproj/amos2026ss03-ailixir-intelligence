@@ -6,8 +6,6 @@ import { useFinalizeDocument } from '@/hooks/useFinalizeDocument';
 import { showOcrTextAtom } from '@/state/debug';
 import { formatDate, formatSize } from '@/utils/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
 import { ChevronLeft, File, Trash2 } from '@tamagui/lucide-icons-2';
 import { useAtomValue } from 'jotai';
 import React, { useCallback } from 'react';
@@ -65,59 +63,6 @@ export default function DocumentScreen() {
   const documentIsExtracted = document?.status === 'extracted';
   const ocrTextEnabled = showOcrText && documentIsExtracted;
   const { data: extraction, isLoading: extractionIsLoading, isError: extractionIsError } = useDocumentExtraction(params.id, documentIsExtracted);
-
-  // Download the Cypher graph script the worker produced for this document.
-  //
-  // Flow:
-  //   1. Backend serves the document with a short-lived v4 signed GET URL
-  //      (`cypher_download_url`). Its expiry sits on the same response so
-  //      we could re-fetch the document if it lapsed mid-session.
-  //   2. We stream the URL to a per-document file in the app's cache
-  //      directory (`<cacheDir>/<doc_id>_graph.cypher`). The destination
-  //      lives inside our sandbox so iOS' share-sheet can hand it off to
-  //      other apps without permission prompts.
-  //   3. Share-sheet handover to whatever the user picks (Files, AirDrop,
-  //      Slack, Notes…).
-  //
-  // The status guards mean this only fires when the worker has actually
-  // written a graph — the button is hidden otherwise (see JSX below).
-  const handleDownloadGraph = useCallback(async () => {
-    if (!document?.cypher_download_url) {
-      Alert.alert('Graph not ready', 'This document does not yet have a generated knowledge graph. ' + 'Wait for status to reach Extracted, then try again.');
-      return;
-    }
-
-    const isAvailable = await Sharing.isAvailableAsync();
-    if (!isAvailable) {
-      Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
-      return;
-    }
-
-    const fileName = `${document.document_id}_graph.cypher`;
-    const localPath = `${FileSystem.cacheDirectory}${fileName}`;
-
-    try {
-      // downloadAsync streams the signed URL directly into the cache dir
-      // — never holding the full body in JS memory. Same expo-file-system
-      // legacy entry point we use for uploads.
-      const result = await FileSystem.downloadAsync(document.cypher_download_url, localPath);
-      if (result.status < 200 || result.status >= 300) {
-        throw new Error(`HTTP ${result.status}`);
-      }
-
-      await Sharing.shareAsync(result.uri, {
-        // Cypher is a plain-text format. text/plain lets receiving apps
-        // (Files, Notes, Slack) preview the contents instead of treating
-        // it as an opaque binary blob.
-        mimeType: 'text/plain',
-        UTI: 'public.plain-text',
-        dialogTitle: 'Download knowledge graph (Cypher)',
-      });
-    } catch (err) {
-      console.error('Cypher download failed:', err);
-      Alert.alert('Download failed', 'Could not download the knowledge graph. The signed URL may have expired — pull to refresh and try again.');
-    }
-  }, [document?.cypher_download_url, document?.document_id]);
 
   const { mutateAsync: finalizeDocument, isPending: isFinalizing } = useFinalizeDocument();
 
@@ -189,10 +134,8 @@ export default function DocumentScreen() {
         <DocumentDetailActions
           status={document.status}
           onStartExtraction={handleStartExtraction}
-          onDownloadGraph={handleDownloadGraph}
           error={document.error}
           processingStep={document.processing_step}
-          cypherDownloadUrl={document.cypher_download_url}
           ocrTextEnabled={ocrTextEnabled}
           extraction={extraction}
           extractionIsLoading={extractionIsLoading}
