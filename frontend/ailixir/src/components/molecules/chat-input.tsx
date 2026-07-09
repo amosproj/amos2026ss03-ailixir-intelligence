@@ -40,9 +40,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onStartVoic
         ref={inputRef}
         value={message}
         onChangeText={setMessage}
+        onSubmitEditing={handleSend}
         placeholder={placeholder}
         theme="bright"
         multiline
+        submitBehavior="submit"
+        returnKeyType="send"
         numberOfLines={3}
         style={{
           flex: 1,
