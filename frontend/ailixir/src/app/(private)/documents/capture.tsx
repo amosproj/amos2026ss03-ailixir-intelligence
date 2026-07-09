@@ -103,20 +103,15 @@ export default function CaptureScreen() {
         </XStack>
 
         <YStack flex={1}>
-          {/* Main Content */}
           {pages.length === 0 ? (
-            // Empty State
             <YStack flex={1} items="center" justify="center" gap={12}>
               <CameraButton emphasis="high" defaultText="Add Page" loadingText="Scanning..." onPhoto={handleAddPage} />
             </YStack>
           ) : (
-            // Grid Layout
             <ScrollView showsVerticalScrollIndicator={false} pb={16}>
               <YStack width="100%" gap={12} py={12} style={{ flexDirection: 'column', display: 'flex', justifyContent: 'center' }}>
-                {/* Render pages in 2-column grid with add page button at the end */}
                 {pages.map((page, index) => (
                   <YStack key={index} flex={1} gap={8}>
-                    {/* Thumbnail Container */}
                     <YStack style={{ margin: 'auto', flex: 1, position: 'relative', width: '50%', height: 0.3 * windowHeight, overflow: 'hidden' }}>
                       <Image source={{ uri: page.uri }} style={{ width: undefined, height: undefined, flex: 1 }} contentFit="contain"></Image>
                     </YStack>
@@ -125,7 +120,7 @@ export default function CaptureScreen() {
                       style={{
                         position: 'absolute',
                         top: 8,
-                        left: windowWidth * 0.5 - 28, // Center the button horizontally over the thumbnail
+                        left: windowWidth * 0.5 - 28,
                         zIndex: 10,
                         backgroundColor: 'rgba(0, 0, 0, 0.5)',
                         borderRadius: 20,
@@ -134,7 +129,6 @@ export default function CaptureScreen() {
                       <Trash2 size={16} color="white" />
                     </Pressable>
 
-                    {/* Page Number */}
                     <CText variant="caption" bold style={{ textAlign: 'center' }}>
                       Page {index + 1}
                     </CText>
