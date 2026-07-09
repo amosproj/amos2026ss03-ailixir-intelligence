@@ -77,9 +77,10 @@ export default function SettingsScreen() {
           emphasis="high"
           onPress={() => signOut(auth)}
           px={28}
-          py={14}
-          style={{ minWidth: 220, maxWidth: 320, width: '75%', shadowColor: '#00000020', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 14, elevation: 6 }}>
-          Log Out
+          style={{ minWidth: 220, maxWidth: 320, width: '75%', minHeight: 52, shadowColor: '#00000020', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 14, elevation: 6 }}>
+          <CText variant="lead" color="$white">
+            Log Out
+          </CText>
         </CButton>
       </XStack>
     </YStack>
