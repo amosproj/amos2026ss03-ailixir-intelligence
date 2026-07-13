@@ -70,7 +70,10 @@ npm run ios
 npm run android
 ```
 
-> **Note:** For detailed setup instructions, including backend configuration, environment variables, and Firebase setup, see the [Documentation](./Documentation) or the [Backend README](./Backend/README.md).
+> **Note:** This covers the frontend only. For the backend — its own
+> setup, environment variables, and how to run/use it (either the deployed
+> instance or your own local copy) — see
+> [`Documentation/running-the-project/`](./Documentation/running-the-project/README.md).
 
 ---
 
