@@ -21,12 +21,16 @@ The system extracts structured information, stores it within a personal knowledg
 ## Tech Stack
 
 - **Frontend:** React Native (Expo), [ElevenLabs](https://elevenlabs.io/) (Voice Chat)
-- **Backend:** Python + Google Cloud Run
-- **Authentication:** Firebase Authentication (JWT validation for API access)
-- **Functions:** Firebase Cloud Functions
-- **AI/ML:** Vertex AI, Document AI
-- **Database:** Firestore
-- **Knowledge Layer:** Vector Search / Neo4j
+- **Backend:** Python (FastAPI) + Google Cloud Run — one public API service, one internal Pub/Sub-driven worker service, one scheduled batch job
+- **Authentication:** Firebase Authentication (ID token validation for API access)
+- **AI/ML:** Vertex AI (Gemini — multimodal document analysis, chat, and knowledge-graph extraction via [Graphiti](https://github.com/getzep/graphiti)), OpenAI embeddings + Vertex AI Ranking API (research-paper retrieval)
+- **Database:** Firestore (documents, extractions, users)
+- **Knowledge Layer:** Neo4j (temporal knowledge graph, per patient), AstraDB (research-paper vector search)
+
+> Full architecture, code-level, and run-it-yourself documentation lives in
+> [`Documentation/`](./Documentation) — see its
+> [README](./Documentation/README.md) for the index; that's the door into
+> exploring the rest of the project.
 
 ---
 
