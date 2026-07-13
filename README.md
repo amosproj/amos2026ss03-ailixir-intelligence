@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [About AIlixir Intelligence](#about-ailixir-intelligence)
+- [Documentation](#documentation)
 - [Tech Stack](#tech-stack)
 - [Setup](#setup)
 - [Key Features](#key-features)
@@ -18,15 +19,27 @@ The system extracts structured information, stores it within a personal knowledg
 
 ---
 
+## Documentation
+
+**[`Documentation/`](./Documentation)** is the full documentation set for
+this project — start at **[`Documentation/README.md`](./Documentation/README.md)**,
+which indexes everything else (system architecture with diagrams, a
+per-file code reference for the backend, the complete API reference, and
+how to run the project — both by using the already-deployed system and by
+running your own copy locally). That page is the door into exploring the
+rest of the project in depth; this README only covers the frontend quick
+start below.
+
+---
+
 ## Tech Stack
 
 - **Frontend:** React Native (Expo), [ElevenLabs](https://elevenlabs.io/) (Voice Chat)
-- **Backend:** Python + Google Cloud Run
-- **Authentication:** Firebase Authentication (JWT validation for API access)
-- **Functions:** Firebase Cloud Functions
-- **AI/ML:** Vertex AI, Document AI
-- **Database:** Firestore
-- **Knowledge Layer:** Vector Search / Neo4j
+- **Backend:** Python (FastAPI) + Google Cloud Run — one public API service, one internal Pub/Sub-driven worker service, one scheduled batch job
+- **Authentication:** Firebase Authentication (ID token validation for API access)
+- **AI/ML:** Vertex AI (Gemini — multimodal document analysis, chat, and knowledge-graph extraction via [Graphiti](https://github.com/getzep/graphiti)), OpenAI embeddings + Vertex AI Ranking API (research-paper retrieval)
+- **Database:** Firestore (documents, extractions, users)
+- **Knowledge Layer:** Neo4j (temporal knowledge graph, per patient), AstraDB (research-paper vector search)
 
 ---
 
@@ -57,7 +70,10 @@ npm run ios
 npm run android
 ```
 
-> **Note:** For detailed setup instructions, including backend configuration, environment variables, and Firebase setup, see the [Documentation](./Documentation) or the [Backend README](./Backend/README.md).
+> **Note:** This covers the frontend only. For the backend — its own
+> setup, environment variables, and how to run/use it (either the deployed
+> instance or your own local copy) — see
+> [`Documentation/running-the-project/`](./Documentation/running-the-project/README.md).
 
 ---
 

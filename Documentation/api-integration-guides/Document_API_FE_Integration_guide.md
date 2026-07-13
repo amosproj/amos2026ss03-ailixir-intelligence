@@ -1,14 +1,18 @@
-# Documents API - Frontend Integration Guide
-
-
+# Ailixir API — Frontend Integration Guide
 
 - **Base URL (production):** `https://ailixir-backend-599892675013.us-east1.run.app`
-- **Auth scheme:** Firebase ID token in `Authorization: Bearer <token>` header on every request except `/health` and `/auth/signup`
+- **Auth scheme:** Firebase ID token in `Authorization: Bearer <token>` header on every request except `/health`, `/auth/signup`, and (a separate mechanism entirely — see §5) `/voice/*`
 - **OpenAPI / Swagger UI:** `<base>/docs` (interactive; click **Authorize** at the top right, paste the ID token without the `Bearer ` prefix, then any "Try it out" call works)
 - **Content type:** all API requests and responses are `application/json` unless noted
 - **Files allowed:** `application/pdf`, `image/png`, `image/jpeg`
 - **Domains allowed:** `medical`, `finance`
 - **Limits:** 50 files per document, 20 MB per file, 200 MB per document total
+
+This guide covers every route the API exposes: Auth, Documents (§3), Chat
+(§4), and Voice (§5). For *why* things are built this way, see
+[`Documentation/architecture/`](../architecture/README.md); for a quick
+task-oriented walkthrough instead of a full reference, see
+[`Documentation/running-the-project/`](../running-the-project/README.md).
 
 ---
 
@@ -42,6 +46,8 @@ Three rules drop out of this:
 2. **Each signed URL is single-use.** A second PUT to the same URL returns `412 Precondition Failed`. If a file upload genuinely failed mid-flight, call `POST /documents/{id}/upload-urls/refresh` to get fresh URLs for the still-pending files.
 3. **Finalize is the trigger.** Until you call `/finalize`, the document stays in `pending_upload` and no AI worker sees it.
 
+Chat (§4) and voice (§5) don't follow this handshake at all — they're plain synchronous JSON requests that return a complete answer.
+
 ---
 
 ## 2. Authentication
@@ -72,9 +78,9 @@ If you hit `401 TOKEN_EXPIRED`, force-refresh with `getIdToken(true)` and retry 
 
 ---
 
-## 3. Endpoint reference
+## 3. Documents API
 
-Every authenticated endpoint accepts and emits JSON, requires `Authorization: Bearer <id_token>`, and returns errors in the same envelope (see §4).
+Every authenticated endpoint accepts and emits JSON, requires `Authorization: Bearer <id_token>`, and returns errors in the same envelope (see §6).
 
 ### 3.1 `GET /health`
 
@@ -101,7 +107,7 @@ After this returns, the client should call Firebase Auth's `signInWithEmailAndPa
 **Request body:**
 
 | Field        | Type   | Required | Notes                                  |
-|--------------|--------|----------|----------------------------------------|
+|--------------|--------|----------|-----------------------------------------|
 | `email`      | string | yes      | Valid email format                     |
 | `password`   | string | yes      | 8–128 chars, no composition rules      |
 | `first_name` | string | yes      | 1–50 chars, trimmed, non-empty         |
@@ -121,7 +127,7 @@ After this returns, the client should call Firebase Auth's `signInWithEmailAndPa
 **Errors:**
 
 | HTTP | `code`                  | When                                |
-|------|-------------------------|-------------------------------------|
+|------|-------------------------|--------------------------------------|
 | 409  | `EMAIL_ALREADY_EXISTS`  | Email is already registered         |
 | 422  | `VALIDATION_FAILED`     | Field validation failed             |
 | 400  | `VALIDATION_FAILED`     | Firebase rejected the password etc. |
@@ -161,7 +167,7 @@ Returns the authenticated user's profile.
 **Errors:**
 
 | HTTP | `code`                    | When                                                  |
-|------|---------------------------|-------------------------------------------------------|
+|------|----------------------------|--------------------------------------------------------|
 | 401  | `UNAUTHENTICATED`         | Missing / invalid / expired token                     |
 | 404  | `USER_PROFILE_NOT_FOUND`  | Firebase user exists but Firestore profile missing    |
 
@@ -179,7 +185,7 @@ This is step 1 of the upload flow. You describe the document and its files; the 
 **Request body:**
 
 | Field   | Type     | Required | Notes                                                  |
-|---------|----------|----------|--------------------------------------------------------|
+|---------|----------|----------|----------------------------------------------------------|
 | `domain` | string  | yes      | `medical` or `finance`                                 |
 | `title`  | string  | no       | ≤ 200 chars, trimmed                                   |
 | `files`  | array   | yes      | 1–50 entries                                           |
@@ -236,7 +242,7 @@ Example:
 **Errors:**
 
 | HTTP | `code`                | When                                            |
-|------|-----------------------|-------------------------------------------------|
+|------|-----------------------|---------------------------------------------------|
 | 401  | `UNAUTHENTICATED`     | Token problem                                   |
 | 422  | `VALIDATION_FAILED`   | Bad field (unknown domain, bad size, …)         |
 | 413  | `TOTAL_SIZE_EXCEEDED` | Sum of `size_bytes` > 200 MB                    |
@@ -271,7 +277,7 @@ curl -X PUT "$UPLOAD_URL" \
 **Failure modes you should handle:**
 
 | HTTP | Meaning                                             | What to do                                              |
-|------|-----------------------------------------------------|---------------------------------------------------------|
+|------|-------------------------------------------------------|------------------------------------------------------------|
 | 400  | Body bigger than the declared `size_bytes`          | Bug in client — `size_bytes` you declared was wrong     |
 | 403  | Wrong header / content-type / URL tampered with     | Bug — re-create document with correct metadata          |
 | 412  | File already uploaded (write-once)                  | Skip; that file is done                                 |
@@ -293,7 +299,7 @@ After all PUTs succeed, call finalize. The API verifies each file exists in GCS 
 **Errors:**
 
 | HTTP | `code`                       | When                                                      |
-|------|------------------------------|-----------------------------------------------------------|
+|------|-------------------------------|--------------------------------------------------------------|
 | 400  | `NO_FILES_UPLOADED`          | No files actually present in GCS — did the PUTs succeed?  |
 | 404  | `DOCUMENT_NOT_FOUND`         | Wrong id, or belongs to another user                      |
 | 409  | `DOCUMENT_ALREADY_FINALIZED` | Already finalized (idempotent retry safety net)           |
@@ -335,7 +341,7 @@ Returned `files` only includes those still pending. Already-uploaded files are i
 **Errors:**
 
 | HTTP | `code`                       | When                                  |
-|------|------------------------------|---------------------------------------|
+|------|-------------------------------|-----------------------------------------|
 | 404  | `DOCUMENT_NOT_FOUND`         | Wrong id                              |
 | 409  | `DOCUMENT_ALREADY_FINALIZED` | Document is no longer `pending_upload`|
 
@@ -360,6 +366,10 @@ Returned `files` only includes those still pending. Already-uploaded files are i
   "finalized_at": "2026-05-20T14:32:14.000Z",
   "processing_step": "exporting_cypher",
   "cypher_gcs_uri": "gs://ailixir-cypher-amos26/graphs/doc_a1b2c3d4e5f6g7h8i9j0_graph.cypher",
+  "cypher_download_url": "https://storage.googleapis.com/.../doc_a1b2c3..._graph.cypher?X-Goog-Algorithm=...",
+  "cypher_download_expires_at": "2026-05-20T14:47:30.000Z",
+  "graph_query": "MATCH (n:Entity)-[r]-(m:Entity) WHERE n.group_id = '...' RETURN n, r, m",
+  "entities_query": "MATCH (ep:Episodic {name: '...', group_id: '...'})-[r]-(n:Entity) RETURN ep.name AS document, n.name AS entity, labels(n) AS entity_type ORDER BY ep.name",
   "error": null,
   "files": [
     {
@@ -383,14 +393,16 @@ Returned `files` only includes those still pending. Already-uploaded files are i
 
 **Document-level worker fields** (populated by the AI pipeline after finalize):
 
-- `processing_step` — fine-grained progress within the worker pipeline while `status == processing`. One of: `downloading`, `ocr`, `saving_extraction`, `building_graph`, `exporting_cypher`. Useful for a progress UI. Stays at the final step (`exporting_cypher`) once `status == extracted`. See §3.11 for the polling pattern and the friendly-label mapping.
-- `cypher_gcs_uri` — set once `status == extracted`. A `gs://` URI to the Cypher script the worker generated for this document's knowledge graph. **Note:** raw GCS URI, not an HTTPS URL. The frontend currently cannot fetch this directly over plain HTTP; a follow-up will replace this with a short-lived signed HTTPS URL alongside the field.
+- `processing_step` — fine-grained progress within the worker pipeline while `status == processing`. One of: `downloading`, `analyzing`, `saving_extraction`, `building_graph`, `updating_summary`, `exporting_cypher`. Useful for a progress UI. Stays at the final step (`exporting_cypher`) once `status == extracted`. See §3.12 for the polling pattern and the friendly-label mapping.
+- `cypher_gcs_uri` — set once `status == extracted`. The raw `gs://` URI of the Cypher script the worker generated, kept for tooling that consumes it directly.
+- `cypher_download_url` / `cypher_download_expires_at` — a short-lived (15 min) signed **HTTPS** URL for the same file — this is what the frontend should actually fetch; `null` until extraction completes or if signing fails.
+- `graph_query` / `entities_query` — ready-to-run Cypher for Neo4j Browser: `graph_query` returns the patient's whole entity graph, `entities_query` scopes to just this document's episode. Both `null` until `status == extracted`. See the note in §10 about these being built with string interpolation of LLM-derived values — treat as read-only convenience queries, not something to build further server-side logic on top of.
 - `error` — set when `status == failed`. May contain raw worker error text (database names, exception traces). **Do not display verbatim to end users.** Show a generic failure UI; surface this to support along with the response's `X-Request-ID` header.
 
 **Errors:**
 
 | HTTP | `code`               | When                                           |
-|------|----------------------|------------------------------------------------|
+|------|-----------------------|---------------------------------------------------|
 | 404  | `DOCUMENT_NOT_FOUND` | Wrong id, soft-deleted, or owned by another user |
 
 ---
@@ -402,7 +414,7 @@ Newest documents first. Returns a thumbnail URL (signed GET URL for the first co
 **Query parameters:**
 
 | Param    | Type   | Notes                                                                  |
-|----------|--------|------------------------------------------------------------------------|
+|----------|--------|----------------------------------------------------------------------------|
 | `limit`  | int    | 1–100, default 50                                                      |
 | `cursor` | string | Opaque pagination cursor; pass back what previous `next_cursor` gave   |
 | `domain` | string | Filter to `medical` or `finance`                                       |
@@ -438,13 +450,62 @@ Newest documents first. Returns a thumbnail URL (signed GET URL for the first co
 **Errors:**
 
 | HTTP | `code`                       | When                          |
-|------|------------------------------|-------------------------------|
+|------|--------------------------------|----------------------------------|
 | 422  | `INVALID_DOMAIN`             | Unknown domain in filter      |
 | 422  | `INVALID_PAGINATION_CURSOR`  | Malformed cursor              |
 
 ---
 
-### 3.10 `DELETE /documents/{document_id}` — soft delete
+### 3.10 `GET /documents/{document_id}/extraction` — read the extraction record
+
+Returns the structured result of the AI pipeline: the clinical narrative and
+classification the LLM produced. Only meaningful once `status == extracted`
+(see §3.8).
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response 200:**
+
+```json
+{
+  "doc_id": "doc_a1b2c3d4e5f6g7h8i9j0",
+  "document_type": "Laborbericht",
+  "confidence_score": null,
+  "extracted_fields": {},
+  "raw_text": null,
+  "raw_text_chars": null,
+  "raw_text_truncated": null,
+  "document_purpose": "Routine blood work follow-up for an existing prostate cancer diagnosis.",
+  "document_date": "2026-05-18",
+  "episode_body": "Patient-1 (DOB 1961-04-02) presented for routine lab work... PSA 4.2 ng/ml (ref 0-4.0), elevated from 7.6 ng/ml on 2026-01-10...",
+  "extracted_at": "2026-05-20T14:32:26.000Z"
+}
+```
+
+**Two field groups, only one populated per document, depending on which
+pipeline processed it:**
+
+- **Current (Gemini-multimodal) pipeline** — populates `document_purpose`,
+  `document_date`, `episode_body` (the rich clinical narrative — this is
+  what should drive any "document narrative" card in the UI). `confidence_score`,
+  `extracted_fields`, `raw_text*` are `null`.
+- **Legacy (Document AI OCR) pipeline** — only present on documents
+  extracted before the migration to Gemini multimodal; populates
+  `confidence_score`, `extracted_fields`, `raw_text*` instead. New uploads
+  never produce these fields — treat them as optional and render whichever
+  set is actually present.
+
+**Errors:**
+
+| HTTP | `code`                  | When                                                                                          |
+|------|--------------------------|--------------------------------------------------------------------------------------------------|
+| 404  | `DOCUMENT_NOT_FOUND`    | Wrong id, or belongs to another user (same code as §3.8 on purpose — can't be used to probe existence of another user's documents) |
+| 409  | `DOCUMENT_NOT_EXTRACTED`| Document exists but the worker hasn't reached `extracted` yet — keep polling §3.8 instead        |
+| 404  | `EXTRACTION_NOT_FOUND`  | `status == extracted` but no extraction record exists — this indicates a backend bug, worth reporting |
+
+---
+
+### 3.11 `DELETE /documents/{document_id}` — soft delete
 
 Marks the document deleted. It disappears from `/documents` listings immediately. A background reconciliation job eventually hard-deletes the GCS objects (we don't expose that timing — treat it as "gone forever from the user's perspective").
 
@@ -455,13 +516,13 @@ Marks the document deleted. It disappears from `/documents` listings immediately
 **Errors:**
 
 | HTTP | `code`                  | When                                                       |
-|------|-------------------------|------------------------------------------------------------|
+|------|---------------------------|------------------------------------------------------------|
 | 404  | `DOCUMENT_NOT_FOUND`    | Wrong id                                                   |
 | 409  | `DOCUMENT_IN_PROCESSING` | Worker is mid-extraction; poll & retry in a few seconds   |
 
 ---
 
-### 3.11 Polling for extraction status
+### 3.12 Polling for extraction status
 
 After `POST /finalize` returns `200`, the worker pipeline runs **automatically and asynchronously** — there's no second API call to trigger it. Typical end-to-end extraction time is **~15-25 seconds** for a small PDF; can be longer for large/multi-file documents.
 
@@ -483,9 +544,10 @@ type DocumentStatus =
 
 type ProcessingStep =
   | "downloading"          // fetching files from GCS
-  | "ocr"                  // running Document AI on each file
-  | "saving_extraction"    // writing OCR results to Firestore
-  | "building_graph"       // calling Gemini to build the knowledge graph
+  | "analyzing"            // Gemini multimodal reads the document
+  | "saving_extraction"    // writing the extraction to Firestore
+  | "building_graph"       // Graphiti extracts entities/relationships into Neo4j
+  | "updating_summary"     // updating the patient's running journey summary
   | "exporting_cypher";    // serialising the graph as a Cypher script
 
 const TERMINAL = new Set<DocumentStatus>(["extracted", "failed"]);
@@ -509,12 +571,13 @@ async function pollUntilDone(documentId: string): Promise<Document> {
 Use this mapping so the UI is consistent across screens:
 
 | `processing_step`     | UI label                          |
-|-----------------------|-----------------------------------|
+|-------------------------|---------------------------------------|
 | (null, before worker) | "Queued for processing…"          |
 | `downloading`         | "Preparing your document…"        |
-| `ocr`                 | "Reading the document…"           |
+| `analyzing`           | "Reading the document…"           |
 | `saving_extraction`   | "Saving extracted data…"          |
 | `building_graph`      | "Building the knowledge graph…"   |
+| `updating_summary`    | "Updating patient summary…"       |
 | `exporting_cypher`    | "Finalising…"                     |
 
 
@@ -524,8 +587,8 @@ Use this mapping so the UI is consistent across screens:
 User taps upload                  →  show upload progress bar
 Upload completes                  →  call /finalize
 Finalize returns 200              →  start polling, show "Processing your document…"
-Status = processing               →  show processing_step in UI ("Reading text…", "Building graph…")
-Status = extracted                →  show result, link to cypher_gcs_uri
+Status = processing               →  show processing_step in UI ("Reading document…", "Building graph…")
+Status = extracted                →  show result, offer chat, link to cypher_download_url
 Status = failed                   →  show error UI
 ```
 
@@ -539,7 +602,127 @@ Status = failed                   →  show error UI
 
 ---
 
-## 4. Error response shape
+## 4. Chat API
+
+`POST /chat/query` — ask a natural-language question about the authenticated
+user's own uploaded documents. Runs synchronously (no polling needed) and
+answers from a combination of the patient's knowledge graph and, optionally,
+general research-paper reference material. Full pipeline explanation in
+[`architecture/02_question_answering_pipeline.md`](../architecture/02_question_answering_pipeline.md).
+
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+
+**Request body:**
+
+| Field     | Type   | Required | Notes                                                                 |
+|-----------|--------|----------|----------------------------------------------------------------------|
+| `query`   | string | yes      | 1–2000 chars — the user's latest message                             |
+| `history` | array  | no       | Prior turns, chronological order, max 20; each `{role, content}`      |
+| `history[].role` | string | — | `"user"` or `"assistant"`                                          |
+| `history[].content` | string | — | 1–4000 chars                                                    |
+| `chat_id` | string \| null | no | ≤128 chars. Opaque Realtime-DB chat id. If present **and** `history` is empty, this is treated as the first turn of a chat and a background title-generation task is scheduled. |
+
+Example — first turn of a new chat:
+
+```bash
+curl -s -X POST "$API/chat/query" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": "What medications is the patient currently on?",
+    "history": [],
+    "chat_id": "chat_abc123"
+  }'
+```
+
+Example — a follow-up turn (note pronoun "its" — this is what §4's contextualizer step resolves):
+
+```bash
+curl -s -X POST "$API/chat/query" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": "What about its side effects?",
+    "history": [
+      {"role": "user", "content": "What medications is the patient currently on?"},
+      {"role": "assistant", "content": "The patient is currently prescribed Tamoxifen 20mg daily."}
+    ],
+    "chat_id": "chat_abc123"
+  }'
+```
+
+**Response 200:**
+
+```json
+{
+  "answer": "The patient is currently prescribed Tamoxifen 20mg daily. Common side effects include...",
+  "contextualized_query": "What are the side effects of Tamoxifen?",
+  "query_changed": true,
+  "facts_used": 3,
+  "entities_used": 4,
+  "papers_used": 1,
+  "title_generation_scheduled": true
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `answer` | The natural-language answer to render |
+| `contextualized_query` | The query actually used for retrieval — may differ from `query` if it was rewritten against `history` |
+| `query_changed` | `true` if the contextualizer rewrote the query (useful for debug UI / analytics, not required for rendering) |
+| `facts_used` / `entities_used` | How many knowledge-graph facts/entities backed the answer — 0 doesn't mean failure, it means nothing relevant was found in the graph |
+| `papers_used` | Reranked research-paper excerpts used, if any — 0 means the answer came from the knowledge graph alone (this arm degrades silently, it's not an error signal) |
+| `title_generation_scheduled` | `true` if a background task was kicked off to auto-title this chat in Realtime Database — purely informational, the client observes the title through its existing RTDB subscription a moment later, no action needed here |
+
+**Errors** — see the full table in §6; the chat-specific codes are:
+
+| HTTP | `code` | Retry? |
+|---|---|---|
+| 504 | `CHAT_RETRIEVAL_TIMEOUT` | Yes, with backoff |
+| 503 | `CHAT_NEO4J_UNAVAILABLE` | Yes, with backoff |
+| 503 | `CHAT_RATE_LIMITED` | Yes, with backoff |
+| 503 | `CHAT_RETRIEVAL_FAILED` | Yes, with backoff |
+| 504 | `CHAT_LLM_TIMEOUT` | Yes, longer backoff |
+| 503 | `CHAT_LLM_EMPTY` | **No** — ask the user to rephrase instead |
+| 503 | `CHAT_LLM_FAILED` | Yes, with backoff |
+
+---
+
+## 5. Voice API (ElevenLabs Custom LLM integration)
+
+`POST /voice/v1/chat/completions` exists for ElevenLabs' Conversational AI
+product, not for the mobile client to call directly. It runs the same
+pipeline as §4 but speaks the OpenAI Chat Completions wire format and uses a
+**completely different auth model** — see
+[`architecture/02_question_answering_pipeline.md`](../architecture/02_question_answering_pipeline.md#voice-the-same-pipeline-behind-an-openai-compatible-adapter-apivoicepy)
+for the full rationale. Included here for completeness / anyone building an
+ElevenLabs agent config, not because a typical frontend integration calls it.
+
+**Headers:**
+
+- `Authorization: Bearer <ELEVENLABS_CUSTOM_LLM_SECRET>` — a static shared secret configured on the deployment, **not** a Firebase ID token
+- `X-User-Id: <firebase-uid>` (configurable header name) — how the patient is identified, since there's no Firebase-authenticated caller in this flow. Set this as an ElevenLabs `secret__`-prefixed dynamic variable, forwarded as a request header from the dashboard's Custom LLM config
+
+**Request body:** OpenAI-compatible `{model, messages: [{role, content}], stream, ...}` — extra fields are tolerated (`extra="allow"`) since ElevenLabs' exact dynamic-variable body shape isn't consistently documented across their own docs.
+
+**Response:** OpenAI `chat.completion` JSON, or `chat.completion.chunk` Server-Sent Events if `stream: true` — delivered as one complete chunk, not token-by-token (see the architecture doc for why).
+
+**Errors:**
+
+| HTTP | `code` | Meaning |
+|---|---|---|
+| 401 | `VOICE_UNAUTHORIZED` | Bad or missing shared secret |
+| 400 | `VOICE_USER_ID_MISSING` | No patient uid found in the header or any known body location |
+| 503 | `VOICE_NOT_CONFIGURED` | Deployment has no shared secret set (fails closed) |
+
+Unlike §4, retrieval/answer *pipeline* failures here don't surface as HTTP
+errors — they're caught and turned into one apologetic spoken sentence in a
+normal `200` response, because a voice agent has no retry-UI loop to react
+to an error code with.
+
+---
+
+## 6. Error response shape
 
 Every non-2xx response (except `204` and rare GCS-direct calls) returns the same envelope:
 
@@ -560,7 +743,7 @@ Every non-2xx response (except `204` and rare GCS-direct calls) returns the same
 ### Full code table
 
 | `code`                          | Typical HTTP | Meaning                                                          |
-|---------------------------------|-------------|------------------------------------------------------------------|
+|----------------------------------|-------------|--------------------------------------------------------------------|
 | `INTERNAL_SERVER_ERROR`         | 500         | Backend bug; retry once, then report                             |
 | `VALIDATION_FAILED`             | 422 / 400   | Request body / fields invalid                                    |
 | `UNAUTHENTICATED`               | 401         | Missing / unparseable bearer header                              |
@@ -573,6 +756,8 @@ Every non-2xx response (except `204` and rare GCS-direct calls) returns the same
 | `DOCUMENT_NOT_FOUND`            | 404         | Wrong id or not yours                                            |
 | `DOCUMENT_ALREADY_FINALIZED`    | 409         | Document moved past `pending_upload`                             |
 | `DOCUMENT_IN_PROCESSING`        | 409         | Worker mid-extraction; backoff & retry                           |
+| `DOCUMENT_NOT_EXTRACTED`        | 409         | Extraction not ready yet — keep polling                          |
+| `EXTRACTION_NOT_FOUND`          | 404         | `status==extracted` but no extraction record — backend bug       |
 | `NO_FILES_UPLOADED`             | 400         | Finalize called but no files landed in GCS                       |
 | `INVALID_DOMAIN`                | 422         | `domain` not in `{medical, finance}`                             |
 | `INVALID_FILE_TYPE`             | 422         | `content_type` not allowed                                       |
@@ -581,10 +766,20 @@ Every non-2xx response (except `204` and rare GCS-direct calls) returns the same
 | `TOO_MANY_FILES`                | 422         | More than 50 files in one document                               |
 | `INVALID_FILE_NAME`             | 422         | Filename empty / reserved / illegal chars                        |
 | `INVALID_PAGINATION_CURSOR`     | 422         | Cursor mangled                                                   |
+| `CHAT_RETRIEVAL_FAILED`         | 503         | Knowledge-graph retrieval failed (generic)                       |
+| `CHAT_RETRIEVAL_TIMEOUT`        | 504         | Knowledge-graph search exceeded its timeout                      |
+| `CHAT_NEO4J_UNAVAILABLE`        | 503         | Neo4j/Aura unreachable                                            |
+| `CHAT_LLM_FAILED`               | 503         | Answer generation failed (generic)                               |
+| `CHAT_LLM_TIMEOUT`              | 504         | Answer generation exceeded its timeout                            |
+| `CHAT_LLM_EMPTY`                | 503         | Gemini returned nothing (safety filter / token budget) — not retryable, ask user to rephrase |
+| `CHAT_RATE_LIMITED`             | 503         | Vertex AI rate limit hit — retry with backoff                     |
+| `VOICE_UNAUTHORIZED`           | 401         | Bad/missing voice shared secret                                   |
+| `VOICE_USER_ID_MISSING`        | 400         | No patient uid resolvable from the voice request                 |
+| `VOICE_NOT_CONFIGURED`         | 503         | Voice integration has no shared secret configured on the server  |
 
 ---
 
-## 5. Document status state machine
+## 7. Document status state machine
 
 ```
                   create               PUT files       finalize         worker picks up
@@ -597,11 +792,11 @@ Every non-2xx response (except `204` and rare GCS-direct calls) returns the same
 ```
 
 | Status            | Triggered by         | Meaning                                                                                |
-|-------------------|----------------------|----------------------------------------------------------------------------------------|
+|--------------------|----------------------|------------------------------------------------------------------------------------------|
 | `pending_upload`  | `POST /documents`    | Document row exists; client is uploading files to GCS                                  |
 | `uploaded`        | `POST /finalize`     | Finalize succeeded; Pub/Sub event published. Usually visible for < 1 second.           |
 | `processing`      | worker picks up event| Worker is running the pipeline. Watch `processing_step` for sub-stage progress.        |
-| `extracted`       | worker completes     | ✅ Terminal: `cypher_gcs_uri` is populated, knowledge graph is in Neo4j and exported.  |
+| `extracted`       | worker completes     | ✅ Terminal: `cypher_gcs_uri`/`cypher_download_url` populated, knowledge graph is in Neo4j. |
 | `failed`          | worker raises        | ❌ Terminal: `error` field carries the raw worker error message (support-only).        |
 
 Typical end-to-end time from `POST /documents` to `status == extracted` is **~15-25 seconds** for a small PDF on a warm worker. Cold-start (first request after scale-to-zero) can add another ~10 seconds.
@@ -611,15 +806,14 @@ Typical end-to-end time from `POST /documents` to `status == extracted` is **~15
 - `pending_upload`, `uploaded`, `extracted`, `failed` → ✅ soft-deletes immediately (returns `204`).
 - `processing` → ❌ refused with `409 DOCUMENT_IN_PROCESSING`. Wait and retry; should clear within seconds.
 
-See §3.11 for the recommended polling loop and friendly UI labels for each stage.
+See §3.12 for the recommended polling loop and friendly UI labels for each stage.
 
 ---
 
-
-## 6. Quick reference — endpoint table
+## 8. Quick reference — endpoint table
 
 | Method | Path                                              | Purpose                                      | Auth |
-|--------|---------------------------------------------------|----------------------------------------------|------|
+|--------|-----------------------------------------------------|--------------------------------------------------|------|
 | GET    | `/health`                                         | Liveness probe                               | no   |
 | POST   | `/auth/signup`                                    | Create account                               | no   |
 | GET    | `/me`                                             | Current user's profile                       | yes  |
@@ -627,12 +821,15 @@ See §3.11 for the recommended polling loop and friendly UI labels for each stag
 | POST   | `/documents/{id}/upload-urls/refresh`             | Reissue URLs for pending files               | yes  |
 | POST   | `/documents/{id}/finalize`                        | Mark uploaded, trigger worker                | yes  |
 | GET    | `/documents`                                      | List user's documents                        | yes  |
-| GET    | `/documents/{id}`                                 | Read one document + download URLs + extraction state (poll this — see §3.11) | yes |
+| GET    | `/documents/{id}`                                 | Read one document + download URLs + extraction state (poll this — see §3.12) | yes |
+| GET    | `/documents/{id}/extraction`                      | Read the structured extraction record        | yes  |
 | DELETE | `/documents/{id}`                                 | Soft-delete document                         | yes  |
+| POST   | `/chat/query`                                     | Ask a question grounded in the user's graph  | yes  |
+| POST   | `/voice/v1/chat/completions`                      | ElevenLabs Custom LLM adapter (not for direct FE use) | shared secret + `X-User-Id`, not Firebase |
 
 ---
 
-## 7. Getting an ID token without the mobile app (for Swagger testing)
+## 9. Getting an ID token without the mobile app (for Swagger testing)
 
 **Option A - sign in via Firebase REST and copy the token.** No SDK setup needed:
 
@@ -653,13 +850,20 @@ curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?k
 
 Either way: go to `<base>/docs`, click **Authorize** at the top right, paste the token (no `Bearer ` prefix), then any "Try it out" call works for the next hour.
 
+For a full copy-pasteable walkthrough (signup → token → upload → extract →
+chat) against the live deployment, see
+[`running-the-project/01_using_the_deployed_system.md`](../running-the-project/01_using_the_deployed_system.md).
+
 ---
 
-## 8. Where things live
+## 10. Where things live
 
 | Concern                            | File                                                  |
-|------------------------------------|-------------------------------------------------------|
-| Endpoint definitions + schemas     | `Backend/api/main.py`                                 |
+|--------------------------------------|---------------------------------------------------------|
+| Endpoint definitions + schemas (auth, documents) | `Backend/api/main.py`                     |
+| Chat endpoint + models              | `Backend/api/chat.py`                                 |
+| Voice endpoint + models             | `Backend/api/voice.py`                                |
+| Chat/voice pipeline (contextualize/retrieve/answer) | `Backend/api/chat_pipeline/`                |
 | Auth (token verification)          | `Backend/api/auth.py`                                 |
 | Request-ID middleware              | `Backend/api/middleware.py`                           |
 | Error envelope handlers            | `Backend/api/errors.py`                               |
@@ -670,9 +874,23 @@ Either way: go to `<base>/docs`, click **Authorize** at the top right, paste the
 | Pub/Sub publishing                 | `Backend/shared/pubsub.py`                            |
 | Worker entry (Pub/Sub push)        | `Backend/workers/main.py`                             |
 | Worker pipeline orchestrator       | `Backend/workers/pipeline/document_pipeline.py`       |
-| OCR adapter (Document AI)          | `Backend/workers/pipeline/ocr/document_ai.py`         |
+| Document analysis (Gemini multimodal — current) | `Backend/workers/pipeline/llm/extractor.py`  |
+| OCR adapter (Document AI — deprecated, kept for history only) | `Backend/workers/pipeline/ocr/`  |
 | Knowledge graph builder + exporter | `Backend/workers/pipeline/graph/`                     |
 | Infrastructure — API               | `Backend/api/terraform/main.tf`                       |
 | Infrastructure — worker            | `Backend/workers/terraform/main.tf`                   |
+
+**Note:** the `graph_query`/`entities_query` strings on `GET /documents/{id}`
+(§3.8) are built with f-string interpolation of values that ultimately come
+from the LLM extraction step, rather than parameterised queries. A future
+backend change may replace them with dedicated server-side endpoints — treat
+them as read-only convenience values today, not something client code should
+extend or compose further.
+
+For the *why* behind any of the above (pacing, retries, the bi-temporal
+graph model, etc.), see
+[`Documentation/architecture/`](../architecture/README.md); for a per-file
+reference of what each of these files exports, see
+[`Documentation/code-components/`](../code-components/README.md).
 
 For bugs, please include the `X-Request-ID` from the failing response - that's the fastest path to a server-side answer.
