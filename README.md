@@ -1,46 +1,66 @@
 # AIlixir Intelligence
 
-AI-powered mobile application to extract, structure, and understand information from unstructured documents across domains.
+## Table of Contents
+
+- [About AIlixir Intelligence](#about-ailixir-intelligence)
+- [Tech Stack](#tech-stack)
+- [Setup](#setup)
+- [Key Features](#key-features)
+- [Demo Domains](#demo-domains)
 
 ---
 
-## Project Mission
+## About AIlixir Intelligence
 
-The mission of this project is to create an MVP that runs on mobile devices. Core functionality includes extracting structured information from uploaded documents, storing and organising it within a personal knowledge base, and enabling conversational querying using RAG with optional enrichment from external knowledge sources such as research papers. The system will demonstrate domain configurability using medical documents as the primary domain and finance as a secondary domain.
+**AIlixir Intelligence** is a domain-agnostic, RAG-powered data context platform that provides an LLM-powered chat interface. It enables users to upload professional data—such as medical or financial documents that are technically readable but practically opaque—and gain valuable insights through conversational querying.
 
----
-
-## Problem
-
-Important information is often locked in unstructured documents:
-
-- Medical reports without clear interpretation  
-- Financial data spread across invoices and timesheets  
-- Legal documents requiring manual cross-referencing  
-
-**AIlixir Intelligence** solves this by making data structured, connected, and conversational.
+The system extracts structured information, stores it within a personal knowledge base, and enables RAG (Retrieval-Augmented Generation) with optional enrichment from external knowledge sources like research papers.
 
 ---
 
 ## Tech Stack
 
-- **Frontend:** React Native (Expo)  
-- **Backend:** Python + Google Cloud Run  
-- **AI/ML:** Vertex AI, Document AI  
-- **Database:** Firestore  
-- **Knowledge Layer:** Vector Search / Neo4j  
+- **Frontend:** React Native (Expo), [ElevenLabs](https://elevenlabs.io/) (Voice Chat)
+- **Backend:** Python + Google Cloud Run
+- **Authentication:** Firebase Authentication (JWT validation for API access)
+- **Functions:** Firebase Cloud Functions
+- **AI/ML:** Vertex AI, Document AI
+- **Database:** Firestore
+- **Knowledge Layer:** Vector Search / Neo4j
 
 ---
 
-## Miro Board Link For backend Tasks
+## Setup
 
-**Edit**
-https://miro.com/welcomeonboard/VEw3bWtiaEJuMFVldndnZFp2WCs0ck5oWnBURUxzU3JsZE1zaElsWmJOQVBteFZibmFvc3h3U0FlczgvRDcvM1lwS2k0WEpuNVdUUFBiM1NXN0xiT0RoSUxQR2Fra2EwMDFqaHZyZmU3Ymx3WmJoSWxPQW91Y1hFcFplL3dNNFdhWWluRVAxeXRuUUgwWDl3Mk1qRGVRPT0hdjE=?share_link_id=286578324277
+### Prerequisites
 
-**View**
-https://miro.com/app/board/uXjVHcF54Y8=/?share_link_id=142814163268
+- Node.js (v18+)
+- npm
+- [Xcode](https://developer.apple.com/xcode/) (for iOS simulator) or [Android Studio](https://developer.android.com/studio) (for Android emulator)
 
----------
+### Quick Start
+
+```bash
+# Clone repository
+git clone git@github.com:amosproj/amos2026ss03-ailixir-intelligence.git
+
+# Navigate to frontend
+cd frontend/ailixir
+
+# Install dependencies
+npm install
+
+# Start the app (iOS)
+npm run ios
+
+# Start the app (Android)
+npm run android
+```
+
+> **Note:** For detailed setup instructions, including backend configuration, environment variables, and Firebase setup, see the [Documentation](./Documentation) or the [Backend README](./Backend/README.md).
+
+---
+
 ## Key Features
 
 - Document scanning and upload  
@@ -57,18 +77,3 @@ https://miro.com/app/board/uXjVHcF54Y8=/?share_link_id=142814163268
 - Finance (invoices, timesheets, expenses)  
 
 ---
-
-## Setup
-
-```bash
-# clone repository
-git clone <repo-url>
-
-# navigate into project
-cd <project-folder>
-
-# install dependencies
-npm install
-
-# start Expo app
-npx expo start
