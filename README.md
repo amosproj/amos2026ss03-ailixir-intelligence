@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [About AIlixir Intelligence](#about-ailixir-intelligence)
+- [Documentation](#documentation)
 - [Tech Stack](#tech-stack)
 - [Setup](#setup)
 - [Key Features](#key-features)
@@ -18,6 +19,19 @@ The system extracts structured information, stores it within a personal knowledg
 
 ---
 
+## Documentation
+
+**[`Documentation/`](./Documentation)** is the full documentation set for
+this project — start at **[`Documentation/README.md`](./Documentation/README.md)**,
+which indexes everything else (system architecture with diagrams, a
+per-file code reference for the backend, the complete API reference, and
+how to run the project — both by using the already-deployed system and by
+running your own copy locally). That page is the door into exploring the
+rest of the project in depth; this README only covers the frontend quick
+start below.
+
+---
+
 ## Tech Stack
 
 - **Frontend:** React Native (Expo), [ElevenLabs](https://elevenlabs.io/) (Voice Chat)
@@ -26,11 +40,6 @@ The system extracts structured information, stores it within a personal knowledg
 - **AI/ML:** Vertex AI (Gemini — multimodal document analysis, chat, and knowledge-graph extraction via [Graphiti](https://github.com/getzep/graphiti)), OpenAI embeddings + Vertex AI Ranking API (research-paper retrieval)
 - **Database:** Firestore (documents, extractions, users)
 - **Knowledge Layer:** Neo4j (temporal knowledge graph, per patient), AstraDB (research-paper vector search)
-
-> Full architecture, code-level, and run-it-yourself documentation lives in
-> [`Documentation/`](./Documentation) — see its
-> [README](./Documentation/README.md) for the index; that's the door into
-> exploring the rest of the project.
 
 ---
 
