@@ -123,3 +123,35 @@ classDiagram
     }
     GeminiRerankerClient <|-- PacedGeminiRerankerClient
 ```
+
+`workers/connections/paced_gemini.py` overrides just enough of Graphiti's
+own client classes to route every internal Vertex AI call through the
+worker's shared rate-limit admission queue — this is the actual fix for the
+`RateLimitError`-under-burst-ingestion problem described in
+[`architecture/01_extraction_and_knowledge_graph_pipeline.md`](../architecture/01_extraction_and_knowledge_graph_pipeline.md).
+The API's chat pipeline paces its *own* direct calls instead (`pacer.py`
+wraps call sites, no subclassing) since it doesn't drive Graphiti's
+internal entity-resolution burst the way ingestion does.
+
+## Request-tracing middleware
+
+```mermaid
+classDiagram
+    class RequestIDMiddleware {
+        <<pure ASGI, not BaseHTTPMiddleware>>
+        +__call__(scope, receive, send)
+    }
+    class logging_Filter {
+        <<python logging.Filter>>
+    }
+    class RequestIDLogFilter {
+        +filter(record) bool
+    }
+    logging_Filter <|-- RequestIDLogFilter
+```
+
+`RequestIDMiddleware` (`api/middleware.py`) deliberately does **not** extend
+Starlette's `BaseHTTPMiddleware` — see the code-components note on why that
+choice matters for `ContextVar` propagation into exception handlers.
+
+
