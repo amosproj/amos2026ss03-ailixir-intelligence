@@ -19,13 +19,13 @@ flowchart TB
 
     subgraph Trigger["Triggers"]
         MOBILE["Mobile client"]
-        ELEVENLABS["ElevenLabs"]
+        ELEVENLABS["ElevenLabs\n(future work — no agent provisioned)"]
         SCHEDULER["Cloud Scheduler\n0 3 1 * * (monthly)\nsvc-account: ailixir-scraper-sched"]
         PUBSUB_PUSHER["Pub/Sub push\nsvc-account: ailixir-pubsub-pusher"]
     end
 
     MOBILE -- "Firebase ID token" --> API
-    ELEVENLABS -- "shared secret" --> API
+    ELEVENLABS -. "shared secret (adapter deployed, unused)" .-> API
     SCHEDULER -- "OAuth token, run.invoker" --> JOB
     API -- "publish" --> TOPIC[["document-uploaded\ntopic"]]
     TOPIC -- "ordered push" --> PUBSUB_PUSHER

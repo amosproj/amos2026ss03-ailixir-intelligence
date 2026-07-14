@@ -68,4 +68,4 @@ Custom components are prefixed with `C` (e.g. `CButton`, `CInput`), and should b
 - **[TanStack Query](https://tanstack.com/query)** — Server state and async data
 - **[Jotai](https://jotai.org/)** — Atomic state management
 - **[Firebase](https://firebase.google.com/)** — Authentication and backend communication
-- **[ElevenLabs](https://elevenlabs.io/)** — Voice chat integration
+- **[ElevenLabs](https://elevenlabs.io/)** — voice chat (*future work*: the Voice Mode screen and SDK wiring are in place; connecting a provisioned agent via `ELEVENLABS_AGENT_ID` remains to be done, so voice is not active yet)

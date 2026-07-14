@@ -6,8 +6,8 @@ Owner code: [`Backend/api/`](../../Backend/api/) (`main.py`, `auth.py`,
 
 ## Purpose
 
-The single public entry point for the mobile client (and, indirectly,
-ElevenLabs): auth, document upload lifecycle, and the question-answering
+The single public entry point for the mobile client: auth, document
+upload lifecycle, and the question-answering
 pipeline ([doc 02](02_question_answering_pipeline.md)). Deployed as the
 `ailixir-backend` Cloud Run service — see
 [doc 05](05_infrastructure_and_deployment.md) for the deployment topology.
@@ -257,7 +257,11 @@ conflate:
 |---|---|---|
 | Mobile client → API | Firebase ID token (`Authorization: Bearer`) | `api/auth.py::get_current_user` |
 | Pub/Sub → Worker | Google-signed OIDC token, audience + issuing service account checked | `workers/main.py::_verify_oidc_token` |
-| ElevenLabs → Voice endpoint | Static shared secret (`ELEVENLABS_CUSTOM_LLM_SECRET`), compared with `secrets.compare_digest` | `api/voice.py::_verify_shared_secret` |
+| ElevenLabs → Voice endpoint* | Static shared secret (`ELEVENLABS_CUSTOM_LLM_SECRET`), compared with `secrets.compare_digest` | `api/voice.py::_verify_shared_secret` |
+
+\* Voice is future work — groundwork in place, not active yet
+([doc 02](02_question_answering_pipeline.md#voice-the-same-pipeline-behind-an-openai-compatible-adapter-apivoicepy)).
+The endpoint is still deployed and publicly reachable, so it belongs in this table.
 
 The worker's Cloud Run ingress is additionally restricted to internal +
 load-balancer traffic only (not just OIDC) — see

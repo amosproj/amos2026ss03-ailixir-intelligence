@@ -59,11 +59,11 @@ flowchart TB
         RANK[Vertex AI — Ranking API]
         OPENAI[OpenAI — embeddings]
         FIREBASE[Firebase Auth]
-        ELEVEN[ElevenLabs Conversational AI]
+        ELEVEN["ElevenLabs Conversational AI<br/>(future work — no agent provisioned)"]
     end
 
     RN -- "Firebase ID token" --> API
-    ELEVEN -- "shared-secret Custom LLM call" --> API
+    ELEVEN -. "shared-secret Custom LLM call<br/>(adapter deployed, unused)" .-> API
     API --> FS
     API --> GCS
     API -- "publish DocumentUploaded" --> PUBSUB
@@ -123,6 +123,6 @@ worker crash-loop can't take down login or chat.
 | Vector store (papers) | AstraDB |
 | Reranking | Vertex AI Ranking API (`discoveryengine`) |
 | Paper embeddings | OpenAI `text-embedding-3-small` |
-| Voice | ElevenLabs Conversational AI (Custom LLM integration) |
+| Voice *(future work)* | ElevenLabs Conversational AI (Custom LLM adapter; groundwork in place, not active yet) |
 | Infra as code | Terraform, 3 independent states (`api/`, `workers/`, `scrapers/terraform/`) |
 | Compute | Cloud Run (2 services) + Cloud Run Job (1, scheduled) |

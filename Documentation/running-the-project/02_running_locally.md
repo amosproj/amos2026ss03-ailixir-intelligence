@@ -24,7 +24,7 @@ backends.
 | A Neo4j instance | Both | [Aura Free](https://neo4j.com/cloud/aura/) works, or `docker run neo4j` locally |
 | An AstraDB database + collection | API only, **optional** | Only the chat paper-retrieval arm needs it — the rest of the system works fine without it (see below) |
 | An OpenAI API key | API only, **optional** | Only needed alongside AstraDB, for query-side paper embeddings |
-| An ElevenLabs account | API only, **optional** | Only needed to test the `/voice` endpoint |
+| An ElevenLabs account | **Not needed** | The `/voice` adapter can be exercised with any self-chosen shared secret |
 
 You do **not** need Document AI — that's the deprecated OCR pipeline (see
 [`code-components/05_workers_pipeline.md`](../code-components/05_workers_pipeline.md#deprecated--dead-code-kept-for-historical-reference-only)).
