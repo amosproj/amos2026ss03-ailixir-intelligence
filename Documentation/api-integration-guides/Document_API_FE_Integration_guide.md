@@ -688,7 +688,10 @@ curl -s -X POST "$API/chat/query" \
 
 ---
 
-## 5. Voice API (ElevenLabs Custom LLM integration)
+## 5. Voice API (ElevenLabs Custom LLM integration) — future work
+
+> Voice is groundwork for future work and is not active yet. The contract below
+> is documented for whoever picks the feature up.
 
 `POST /voice/v1/chat/completions` exists for ElevenLabs' Conversational AI
 product, not for the mobile client to call directly. It runs the same
@@ -825,7 +828,7 @@ See §3.12 for the recommended polling loop and friendly UI labels for each stag
 | GET    | `/documents/{id}/extraction`                      | Read the structured extraction record        | yes  |
 | DELETE | `/documents/{id}`                                 | Soft-delete document                         | yes  |
 | POST   | `/chat/query`                                     | Ask a question grounded in the user's graph  | yes  |
-| POST   | `/voice/v1/chat/completions`                      | ElevenLabs Custom LLM adapter (not for direct FE use) | shared secret + `X-User-Id`, not Firebase |
+| POST   | `/voice/v1/chat/completions`                      | ElevenLabs Custom LLM adapter — *future work*, not for direct FE use | shared secret + `X-User-Id`, not Firebase |
 
 ---
 

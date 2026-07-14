@@ -15,7 +15,7 @@ Infrastructure is automatically managed through the CI/CD pipeline. No manual se
 - `GCP_SA_KEY`: Service account JSON key
 - `GCP_PROJECT_ID`: Your GCP project ID
 - `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`: chat pipeline knowledge-graph retrieval
-- `ELEVENLABS_CUSTOM_LLM_SECRET`: voice Custom LLM integration
+- `ELEVENLABS_CUSTOM_LLM_SECRET`: voice adapter shared secret — must be set (the endpoint fails closed without it)
 - `ASTRA_DB_API_ENDPOINT`, `ASTRA_DB_TOKEN`, `ASTRA_DB_COLLECTION`: chat pipeline hybrid retrieval, research-paper arm (same AstraDB collection `scrapers/` ingests into)
 - `OPENAI_API_KEY`: query-embedding key for the research-paper arm — MUST be the same OpenAI key used to embed the scraped collection (`OPEN_AI_API` in `scrapers/.env`)
 

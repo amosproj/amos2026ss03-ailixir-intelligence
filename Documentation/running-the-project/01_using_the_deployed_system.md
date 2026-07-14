@@ -158,16 +158,13 @@ Watch `query_changed: true` and `contextualized_query` in the response —
 that's Step 1 rewriting "its side effects" into a self-contained question
 using the history you sent.
 
-## Voice — not directly playable without a deployment secret
+## Voice — groundwork in place, not active yet
 
-`POST /voice/v1/chat/completions` runs the same pipeline behind an
-OpenAI-Chat-Completions-shaped adapter for ElevenLabs' Conversational AI
-(see [`architecture/02_question_answering_pipeline.md`](../architecture/02_question_answering_pipeline.md#voice-the-same-pipeline-behind-an-openai-compatible-adapter-apivoicepy)).
-It requires a shared secret (`ELEVENLABS_CUSTOM_LLM_SECRET`) set on the
-deployment, and identifies the patient via a header rather than a Firebase
-token — not something an external user can call without that secret. If you
-want to try it end-to-end, set your own secret and run it yourself: see
-[02 — Running Locally](02_running_locally.md).
+Voice chat is future work, so there's nothing to try from the deployed system.
+The backend adapter (`POST /voice/v1/chat/completions`) is deployed and gated
+behind a shared secret; you can exercise it in isolation by running the system
+yourself — see [02 — Running Locally](02_running_locally.md) and
+[`architecture/02`](../architecture/02_question_answering_pipeline.md#voice-the-same-pipeline-behind-an-openai-compatible-adapter-apivoicepy).
 
 ## Troubleshooting
 

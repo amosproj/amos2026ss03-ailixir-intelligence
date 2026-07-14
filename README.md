@@ -34,12 +34,22 @@ start below.
 
 ## Tech Stack
 
-- **Frontend:** React Native (Expo), [ElevenLabs](https://elevenlabs.io/) (Voice Chat)
+- **Frontend:** React Native (Expo)
 - **Backend:** Python (FastAPI) + Google Cloud Run — one public API service, one internal Pub/Sub-driven worker service, one scheduled batch job
 - **Authentication:** Firebase Authentication (ID token validation for API access)
 - **AI/ML:** Vertex AI (Gemini — multimodal document analysis, chat, and knowledge-graph extraction via [Graphiti](https://github.com/getzep/graphiti)), OpenAI embeddings + Vertex AI Ranking API (research-paper retrieval)
 - **Database:** Firestore (documents, extractions, users)
 - **Knowledge Layer:** Neo4j (temporal knowledge graph, per patient), AstraDB (research-paper vector search)
+
+---
+
+## Future Work
+
+**Voice chat ([ElevenLabs](https://elevenlabs.io/) Conversational AI).** The
+groundwork is in place — an OpenAI-compatible Custom LLM adapter on the backend,
+a token service, and a Voice Mode screen in the app. Connecting these into a live
+voice experience is left as future work; the feature is not active in the current
+build.
 
 ---
 

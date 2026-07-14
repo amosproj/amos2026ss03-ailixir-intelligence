@@ -31,9 +31,10 @@ GCP deployment topology.
 | [`04_literature_ingestion_pipeline.md`](architecture/04_literature_ingestion_pipeline.md) | The standalone scraper job that feeds the research-paper corpus chat reads from |
 | [`05_infrastructure_and_deployment.md`](architecture/05_infrastructure_and_deployment.md) | Cloud Run topology, service accounts/IAM, data stores, Pub/Sub, Terraform layout |
 
-Also in this folder: `frontend_architecture_diagram` — a hand-drawn diagram
-of the mobile app's voice/ElevenLabs/RTDB flow. Independent of the six docs
-above; kept because it's still accurate.
+Also in this folder: `frontend_architecture_diagram` — a hand-drawn diagram of
+the mobile app's voice/ElevenLabs/RTDB flow. Independent of the six docs above;
+depicts the *intended* voice design, which is future work — groundwork in place,
+not active yet.
 
 ### [`code-components/`](code-components/README.md) — what each file does
 

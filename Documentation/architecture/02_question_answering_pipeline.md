@@ -12,8 +12,8 @@ built for them — plus, optionally, general medical reference material from a
 scraped research-paper corpus. Two entry points share one pipeline:
 
 - `POST /chat/query` — the mobile app's text chat.
-- `POST /voice/v1/chat/completions` — ElevenLabs' Conversational AI agent,
-  speaking to the same pipeline through an OpenAI-compatible adapter.
+- `POST /voice/v1/chat/completions` — an OpenAI-compatible adapter reaching the
+  same pipeline. *Future work — groundwork in place, not active yet.*
 
 Unlike [doc 01](01_extraction_and_knowledge_graph_pipeline.md), this pipeline
 runs **synchronously inside the API service**, on the user's request clock —
@@ -272,6 +272,10 @@ Graphiti-side rate-limit errors start showing up from the API service.
 ---
 
 ## Voice: the same pipeline behind an OpenAI-compatible adapter (`api/voice.py`)
+
+> **Future work.** The adapter below is built and deployed — the groundwork for
+> voice is in place, but the feature is not active yet and has no live caller
+> (issue #249).
 
 `POST /voice/v1/chat/completions` exists because ElevenLabs' Conversational
 AI product can point at an external "Custom LLM" instead of a hosted model,

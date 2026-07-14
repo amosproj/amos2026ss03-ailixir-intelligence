@@ -76,6 +76,8 @@ walkthrough in [doc 02 architecture](../architecture/02_question_answering_pipel
 adapter so ElevenLabs' Conversational AI can use the same pipeline as a
 "Custom LLM." See [doc 02 architecture](../architecture/02_question_answering_pipeline.md#voice-the-same-pipeline-behind-an-openai-compatible-adapter-apivoicepy)
 for the full contract and why it differs from `chat.py`.
+
+*Future work — deployed, but not exercised by any live caller.*
 - `VoiceChatCompletionRequest` / `_VoiceMessage` — permissive (`extra="allow"`) models matching the OpenAI wire shape, since ElevenLabs' exact field set for dynamic variables isn't consistently documented.
 - `_verify_shared_secret(authorization)` — fails closed if `ELEVENLABS_CUSTOM_LLM_SECRET` is unset; otherwise constant-time-compares (`secrets.compare_digest`) the bearer token.
 - `_extract_uid(payload, header_uid)` — resolves the patient's Firebase UID, checking the configured header first, then a list of plausible dynamic-variable body locations; returns `(uid, source)` so the matching path is visible in logs.
