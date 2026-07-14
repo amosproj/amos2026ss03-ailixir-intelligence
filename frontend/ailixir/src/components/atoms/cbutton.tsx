@@ -2,6 +2,9 @@ import { Button, styled } from 'tamagui';
 
 export const CButton = styled(Button, {
   chromeless: 'all',
+  style: {
+    minHeight: 52,
+  },
   pressStyle: {
     opacity: 0.7,
   },
