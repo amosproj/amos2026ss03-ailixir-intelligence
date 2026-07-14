@@ -18,17 +18,31 @@ The endpoint is async throughout. Graphiti (Neo4j + Vertex AI) is initialised
 lazily on first request (or eagerly on lifespan startup if
 `CHAT_GRAPHITI_WARMUP=true`) and reused across the service's lifetime.
 
+Retrieval never fails the request
+---------------------------------
+Neither database can 503 this endpoint. If Neo4j or AstraDB is unconfigured,
+unreachable, or slow, that arm returns a degraded (empty) result carrying a
+reason, the answerer renders the reason into its prompt, and the user gets a
+200 whose answer explains which source could not be read and why — see
+`chat_pipeline/availability.py`. A patient asking about their lab results
+during a Neo4j outage is told "I couldn't reach your records, please try
+again shortly", not handed an error banner, and crucially not told they have
+no lab results.
+
+`degraded_sources` on the response names the arms that were unavailable, so
+the client can also show a non-blocking banner if it wants to. An empty list
+is the normal, healthy case.
+
 Error classification
 --------------------
-Failures are classified into three buckets, each surfaced as a distinct
-HTTP status + error code:
+What remains failable is the ANSWER step — Gemini itself. Those failures
+still surface as distinct HTTP statuses:
 
-  503 / CHAT_RETRIEVAL_TIMEOUT, CHAT_NEO4J_UNAVAILABLE, CHAT_RATE_LIMITED,
-        CHAT_RETRIEVAL_FAILED, CHAT_LLM_FAILED
+  503 / CHAT_RATE_LIMITED, CHAT_LLM_FAILED
         → transient remote dependency failure. iOS client should auto-retry
           with backoff (e.g. 1s, 5s, 15s).
 
-  504 / CHAT_LLM_TIMEOUT, CHAT_RETRIEVAL_TIMEOUT
+  504 / CHAT_LLM_TIMEOUT
         → server-side hard timeout. Same retry strategy as 503 but the
           backoff start is longer (10s, 30s, 60s) because the operation
           known-took longer than the timeout.
@@ -37,6 +51,10 @@ HTTP status + error code:
         → Gemini returned no content (SAFETY filter / MAX_TOKENS).
           NOT auto-retryable — the same prompt will produce the same
           empty answer. iOS client should ask the user to rephrase.
+
+(The retrieval-side codes CHAT_NEO4J_UNAVAILABLE / CHAT_RETRIEVAL_TIMEOUT /
+CHAT_RETRIEVAL_FAILED are no longer emitted by this endpoint. They remain in
+the `ErrorCode` enum so existing clients that switch on them keep compiling.)
 
 All paths log the (request_id, uid, error_class, finish_reason) tuple so
 the on-call runbook can correlate user reports with backend logs.
@@ -62,9 +80,6 @@ from shared.models.errors import ErrorCode
 from shared.retryable_errors import (
     GoogleServiceUnavailable,
     GraphitiRateLimitError,
-    Neo4jAuthError,
-    Neo4jServiceUnavailable,
-    Neo4jSessionExpired,
     ResourceExhausted,
 )
 
@@ -118,6 +133,12 @@ class ChatQueryResponse(BaseModel):
     `papers_used`          — number of reranked research-paper chunks used
                              (0 if the paper corpus was unavailable/empty —
                              the answer still comes from the knowledge graph).
+    `degraded_sources`     — names of the retrieval sources that could NOT be
+                             read for this request ("knowledge_graph",
+                             "research_papers"). Empty in the healthy case.
+                             The answer already explains any degradation in
+                             prose; this field exists so the client can also
+                             show a banner without parsing the answer text.
     """
 
     answer: str
@@ -126,6 +147,7 @@ class ChatQueryResponse(BaseModel):
     facts_used: int
     entities_used: int
     papers_used: int = 0
+    degraded_sources: list[str] = Field(default_factory=list)
     # True when a background title-generation task was scheduled for this chat
     # (first turn + chat_id present). The title itself lands in RTDB a moment
     # later; the client observes it via its chat-list subscription. Purely
@@ -205,6 +227,12 @@ Gemini synthesises the retrieved facts (and any research paper excerpts)
 into a precise, temporally-aware natural-language answer. Facts are clearly
 marked as current or historical; paper excerpts are clearly marked as
 general reference, not patient-specific.
+
+**Database outages do not fail this endpoint.**
+If Neo4j or AstraDB is unconfigured or unreachable, that source is listed in
+`degraded_sources` and the answer itself tells the user which records could
+not be read and why. An unreadable knowledge graph is never presented to the
+user as "you have no records".
     """,
 )
 async def chat_query(
@@ -236,71 +264,32 @@ async def chat_query(
     contextualized = ctx.query
 
     # Step 2 — Retrieve (two arms, concurrent)
-    # The paper-retrieval arm is launched first and never raises (see its
-    # module docstring), so it's safe to let it run unguarded while the KG
-    # arm's try/except below handles its own failure modes. If KG retrieval
-    # fails, we deliberately do NOT await/cancel the paper task — it keeps
-    # running via the `_paper_tasks` strong reference and its result is
-    # simply discarded once the request has already failed.
+    # Neither arm raises (see their module docstrings): an unconfigured, down,
+    # or slow database comes back as a degraded empty result carrying a reason,
+    # which Step 3 renders into the answer. So both are plain awaits — there is
+    # no failure path to guard here any more, and no way for a database outage
+    # to cost the user their request.
     paper_task = asyncio.create_task(retrieve_papers(query=contextualized))
     _paper_tasks.add(paper_task)
     paper_task.add_done_callback(_paper_tasks.discard)
 
-    try:
-        retrieval = await retrieve(
-            query=contextualized,
-            user_id=uid,
-        )
-    except asyncio.TimeoutError:
-        _log.warning("chat_query retrieval_timeout uid=%s", uid)
-        raise APIError(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            code=ErrorCode.CHAT_RETRIEVAL_TIMEOUT,
-            message=(
-                "Knowledge graph retrieval timed out. "
-                "Please try again in a moment."
-            ),
-        )
-    except (Neo4jServiceUnavailable, Neo4jSessionExpired, Neo4jAuthError) as exc:
-        _log.warning(
-            "chat_query neo4j_unavailable uid=%s err_class=%s err=%s",
-            uid, type(exc).__name__, exc,
-        )
-        raise APIError(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            code=ErrorCode.CHAT_NEO4J_UNAVAILABLE,
-            message=(
-                "The medical knowledge graph is temporarily unavailable. "
-                "Please try again."
-            ),
-        )
-    except (ResourceExhausted, GraphitiRateLimitError) as exc:
-        _log.warning(
-            "chat_query retrieval_rate_limited uid=%s err=%s", uid, exc,
-        )
-        raise APIError(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            code=ErrorCode.CHAT_RATE_LIMITED,
-            message=(
-                "The AI service is briefly rate-limited. "
-                "Please try again in a few seconds."
-            ),
-        )
-    except Exception as exc:
-        _log.error(
-            "chat_query retrieval_failed uid=%s err_class=%s err=%s",
-            uid, type(exc).__name__, exc, exc_info=True,
-        )
-        raise APIError(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            code=ErrorCode.CHAT_RETRIEVAL_FAILED,
-            message="Knowledge graph retrieval failed. Please try again.",
-        )
-
-    # KG retrieval succeeded — collect the concurrently-running paper arm.
-    # `retrieve_papers` never raises, so this is a plain await, not a
-    # try/except; a degraded paper corpus simply yields an empty result.
+    retrieval = await retrieve(query=contextualized, user_id=uid)
     paper_result: PaperRetrievalResult = await paper_task
+
+    degraded_sources = [
+        name
+        for name, result in (
+            ("knowledge_graph", retrieval),
+            ("research_papers", paper_result),
+        )
+        if result.degraded
+    ]
+    if degraded_sources:
+        _log.warning(
+            "chat_query_degraded uid=%s sources=%s kg_reason=%s papers_reason=%s",
+            uid, ",".join(degraded_sources),
+            retrieval.degraded_reason, paper_result.degraded_reason,
+        )
 
     # Step 3 — Generate answer
     try:
@@ -358,9 +347,10 @@ async def chat_query(
 
     _log.info(
         "chat_query_done uid=%s query_changed=%s facts=%d entities=%d papers=%d "
-        "answer_len=%d title_scheduled=%s",
+        "answer_len=%d title_scheduled=%s degraded=%s",
         uid, ctx.changed, retrieval.total_edges, retrieval.total_nodes,
         paper_result.total_chunks, len(answer), title_generation_scheduled,
+        ",".join(degraded_sources) or "none",
     )
 
     return ChatQueryResponse(
@@ -370,5 +360,6 @@ async def chat_query(
         facts_used=retrieval.total_edges,
         entities_used=retrieval.total_nodes,
         papers_used=paper_result.total_chunks,
+        degraded_sources=degraded_sources,
         title_generation_scheduled=title_generation_scheduled,
     )

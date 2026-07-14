@@ -26,11 +26,19 @@ once other domains onboard — no caller-side change needed.
 
 Graceful degradation
 ---------------------
-Mirrors contextualizer.py: `retrieve_papers` MUST NOT raise. AstraDB being
-down, an OpenAI embedding error, a Ranking API quota trip, or a timeout all
-resolve to an empty `PaperRetrievalResult` — the chat pipeline then answers
-from the knowledge graph alone. A degraded or unavailable paper corpus must
-never take down the primary (graph-RAG) answer path.
+`retrieve_papers` MUST NOT raise. AstraDB being unconfigured (no ASTRA_DB_*
+env vars), down, an OpenAI embedding error, a Ranking API quota trip, or a
+timeout all resolve to an empty `PaperRetrievalResult` — the chat pipeline
+then answers from the knowledge graph alone. A degraded or unavailable paper
+corpus must never take down the answer path.
+
+Two refinements over "swallow everything", both from `availability.py`:
+
+  - The result carries `degraded` + `degraded_reason`, so "the corpus has no
+    papers on this topic" stays distinguishable from "the corpus could not be
+    read" — the answerer says so rather than silently thinning the answer.
+  - A `CircuitBreaker` latches the arm out for a cooldown after a failure, so
+    a down AstraDB costs one 8s timeout, not one per request.
 """
 
 from __future__ import annotations
@@ -43,6 +51,13 @@ from dataclasses import dataclass, field
 from google.cloud import discoveryengine_v1 as discoveryengine
 
 from api.chat_pipeline.astra_client import get_astra_store
+from api.chat_pipeline.availability import (
+    CircuitBreaker,
+    classify,
+    failure_reason,
+    missing_env_vars,
+    should_trip,
+)
 from api.chat_pipeline.reranker_client import get_reranker_client, ranking_config_path
 
 _log = logging.getLogger(__name__)
@@ -74,6 +89,19 @@ _MAX_QUERY_CHARS = int(os.environ.get("CHAT_PAPER_MAX_QUERY_CHARS", "2000"))
 # outlier inflating the rank request.
 _MAX_CHUNK_CHARS = 2000
 
+# Env vars without which there is no vector store to query. `OPEN_AI_API` is
+# included because the query is embedded through OpenAI before it reaches
+# AstraDB — no key, no search vector, however healthy AstraDB is.
+_REQUIRED_ENV = (
+    "ASTRA_DB_API_ENDPOINT",
+    "ASTRA_DB_TOKEN",
+    "ASTRA_DB_COLLECTION",
+    "OPEN_AI_API",
+)
+
+# Process-wide latch. See availability.py.
+_breaker = CircuitBreaker("paper_corpus")
+
 
 @dataclass
 class PaperChunk:
@@ -89,10 +117,19 @@ class PaperChunk:
 
 @dataclass
 class PaperRetrievalResult:
-    """Structured output from a hybrid paper retrieval call."""
+    """Structured output from a hybrid paper retrieval call.
+
+    `degraded` separates "searched the corpus, nothing relevant" (degraded=
+    False, chunks=[]) from "could not search the corpus" (degraded=True,
+    chunks=[]). The answerer only mentions the paper corpus to the user in the
+    second case — an answer with no relevant papers is a normal answer, an
+    answer given while the corpus was unreadable is a caveated one.
+    """
 
     query: str
     chunks: list[PaperChunk] = field(default_factory=list)
+    degraded: bool = False
+    degraded_reason: str | None = None
 
     @property
     def total_chunks(self) -> int:
@@ -159,14 +196,20 @@ async def _rerank(query: str, documents: list) -> list[PaperChunk]:
     return chunks
 
 
+def _degraded(query: str, reason: str) -> PaperRetrievalResult:
+    """An empty result carrying the reason the paper corpus could not be read."""
+    return PaperRetrievalResult(query=query, degraded=True, degraded_reason=reason)
+
+
 async def retrieve_papers(query: str) -> PaperRetrievalResult:
     """
     Hybrid arm of chat retrieval: top research-paper chunks for `query`,
     vector-searched then reranked. See module docstring for the two stages.
 
-    Never raises — any failure degrades to an empty result so the caller
-    can still answer from the knowledge graph alone. Callers run this
-    concurrently with `retriever.retrieve()` via `asyncio.create_task`.
+    Never raises — any failure degrades to an empty result (with `degraded=True`
+    and a reason) so the caller can still answer from the knowledge graph alone.
+    Callers run this concurrently with `retriever.retrieve()` via
+    `asyncio.create_task`.
     """
     if len(query) > _MAX_QUERY_CHARS:
         _log.warning(
@@ -175,16 +218,40 @@ async def retrieve_papers(query: str) -> PaperRetrievalResult:
         )
         query = query[:_MAX_QUERY_CHARS]
 
+    # Cheapest checks first: an unconfigured or known-down corpus costs nothing.
+    missing = missing_env_vars(_REQUIRED_ENV)
+    if missing:
+        _log.warning("retrieve_papers_unconfigured missing_env=%s", ",".join(missing))
+        return _degraded(
+            query, "the research-paper library is not configured on this server",
+        )
+
+    if _breaker.is_open():
+        _log.info("retrieve_papers_skipped_circuit_open")
+        return _degraded(query, _breaker.reason)
+
     try:
         documents = await _vector_search(query)
     except asyncio.TimeoutError:
         _log.warning("paper_vector_search_timeout after=%.1fs", _VECTOR_TIMEOUT_S)
-        return PaperRetrievalResult(query=query)
+        reason = "the research-paper library did not respond in time"
+        _breaker.trip(reason)
+        return _degraded(query, reason)
     except Exception as exc:
         _log.warning(
-            "paper_vector_search_failed err_class=%s err=%s", type(exc).__name__, exc,
+            "paper_vector_search_failed err_class=%s kind=%s err=%s",
+            type(exc).__name__, classify(exc), exc,
         )
-        return PaperRetrievalResult(query=query)
+        reason = f"the research-paper library is unavailable: {failure_reason(exc)}"
+        # Same rule as the graph arm: latch out only a store that is actually
+        # down. An OpenAI embedding 429 must not cost every other user their
+        # paper results for the cooldown window.
+        if should_trip(exc):
+            _breaker.trip(reason)
+        return _degraded(query, reason)
+
+    # The store answered, so it is healthy — even if it had nothing to say.
+    _breaker.reset()
 
     if not documents:
         _log.info(
@@ -193,16 +260,22 @@ async def retrieve_papers(query: str) -> PaperRetrievalResult:
         )
         return PaperRetrievalResult(query=query)
 
+    # Rerank failures do NOT trip the breaker: the Ranking API is a separate
+    # dependency from AstraDB, and latching out the whole arm because Vertex
+    # ranking is rate-limited would throw away a perfectly good vector store.
     try:
         chunks = await _rerank(query, documents)
     except asyncio.TimeoutError:
         _log.warning("paper_rerank_timeout after=%.1fs", _RERANK_TIMEOUT_S)
-        return PaperRetrievalResult(query=query)
+        return _degraded(query, "the research-paper ranking service did not respond in time")
     except Exception as exc:
         _log.warning(
             "paper_rerank_failed err_class=%s err=%s", type(exc).__name__, exc,
         )
-        return PaperRetrievalResult(query=query)
+        return _degraded(
+            query,
+            f"the research-paper ranking service is unavailable: {failure_reason(exc)}",
+        )
 
     _log.info(
         "retrieve_papers_done domain=%s sub_domain=%s vector_hits=%d reranked=%d",
