@@ -116,4 +116,17 @@ classDiagram
     ErrorResponse *-- ErrorDetail : error
     ErrorDetail --> ErrorCode : code
 ```
+**Notes:**
+- `Document *-- DocumentFile` is a real composition — files are stored as an
+  embedded array on the Firestore document, not a separate collection.
+- The `..>` (dependency) arrows aren't foreign keys enforced by Firestore
+  (there's no referential integrity there) — they're just "this field's
+  value is meant to match that other model's id/uid," maintained by
+  application code in `shared/repositories/`.
+- `LiteraturePaper` is the odd one out — it's a *global* ledger (keyed by
+  PubMed ID, not per-user) for the scraper subsystem, unrelated to the
+  `Document`/`Extraction`/`JourneySummary` per-patient cluster above.
+- `ErrorCode` has ~30 members across auth/documents/chat/voice; only a
+  representative sample is shown — full list in
+  [`shared/models/errors.py`](../../Backend/shared/models/errors.py).
 
