@@ -3,7 +3,6 @@ import { showOcrTextAtom } from '@/state/debug';
 import { useAtom } from 'jotai';
 import React, { useState, useEffect } from 'react';
 import { getAuth, signOut } from 'firebase/auth';
-import { Link } from 'expo-router';
 import { Switch, XStack, YStack } from 'tamagui';
 
 export default function SettingsScreen() {
@@ -69,15 +68,10 @@ export default function SettingsScreen() {
       </YStack>
 
       <XStack justify="center" pb={8}>
-        <Link href="/chats/stt">STT Testpage</Link>
-      </XStack>
-
-      <XStack justify="center" pb={8}>
         <CButton
           emphasis="high"
           onPress={() => signOut(auth)}
           px={28}
-          py={14}
           style={{ minWidth: 220, maxWidth: 320, width: '75%', shadowColor: '#00000020', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 14, elevation: 6 }}>
           Log Out
         </CButton>

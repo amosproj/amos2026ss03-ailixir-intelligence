@@ -30,8 +30,6 @@ flowchart TD
     R2 --> A
     A --> Out["Natural-language answer"]
 
-    style R1 fill:#e8f4ff
-    style R2 fill:#fff3e0
 ```
 
 Both retrieval arms run **concurrently** (`asyncio.create_task` in

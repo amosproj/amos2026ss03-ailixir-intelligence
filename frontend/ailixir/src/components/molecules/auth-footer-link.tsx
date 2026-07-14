@@ -12,7 +12,7 @@ export function AuthFooterLink({ text, linkLabel, onPress }: AuthFooterLinkProps
     <XStack width="100%" justify="center" items="center">
       <CText variant="body" color="darkgray">
         {text}{' '}
-        <CText color="$accent5" onPress={onPress}>
+        <CText variant="body" color="$accent5" onPress={onPress}>
           {linkLabel}
         </CText>
       </CText>
