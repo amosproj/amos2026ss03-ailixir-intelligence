@@ -157,7 +157,6 @@ classDiagram
     }
     VoiceChatCompletionRequest "1" *-- "many" _VoiceMessage : messages
 ```
-
 **Notes:**
 - `ChatMessage` and `_VoiceMessage` look identical but are two separate
   classes — `chat.py`'s pipeline is Firebase-token-authenticated per user,
@@ -168,3 +167,5 @@ classDiagram
   (`DocumentFileResponse` has download URLs, `DocumentFileUploadInstruction`
   has upload URLs) — they're response variants for different points in the
   same upload lifecycle, not the same type reused.
+
+
