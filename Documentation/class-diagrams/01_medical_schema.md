@@ -146,3 +146,10 @@ classDiagram
     Referral --> Provider : REFERRED_TO
     Appointment --> Provider : RELATES_TO
 ```
+**Reading this diagram:** every arrow is one of the 20 edge type names from
+`MEDICAL_EDGE_TYPES` (`HAS_DIAGNOSIS`, `TREATED_BY`, `INDICATES`, ...), not a
+generic UML association. `RELATES_TO` also exists as a fallback for any
+entity pair not listed above (`("Entity", "Entity"): ["RELATES_TO"]` in the
+source) — omitted here since it isn't a specific pair, but it's the catch-all
+Graphiti uses when a real document mentions a relationship this fixed schema
+didn't anticipate.
