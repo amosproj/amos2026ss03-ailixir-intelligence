@@ -108,11 +108,29 @@ class PaperChunk:
     """One reranked research-paper chunk, ready for the answerer prompt."""
 
     content: str
+    title: str | None = None         # human-readable paper/video name
     source: str | None = None        # e.g. "pubmed", "archive", "youtube"
     source_type: str | None = None   # e.g. "paper", "video"
     source_id: str | None = None
     published_date: str | None = None
+    url: str | None = None           # link to the source, when derivable
     score: float | None = None       # Ranking API relevance score
+
+
+@dataclass
+class PaperReference:
+    """A distinct research-paper source used as context for an answer.
+
+    Chunks are the unit of retrieval; references are the unit a client shows.
+    Several chunks routinely come from the same paper, so `PaperRetrievalResult.
+    references` collapses them to one entry per paper — this is that entry.
+    """
+
+    title: str
+    source: str | None = None        # "pubmed" / "archive" / "youtube"
+    source_type: str | None = None   # "paper" / "video"
+    published_date: str | None = None
+    url: str | None = None
 
 
 @dataclass
@@ -134,6 +152,48 @@ class PaperRetrievalResult:
     @property
     def total_chunks(self) -> int:
         return len(self.chunks)
+
+    @property
+    def references(self) -> list[PaperReference]:
+        """The distinct papers behind `chunks`, most-relevant first.
+
+        Deduplicates by `source_id` (stable per paper) and falls back to a
+        normalised title, preserving the reranked order so the first entry is
+        the most relevant source. Chunks with nothing displayable (no title
+        and no url) are skipped — a reference the client can't render is noise.
+        """
+        seen: set[str] = set()
+        references: list[PaperReference] = []
+        for chunk in self.chunks:
+            key = (chunk.source_id or "").strip() or (chunk.title or "").strip().lower()
+            title = (chunk.title or "").strip()
+            if not key or key in seen or (not title and not chunk.url):
+                continue
+            seen.add(key)
+            references.append(
+                PaperReference(
+                    title=title,
+                    source=chunk.source,
+                    source_type=chunk.source_type,
+                    published_date=chunk.published_date,
+                    url=chunk.url,
+                )
+            )
+        return references
+
+
+def _derive_paper_url(meta: dict) -> str | None:
+    """Best-effort link to a paper: an explicit URL the scraper stored, else a
+    doi.org resolver for a bare DOI, else None. Never fabricates a URL from an
+    identifier whose format we can't be sure of."""
+    ref = str(meta.get("ref") or "").strip()
+    doi = str(meta.get("doi") or "").strip()
+    for candidate in (ref, doi):
+        if candidate.startswith(("http://", "https://")):
+            return candidate
+    if doi:
+        return f"https://doi.org/{doi}"
+    return None
 
 
 async def _vector_search(query: str) -> list:
@@ -186,10 +246,12 @@ async def _rerank(query: str, documents: list) -> list[PaperChunk]:
         chunks.append(
             PaperChunk(
                 content=doc.page_content,
+                title=meta.get("title"),
                 source=meta.get("source"),
                 source_type=meta.get("source_type"),
                 source_id=meta.get("source_id"),
                 published_date=meta.get("published_date"),
+                url=_derive_paper_url(meta),
                 score=record.score,
             )
         )

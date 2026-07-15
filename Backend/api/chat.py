@@ -120,6 +120,21 @@ class ChatQueryRequest(BaseModel):
     chat_id: str | None = Field(default=None, max_length=128)
 
 
+class PaperReference(BaseModel):
+    """One research-paper source used as context for the answer.
+
+    Deduplicated per paper: several retrieved chunks from the same paper
+    collapse to a single reference. Exposed so the client can render a
+    "sources" list (title, where it's from, and a link when one is derivable).
+    """
+
+    title: str
+    source: str | None = None          # "pubmed" / "archive" / "youtube"
+    source_type: str | None = None     # "paper" / "video"
+    published_date: str | None = None
+    url: str | None = None             # link to the source, when derivable
+
+
 class ChatQueryResponse(BaseModel):
     """
     Response for POST /chat/query.
@@ -133,6 +148,10 @@ class ChatQueryResponse(BaseModel):
     `papers_used`          — number of reranked research-paper chunks used
                              (0 if the paper corpus was unavailable/empty —
                              the answer still comes from the knowledge graph).
+    `papers`               — the distinct research papers those chunks came
+                             from, most-relevant first. `papers_used` counts
+                             chunks; `len(papers)` counts unique papers. The
+                             client renders these as the answer's sources.
     `degraded_sources`     — names of the retrieval sources that could NOT be
                              read for this request ("knowledge_graph",
                              "research_papers"). Empty in the healthy case.
@@ -147,6 +166,7 @@ class ChatQueryResponse(BaseModel):
     facts_used: int
     entities_used: int
     papers_used: int = 0
+    papers: list[PaperReference] = Field(default_factory=list)
     degraded_sources: list[str] = Field(default_factory=list)
     # True when a background title-generation task was scheduled for this chat
     # (first turn + chat_id present). The title itself lands in RTDB a moment
@@ -360,6 +380,16 @@ async def chat_query(
         facts_used=retrieval.total_edges,
         entities_used=retrieval.total_nodes,
         papers_used=paper_result.total_chunks,
+        papers=[
+            PaperReference(
+                title=ref.title,
+                source=ref.source,
+                source_type=ref.source_type,
+                published_date=ref.published_date,
+                url=ref.url,
+            )
+            for ref in paper_result.references
+        ],
         degraded_sources=degraded_sources,
         title_generation_scheduled=title_generation_scheduled,
     )
