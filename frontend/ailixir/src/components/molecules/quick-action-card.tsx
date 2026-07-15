@@ -13,7 +13,7 @@ export function QuickActionCard({ action }: QuickActionCardProps) {
   const Icon = action.icon;
 
   const content = (
-    <YStack flex={1} gap={14} p={20} bg="$accent12" items="center" justify="center" style={{ minWidth: 160, minHeight: 180 }}>
+    <YStack flex={1} width="100%" gap={14} p={20} bg="$accent12" items="center" justify="center" style={{ minHeight: 180 }}>
       <YStack width={64} height={64} items="center" justify="center" bg={action.iconBackground}>
         <Icon size={action.iconSize} color="$accent12" strokeWidth={action.iconStrokeWidth} />
       </YStack>
@@ -25,7 +25,11 @@ export function QuickActionCard({ action }: QuickActionCardProps) {
   );
 
   if (action.onPress) {
-    return <Pressable onPress={action.onPress}>{content}</Pressable>;
+    return (
+      <Pressable style={{ flex: 1 }} onPress={action.onPress}>
+        {content}
+      </Pressable>
+    );
   }
 
   return (

@@ -9,7 +9,7 @@ type QuickActionsGridProps = {
 
 export function QuickActionsGrid({ actions }: QuickActionsGridProps) {
   return (
-    <XStack gap={12} flexWrap="wrap">
+    <XStack gap={12} width="100%" flexWrap="nowrap">
       {actions.map((action) => (
         <QuickActionCard key={action.title} action={action} />
       ))}

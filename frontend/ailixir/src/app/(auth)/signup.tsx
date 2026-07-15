@@ -14,19 +14,12 @@ export default function SignUpScreen() {
   const onSubmit: SubmitHandler<SignUpFormValues> = async (data) => {
     try {
       setError('');
-      // Normalise email at the boundary — same reason as the signIn path:
-      // strip iOS-keyboard whitespace + auto-cap before Firebase ever sees
-      // it. Keeps the account record matching whatever the user will type
-      // next at the login screen.
       await signUpAsync({
         email: data.email.trim().toLowerCase(),
         password: data.password,
         first_name: data.firstName,
         last_name: data.lastName,
       });
-      // `replace` (not `push`) so the back button doesn't return the user
-      // to a half-filled signup form. Stale form state in the back stack
-      // is a known UX pitfall.
       router.replace('./login');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'An unexpected error occurred';

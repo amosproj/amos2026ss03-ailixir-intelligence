@@ -11,20 +11,11 @@ export default function LoginScreen() {
   const { signIn } = useAuth();
   const [error, setError] = useState('');
 
-  // On success: do NOT navigate here. `Stack.Protected` in the root layout
-  // is the single source of truth for routing — when Firebase fires
-  // `onAuthStateChanged`, the guard flips and the user is moved to
-  // `(private)`. A manual `router.push('./success')` races that swap and
-  // on slow / cold-storage devices loses, leaving the user stuck on this
-  // screen (issue #208).
   const handleLogin = async (data: { email: string; password: string }) => {
     setError('');
     try {
       await signIn(data.email, data.password);
     } catch (e) {
-      // `useAuth().signIn` always throws `AuthError`; the `userMessage` is
-      // safe to render. Any other shape is a programming error we want to
-      // surface during dev, not silently swallow.
       setError(e instanceof AuthError ? e.userMessage : 'Something went wrong. Please try again.');
     }
   };
