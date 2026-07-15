@@ -4,17 +4,15 @@ import type { ExtractionResponse } from '@/hooks/useDocumentExtraction';
 import { CButton } from '@/components/atoms';
 import { ActionPair, FailureCard } from '@/components/molecules';
 import { DocumentNarrativeCard, OcrTextCard } from '@/components/organisms';
-import { BookUp2, ImageDown } from '@tamagui/lucide-icons-2';
+import { BookUp2 } from '@tamagui/lucide-icons-2';
 import React from 'react';
 import { YStack } from 'tamagui';
 
 type DocumentDetailActionsProps = {
   status: DocumentStatus;
   onStartExtraction: () => void;
-  onDownloadGraph: () => void;
   error?: string | null;
   processingStep?: string | null;
-  cypherDownloadUrl?: string | null;
   ocrTextEnabled?: boolean;
   extraction?: ExtractionResponse | undefined;
   extractionIsLoading?: boolean;
@@ -25,10 +23,8 @@ type DocumentDetailActionsProps = {
 export function DocumentDetailActions({
   status,
   onStartExtraction,
-  onDownloadGraph,
   error,
   processingStep,
-  cypherDownloadUrl,
   ocrTextEnabled = false,
   extraction,
   extractionIsLoading = false,
@@ -54,13 +50,7 @@ export function DocumentDetailActions({
             </CButton>
           ) : null
         }
-        rightAction={
-          cypherDownloadUrl ? (
-            <CButton icon={ImageDown} emphasis="high" onPress={onDownloadGraph}>
-              Download graph
-            </CButton>
-          ) : null
-        }
+        rightAction={null}
       />
 
       {narrativeVisible && <DocumentNarrativeCard extraction={extraction} isLoading={extractionIsLoading} isError={extractionIsError} />}

@@ -4,7 +4,7 @@ import { CButton, CInput } from '@/components/atoms';
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
 import { TamaguiElement } from 'tamagui';
-import { Send, Mic, AudioWaveform } from '@tamagui/lucide-icons-2';
+import { Send, AudioWaveform } from '@tamagui/lucide-icons-2';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export interface ChatInputProps {
@@ -25,11 +25,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onStartVoic
     }
   };
 
-  const onPressTextToSpeech = () => {
-    // TODO: Implement text-to-speech logic (e.g., call API to convert text to speech)
-    alert('Text-to-speech not available');
-  };
-
   return (
     <View
       style={{
@@ -45,9 +40,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onStartVoic
         ref={inputRef}
         value={message}
         onChangeText={setMessage}
+        onSubmitEditing={handleSend}
         placeholder={placeholder}
         theme="bright"
         multiline
+        submitBehavior="submit"
+        returnKeyType="send"
         numberOfLines={3}
         style={{
           flex: 1,
@@ -57,7 +55,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onStartVoic
           paddingVertical: 0,
         }}
       />
-      <CButton onPress={onPressTextToSpeech} icon={Mic} accessibilityLabel="Text-to-speech" />
       {message.trim() ? (
         <CButton circular icon={Send} onPress={handleSend} accessibilityLabel="Send message" />
       ) : (

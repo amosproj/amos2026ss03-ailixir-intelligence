@@ -71,7 +71,7 @@ export function DocumentNarrativeCard({ extraction, isLoading, isError }: Docume
             this is a single LLM-authored paragraph and reads better in the
             normal body face.
           */}
-          <CText variant="caption" color="$color12" selectable style={{ lineHeight: 20 }}>
+          <CText variant="body" color="$color12" selectable style={{ lineHeight: 20 }}>
             {extraction.episode_body}
           </CText>
         </ScrollView>

@@ -1,15 +1,18 @@
 import { Link, type Href } from 'expo-router';
+import { RectButton } from 'react-native-gesture-handler';
 
 import { CText } from '@/components/atoms';
 import { XStack, YStack } from 'tamagui';
 
 type ListItemContainerProps = {
-  href: Href;
+  href?: Href;
+  onPress?: () => void;
   children: React.ReactNode;
 };
 
 type ListItemContentProps = {
-  href: Href;
+  href?: Href;
+  onPress?: () => void;
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
@@ -18,19 +21,31 @@ type ListItemContentProps = {
   endAdornment?: React.ReactNode;
 };
 
-export function ListItemContainer({ href, children }: ListItemContainerProps) {
+export function ListItemContainer({ href, onPress, children }: ListItemContainerProps) {
+  const content = (
+    <XStack items="center" justify="space-between" bg="$accent12" px={18} py={18} gap={10}>
+      {children}
+    </XStack>
+  );
+
+  if (onPress) {
+    return <RectButton onPress={onPress}>{content}</RectButton>;
+  }
+
+  if (!href) {
+    return content;
+  }
+
   return (
     <Link href={href} asChild>
-      <XStack items="center" justify="space-between" bg="$accent12" px={18} py={18} gap={10}>
-        {children}
-      </XStack>
+      {content}
     </Link>
   );
 }
 
-export function ListItemContent({ href, icon, title, subtitle, meta, contentAccessory, endAdornment }: ListItemContentProps) {
+export function ListItemContent({ href, onPress, icon, title, subtitle, meta, contentAccessory, endAdornment }: ListItemContentProps) {
   return (
-    <ListItemContainer href={href}>
+    <ListItemContainer href={href} onPress={onPress}>
       <XStack items="center" gap={14} flex={1}>
         {icon}
         <YStack gap={2} flex={1}>

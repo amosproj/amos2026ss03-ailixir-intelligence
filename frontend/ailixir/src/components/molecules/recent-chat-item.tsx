@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Alert, type Animated } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { router } from 'expo-router';
 import { getAuth } from 'firebase/auth';
 import { Sparkles, Trash2 } from '@tamagui/lucide-icons-2';
 import { Circle, YStack } from 'tamagui';
@@ -32,6 +33,8 @@ function ChatAvatar() {
 }
 
 export function RecentChatItem({ chat, deletable = false }: RecentChatItemProps) {
+  const isSwipeOpenRef = useRef(false);
+
   // Confirm-then-delete. `close` collapses the open swipe panel whether the
   // user cancels or the delete fails, so the row never gets stuck half-open.
   const confirmDelete = useCallback(
@@ -64,9 +67,12 @@ export function RecentChatItem({ chat, deletable = false }: RecentChatItemProps)
     [chat.id],
   );
 
-  const row = (
-    <ListItemContent href={`/(private)/chats/${chat.id}`} icon={<ChatAvatar />} title={chat.title} subtitle={chat.preview} contentAccessory={<CText variant="caption">{chat.timeLabel}</CText>} />
-  );
+  const handleOpenChat = useCallback(() => {
+    if (isSwipeOpenRef.current) return;
+    router.push(`/(private)/chats/${chat.id}`);
+  }, [chat.id]);
+
+  const row = <ListItemContent onPress={handleOpenChat} icon={<ChatAvatar />} title={chat.title} subtitle={chat.preview} contentAccessory={<CText variant="caption">{chat.timeLabel}</CText>} />;
 
   // Home "Recent Chats" rows aren't deletable — render the plain row.
   if (!deletable) return row;
@@ -82,7 +88,16 @@ export function RecentChatItem({ chat, deletable = false }: RecentChatItemProps)
   );
 
   return (
-    <Swipeable renderRightActions={renderRightActions} overshootRight={false} rightThreshold={40}>
+    <Swipeable
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      rightThreshold={40}
+      onSwipeableOpen={() => {
+        isSwipeOpenRef.current = true;
+      }}
+      onSwipeableClose={() => {
+        isSwipeOpenRef.current = false;
+      }}>
       {row}
     </Swipeable>
   );
